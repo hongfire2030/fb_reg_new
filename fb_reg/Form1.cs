@@ -306,7 +306,7 @@ namespace fb_reg
                     LogStatus(device, "Chay set proxy mới   -tttttttttttttt-----------");
                     if (!SetProxySuperProxy(device))
                     {
-                        LogStatus(device, "Can not set proxy ----ttttttttt-------return ");
+                        LogStatus(device, "Can not set proxy ----ttttttttt-------return -test ");
                         Thread.Sleep(6000);
                         device.loadNewProxy = true;
                         return false;
