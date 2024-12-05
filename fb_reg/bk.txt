@@ -1,0 +1,855 @@
+﻿using AE.Net.Mail;
+using Google.Apis.Auth.OAuth2;
+using MessagingToolkit.QRCode.Codec;
+using MessagingToolkit.QRCode.Codec.Data;
+using System;
+using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Text.RegularExpressions;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Xml;
+using xNet;
+
+namespace Regkerdong
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+        }
+
+        int totalRun = 0;
+        int fail = 0;
+        int regOk = 0;
+        int noVerified = 0;
+        DateTime localDate = DateTime.Now;
+        Bitmap FACEBOOK_OPEN;
+
+
+        string selectedDevice;
+        string selectedDeviceName;
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            
+
+            GoogleSheet.Initial();
+            var listDevices = KAutoHelper.ADBHelper.GetDevices();
+            if (listDevices != null && listDevices.Count > 0)
+            {
+                selectedDevice = listDevices[listDevices.Count - 1];
+                for (int i = 0; i < listDevices.Count; i++)
+                {
+                    deviceIdBox.Items.Add(listDevices[i]);
+                }
+                deviceIdBox.SelectedIndex = listDevices.Count - 1;
+            }
+            Text = Constant.LANGUAGE;
+
+            deviceNameCb.Items.Add("s7");
+            deviceNameCb.Items.Add("a30");
+            deviceNameCb.Items.Add("a7Cook");
+        }
+
+        private void CloneBtn_Click(object sender, EventArgs e)
+        {
+            selectedDeviceName = (string)deviceNameCb.SelectedItem;
+            Text = selectedDeviceName;
+            string imageFolder = "img/" + selectedDeviceName + "/";
+
+            FACEBOOK_OPEN = (Bitmap)Image.FromFile(imageFolder + "check_facebook_open_ok.png");
+            
+            selectedDevice = (string)deviceIdBox.SelectedItem;
+            
+            Task t = new Task(() =>
+            {
+                localDate = DateTime.Now;
+
+                var culture = new CultureInfo("en-US");
+                string startTime = localDate.ToString(culture);
+                label2.Invoke(new MethodInvoker(() =>
+                {
+
+                    label2.Text = "Start:" + startTime;
+                }));
+                DeviceId.Invoke(new MethodInvoker(() =>
+                {
+
+                    DeviceId.Text = selectedDevice;
+                }));
+                while (true)
+                {
+                    totalRun++;
+                    var watch = System.Diagnostics.Stopwatch.StartNew();
+
+                    Autoclone(selectedDevice);
+                    Thread.Sleep(1000);
+                    watch.Stop();
+                    long second = watch.ElapsedMilliseconds / 1000;
+                    Console.WriteLine($"Execution Time: {second} ms");
+                    label3.Invoke(new MethodInvoker(() =>
+                    {
+                        string status = "TotalReg:" + totalRun + " --regOk:" + regOk + " --regFail:" + fail + "  --NoVerified:" + noVerified + " time:" + second;
+                        label3.Text = status;
+                    }));
+                }
+
+
+            });
+            t.Start();
+        }
+
+        public void Autoclone(string deviceID)
+        {
+            try
+            {
+                //GoogleSheet.WriteAccount2All("aaaaa", "All");
+                //GoogleSheet.WriteAccount("sss", deviceID);
+                //string aaa = Utility.CheckLive();
+                if (!ChangeDeviceInfo(deviceID))
+                {
+                    fail++;
+                    return;
+                }
+                Thread.Sleep(1000);
+                ChangeIp(deviceID);
+
+                Thread.Sleep(1000);
+                QLong.Phone.Về_Màn_Hình_Chính(deviceID);
+                Thread.Sleep(1500);
+                OpenFacebookApp(deviceID);
+                Thread.Sleep(1000);
+                Utility.Log("Tap to new account button", status);
+                if (selectedDeviceName == "a30")
+                {
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 50.7, 80.6);
+                } else if (selectedDeviceName == "s7")
+                {
+                    Device.TapByPercentDelay(deviceID, 51.2, 87.4, 1000);
+                }
+                if (selectedDeviceName == "a7Cook")
+                {
+                    KAutoHelper.ADBHelper.Tap(deviceID, 572, 1708);
+                }
+
+                // next
+                Next(deviceID);
+                Thread.Sleep(1000);
+                // Allow all
+                Utility.Log("Allow all permission", status);
+                WaitAndTapXML(deviceID, 10, "Allowresource");
+                Thread.Sleep(1000);
+                WaitAndTapXML(deviceID, 10, "Allowresource");
+
+                // Random gender
+                string gender = GetGender();
+                Thread.Sleep(2000);
+                if (!InputName(deviceID, gender))
+                {
+                    fail++;
+                    return;
+                }
+
+                Utility.Log("Input Birthday", status);
+                //Thread.Sleep(2000);
+                if (!InputBirthday(deviceID))
+                {
+                    fail++;
+                    return;
+                }
+
+                Next(deviceID);
+                Thread.Sleep(1000);
+
+                Utility.Log("Input gender", status);
+                InputGender(deviceID, gender);
+
+                Next(deviceID);
+                Thread.Sleep(2000);
+                string[] ll = Utility.GetCordText(deviceID, "edittext");
+                if (ll == null)
+                {
+                    fail++;
+                    return;
+                }
+                KAutoHelper.ADBHelper.Tap(deviceID, Convert.ToInt32(ll[2]) - 10, Convert.ToInt32(ll[3]) - 10);
+                Thread.Sleep(1000);
+                string phone = Utility.GeneratePhoneNumber(dausotextbox.Text);
+                KAutoHelper.ADBHelper.InputText(deviceID, Utility.ConvertToUnsign(phone));
+                Thread.Sleep(2000);
+                Next(deviceID);
+                Thread.Sleep(1300);
+                string password = Utility.GeneratePassword();
+
+                KAutoHelper.ADBHelper.InputText(deviceID, password);
+
+                Next(deviceID);
+                Thread.Sleep(1300);
+
+
+                Utility.Log("Tap sign up button", status);
+                WaitAndTapXML(deviceID, 20, "SignUpresourceid");
+
+                // Wait about 18s and check action
+
+                Thread.Sleep(25000);
+
+
+
+                if (CheckLock(deviceID))
+                {
+                    fail++;
+                    return;
+                }
+
+                if (Utility.CheckTextExist(deviceID, "what their friends call them"))
+                {
+                    string[] aa = Utility.GetCordText(deviceID, "edittext");
+                    if (aa == null)
+                    {
+                        fail++;
+                        return;
+                    }
+                    KAutoHelper.ADBHelper.Tap(deviceID, Convert.ToInt32(aa[2]) - 10, Convert.ToInt32(aa[3]) - 10);
+                    string name = Utility.GetFirtName(InputEnglishNameCheckbox.Checked, gender);
+                    QLong.Phone.Truyền_Chuỗi(deviceID, name);
+                    Thread.Sleep(3000);
+                    Next(deviceID);
+                }
+                if (Utility.CheckTextExist(deviceID, "SelectYourName"))
+                {
+                    Utility.Log("select your name after create", status);
+                    if (selectedDeviceName == "s7")
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 91.5, 37.7);
+                    } else if (selectedDeviceName == "a30")
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 90.8, 38.4);
+                    }
+                    else if (selectedDeviceName == "a7Cook")
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 90.7, 47.8);
+                    }
+
+                    Next(deviceID);
+                }
+
+                if (Utility.CheckTextExist(deviceID, "Phonenumberalreadyinuse"))
+                {
+                    fail++;
+                    return;
+                }
+
+                if (Utility.CheckTextExist(deviceID, "ConfirmbyEmail"))
+                {
+                    goto ENTER_CODE_CONFIRM_EMAIL;
+                }
+
+                if (WaitAndTapXML(deviceID, 3, "NOTNOW"))
+                {
+                    Utility.Log("Have popup Not Now", status);
+
+                    Thread.Sleep(1000);
+                    
+                    Device.EnterPress(deviceID);
+                    Device.EnterPress(deviceID);
+                    Thread.Sleep(1000);
+                } 
+    
+ ENTER_CODE_CONFIRM_EMAIL:
+                
+                if (!WaitAndTapXML(deviceID, 20, "ConfirmbyEmail")) {
+                    fail++;
+                    return;
+                }
+                string Hotmail = "";
+                string[] TKMK;
+                Utility.Log("Tap text box email address", status);
+                WaitAndTapXML(deviceID, 3, "editText");
+
+                Hotmail = Utility.CheckLive();
+                if (Hotmail == Constant.FAIL)
+                {
+                    fail++;
+                    return;
+                }
+                TKMK = Hotmail.Split('|');
+                Thread.Sleep(300);
+                Utility.Log("Put email:" + TKMK[0], status);
+                KAutoHelper.ADBHelper.InputText(deviceID, TKMK[0]);
+
+                Thread.Sleep(3000);
+                WaitAndTapXML(deviceID,2, "updateemail");
+                Utility.Log("Tap button continue", status);
+                WaitAndTapXML(deviceID, 20, "Continue");
+
+                Utility.Log("Check enter screen enter code - if not - return", status);
+
+                if (!WaitXML(deviceID, 20, "Enterthecode"))
+                {
+                    fail++;
+                    return;
+                }
+
+                string code = Utility.GetHotmailCode(Hotmail);
+                if (code == Constant.FAIL)
+                {
+                    // Resend mail
+                    Utility.Log("Get verify code fail", status);
+                    WaitAndTapXML(deviceID, 3, "sendemailagain");
+                    Thread.Sleep(2000);
+                    code = Utility.GetHotmailCode(Hotmail);
+                    if (code == Constant.FAIL)
+                    {
+                        Utility.StoreInfoNoVerify(selectedDeviceName, deviceID, password, Hotmail, gender);
+
+                        noVerified++;
+                        return;
+                    }
+                }
+                Utility.Log("tap to confirm code", status);
+                WaitAndTapXML(deviceID, 3, "editText");
+
+                Utility.Log("Input code:" + code, status);
+                KAutoHelper.ADBHelper.InputText(deviceID, code);
+
+                Thread.Sleep(4000);
+                WaitAndTapXML(deviceID, 10, "Confirmresource");
+
+                Thread.Sleep(4000);
+                Utility.Log("Skip upload photo ", status);
+                string qrCode = "";
+                if (!Utility.CheckTextExist(deviceID, "Add5"))
+                {
+
+                    WaitAndTapXML(deviceID, 20, "Skipresource");
+                    Thread.Sleep(2000);
+                    
+                    if (Utility.CheckTextExist(deviceID, "SaveYourLoginInfo"))
+                    {
+                        WaitAndTapXML(deviceID, 5, "okresource");
+                        goto DENY_LOCATION_AND_STORE_DATA;
+                    }
+                }
+                // Add your friend
+                if (!WaitAndTapXML(deviceID, 20, "Add5"))
+                {
+                    WaitAndTapXML(deviceID, 5, "skip");
+                }
+
+                // Invite your friend
+                Utility.Log("Invite friend tap", status);
+                WaitAndTapXML(deviceID, 5, "InviteAll");
+
+                WaitAndTapXML(deviceID, 5, "YESresource");
+                WaitAndTapXML(deviceID, 5, "OKresource");
+
+                Utility.Log("Save login info", status);
+
+                // Done
+DENY_LOCATION_AND_STORE_DATA:                
+                regOk++;
+                Thread.Sleep(3000);
+                if (Utility.CheckTextExist(deviceID, "allowfacebooktoaccessyourlocation"))
+                {
+                    // Deny access location
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 58.4, 63.3);
+                } else
+                {
+                    WaitAndTapXML(deviceID, 3, "deny");
+                }
+                
+                if (runAvatarCheckbox.Checked)
+                {
+                    UploadAvatar(deviceID);
+                }
+                
+                if (set2faCheckbox.Checked)
+                {
+                    qrCode = Set2fa(deviceID);
+                }
+                Utility.Log("Store information account facebook", status);
+                Utility.StoreInfo(selectedDeviceName, deviceID, password, Hotmail, qrCode, gender);
+            }
+            catch (Exception e) {
+                Utility.Log(e.Message, status);
+            }
+        }
+
+        public string GetGender()
+        {
+            string gender;
+
+            if (maleCheckbox.Checked)
+            {
+                gender = Constant.MALE;
+            }
+            else if (femaleCheckbox.Checked)
+            {
+                gender = Constant.FEMALE;
+            }
+            else
+            {
+                Random r = new Random();
+                int rand = r.Next(100);
+
+                if (rand > 50)
+                {
+                    gender = Constant.FEMALE;
+                }
+                else
+                {
+                    gender = Constant.MALE;
+                }
+            }
+            return gender;
+        }
+        public string Set2fa(string deviceID)
+        {
+            try
+            {
+                //Tap setting
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.5, 12.7);
+                Thread.Sleep(3000);
+                KAutoHelper.ADBHelper.Swipe(deviceID, 500, 1300, 500, 10);
+                Thread.Sleep(2000);
+                // Tap setting and privacy
+                WaitAndTapXML(deviceID, 5, "settings&amp;privacy");
+
+                Thread.Sleep(2000);
+                // Tap setting and privacy 2
+                string[] kk = Utility.GetCordText(deviceID, "settings&amp;privacy");
+                if (kk == null)
+                {
+                    return "";
+                }
+                KAutoHelper.ADBHelper.Tap(deviceID, Convert.ToInt32(kk[2]) - 100, Convert.ToInt32(kk[3]) + 20);
+                WaitAndTapXML(deviceID, 5, "securityandlogin");
+                WaitAndTapXML(deviceID, 5, "usetwofactorauthenticationresourceid");
+                WaitAndTapXML(deviceID, 5, "continue");
+
+                Thread.Sleep(4000);
+
+                Random random2 = new Random();
+                int num7 = random2.Next(0, 99999);
+                Bitmap bitmap = KAutoHelper.ADBHelper.ScreenShoot(deviceID, true, "screenShoot.png");
+                bitmap.Save(AppDomain.CurrentDomain.BaseDirectory + "QR" + num7.ToString() + ".PNG");
+                Image image = Image.FromFile(AppDomain.CurrentDomain.BaseDirectory + "QR" + num7.ToString() + ".PNG");
+                QRCodeDecoder qrcodeDecoder = new QRCodeDecoder();
+                string input2 = qrcodeDecoder.Decode(new QRCodeBitmapImage(image as Bitmap));
+                string text13 = Regex.Match(input2, "secret=[0-9a-zA-Z_.%-]{0,}").ToString();
+                string QrCode = text13.Replace("secret=", "");
+                HttpRequest httpRequest = new HttpRequest();
+                string input3 = httpRequest.Get("http://2fa.live/tok/" + QrCode, null).ToString();
+                string token = Regex.Match(input3, ":\"(.*?)\"}$").Groups[1].ToString();
+                image.Dispose();
+                Image image2 = Image.FromFile("QR" + num7.ToString() + ".PNG");
+                image2.Dispose();
+                File.Delete("QR" + num7.ToString() + ".PNG");
+                Thread.Sleep(3000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 50.6, 95.3);
+                Thread.Sleep(3000);
+                if (selectedDeviceName == "s7")
+                {
+                    KAutoHelper.ADBHelper.Tap(deviceID, 472, 781);
+                }
+                else if (selectedDeviceName == "a7Cook")
+                {
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 23.1, 33.2);
+                }
+                
+                Thread.Sleep(1000);
+                KAutoHelper.ADBHelper.InputText(deviceID, token);
+                Thread.Sleep(2000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 50.6, 95.3);
+                Thread.Sleep(3000);
+                
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 50.6, 95.3);
+                Thread.Sleep(2000);
+                return QrCode;
+            } catch(Exception e)
+            {
+                return "";
+            }
+            
+        }
+        public bool CheckLock(string deviceID)
+        {
+            Utility.Log("Check account lock", status);
+            return Utility.CheckTextExist(deviceID, "YourAccountHasBeenDisable");
+        }
+
+        // Change device info
+        public bool ChangeDeviceInfo(string deviceID)
+        {
+            try
+            {
+                Utility.Log("Change device Information", status);
+                QLong.Phone.Về_Màn_Hình_Chính(deviceID);
+                Thread.Sleep(1500);
+
+                Utility.Log("Open fake setting app", status);
+                QLong.Phone.Mở_Ứng_Dụng(deviceID, "com.devicefaker.plus");
+
+                //bool check = Wait(deviceID, 30, DEVICE_FAKER_APP);
+                if (!WaitXML(deviceID, 10, "Faker"))
+                {
+                    return false;
+                }
+                // TODO
+                Thread.Sleep(1000);
+                WaitAndTapXML2(deviceID, 5, "spnTextView");
+                Thread.Sleep(1000);
+                WaitAndTapXML3(deviceID, 5, "spnTextView");
+                Thread.Sleep(1000);
+                WaitAndTapXML(deviceID, 5, "Apply");
+                Thread.Sleep(1000);
+                Utility.Log("Finish change device info", status);
+                QLong.Phone.Về_Màn_Hình_Chính(deviceID);
+                Thread.Sleep(1500);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        public void ChangeIp(string deviceID)
+        {
+            try
+            {
+                string openAirplaneModeCmd = string.Format("adb -s {0} shell am start -a android.settings.AIRPLANE_MODE_SETTINGS", deviceID);
+                Device.ExecuteCMD(openAirplaneModeCmd);
+                Thread.Sleep(1000);
+
+                if (selectedDeviceName == "a30")
+                {
+                    WaitAndTapXML(deviceID, 5, "Offresource");
+                    Thread.Sleep(2000);
+                    WaitAndTapXML(deviceID, 5, "Onresource");
+                } else
+                {
+                    WaitAndTapXML(deviceID, 5, "Airplane");
+                    Thread.Sleep(1000);
+                    WaitAndTapXML(deviceID, 5, "Airplane");
+                }
+                
+                
+                // Check airplan mode
+                if (Device.IsAirPlaneMode(deviceID))
+                {
+                    if (selectedDeviceName == "a30")
+                    {
+                        WaitAndTapXML(deviceID, 5, "Onresource");
+                    } else
+                    {
+                        WaitAndTapXML(deviceID, 5, "Airplane");
+                    }
+                        
+                }
+            }
+            catch (Exception e)
+            {
+                Utility.Log("exception:" + e.Message, status);
+            }
+        }
+
+        public void OpenFacebookApp(string deviceID)
+        {
+            Utility.Log("Delete cache data on facebook", status);
+            QLong.Phone.XóaDữLiệu(deviceID, "com.facebook.katana");
+            Thread.Sleep(1500);
+
+            QLong.Phone.Mở_Ứng_Dụng(deviceID, "com.facebook.katana");
+
+            CheckFacebookOpenOk(deviceID);
+            Thread.Sleep(1000);
+        }
+
+
+        public bool InputName(string deviceID, string gender)
+        {
+            try
+            {
+                string lastname = Utility.GetLastName(InputEnglishNameCheckbox.Checked);
+                string name = Utility.GetFirtName(InputEnglishNameCheckbox.Checked, gender);
+
+                Thread.Sleep(3000);
+                Utility.Log("Text: Name:" + name, status);
+                QLong.Phone.Truyền_Chuỗi(deviceID, name);
+
+                Thread.Sleep(3000);
+                Device.TabPress(deviceID);
+                Utility.Log("Input text: lastname:" + lastname, status);
+                QLong.Phone.Truyền_Chuỗi(deviceID, lastname);
+                Thread.Sleep(3000);
+
+                Next(deviceID);
+                Thread.Sleep(300);
+                if (Utility.CheckTextExist(deviceID, "what their friends call them"))
+                {
+                    string[] aa = Utility.GetCordText(deviceID, "edittext");
+                    if (aa == null)
+                    {
+                        fail++;
+                        return false;
+                    }
+                    KAutoHelper.ADBHelper.Tap(deviceID, Convert.ToInt32(aa[2]) - 10, Convert.ToInt32(aa[3]) - 10);
+                    name = Utility.GetFirtName(InputEnglishNameCheckbox.Checked, gender);
+                    QLong.Phone.Truyền_Chuỗi(deviceID, name);
+                    Thread.Sleep(3000);
+                    Next(deviceID);
+                    if (Utility.CheckTextExist(deviceID, "what their friends call them"))
+                    {
+                        fail++;
+                        return false;
+                    }
+                }
+                if (Utility.CheckTextExist(deviceID, "SelectYourName"))
+                {
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 91.5, 37.7);
+                    Next(deviceID);
+                }
+                return true;
+            } catch (Exception e)
+            {
+                Utility.Log(e.Message, status);
+                return false;
+            }
+
+
+        }
+
+        public void UploadAvatar (string deviceID) {
+            Thread.Sleep(2000);
+            // Tap avatar
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 8.0, 21.7);
+            Thread.Sleep(2000);
+            WaitAndTapXML(deviceID, 5, "getstarted");
+
+            WaitAndTapXML(deviceID, 5, "getstarted");
+            WaitAndTapXML(deviceID, 5, "choosepic");
+            WaitAndTapXML(deviceID, 5, "allowresource");
+
+            Thread.Sleep(2000);
+            // Select a image
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 53.2, 25.3);
+            Thread.Sleep(2000);
+            WaitAndTapXML(deviceID, 5, "saveresource");
+            Thread.Sleep(2000);
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 6.9, 5.5);
+            Thread.Sleep(2000);
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 6.9, 5.5);
+            Thread.Sleep(2000);
+            WaitAndTapXML(deviceID, 5, "stopresource");
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 6.9, 5.5);
+            Thread.Sleep(2000);
+
+
+           
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 6.9, 5.5);
+            Thread.Sleep(2000);
+        }
+        public bool InputBirthday(string deviceID)
+        {
+            try
+            {
+                int baseY;
+                int baseX;
+                string[] yearCord = Utility.GetCordText(deviceID, "2textresourceidclassandroidwidgetNumber");
+                string[] dayCord = Utility.GetCordText(deviceID, "1textresourceidclassandroidwidgetNumber");
+                if (yearCord == null)
+                {
+                    return false;
+                }
+                baseY = (Convert.ToInt32(yearCord[1]) + Convert.ToInt32(yearCord[3])) / 2;
+                int centerDay = (Convert.ToInt32(dayCord[0]) + Convert.ToInt32(dayCord[2])) / 2;
+
+                baseX = centerDay - (Convert.ToInt32(dayCord[2]) - Convert.ToInt32(dayCord[0]));
+
+                Random random = new Random();
+                int randomMonth = random.Next(500);
+
+                Random n = new Random();
+                if (Utility.CheckAndTap(deviceID, "2textresourceidclassandroidwidgetNumber")) // year
+                {
+                    QLong.Phone.Truyền_Chuỗi(deviceID, Convert.ToString(n.Next(1990, 2000)));
+                }
+                if (Utility.CheckAndTap(deviceID, "1textresourceidclassandroidwidgetNumber")) // day
+                {
+                    QLong.Phone.Truyền_Chuỗi(deviceID, Convert.ToString(n.Next(1, 28)));
+                }
+                KAutoHelper.ADBHelper.Swipe(deviceID, baseX, baseY, baseX, baseY + baseX + randomMonth);
+                return true;
+            }
+            catch (Exception e)
+            {
+                fail++;
+                return false;
+            }
+        }
+
+        public void InputGender(string deviceID, string gender)
+        {
+            if (gender == Constant.FEMALE)
+            {
+                WaitAndTapXML(deviceID, 2, "textfemaleresource");
+            }
+            else
+            {
+                WaitAndTapXML(deviceID, 2, "textmaleresource");
+            }
+        }
+
+        public bool WaitXML(string deviceID, int time, string text)
+        {
+            for (int i = 0; i < time; i++)
+            {
+               
+                if (Utility.CheckTextExist(deviceID, text))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public bool WaitAndTapXML(string deviceID, int time, string text)
+        {
+            for (int i = 0; i < time; i++)
+            {
+                
+                if (Utility.CheckAndTap(deviceID, text))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public bool WaitAndTapXML2(string deviceID, int time, string text)
+        {
+            for (int i = 0; i < time; i++)
+            {
+
+                if (Utility.CheckAndTap2(deviceID, text))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public bool WaitAndTapXML3(string deviceID, int time, string text)
+        {
+            for (int i = 0; i < time; i++)
+            {
+
+                if (Utility.CheckAndTap3(deviceID, text))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private void CheckFacebookOpenOk(string deviceID)
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                Thread.Sleep(1000);
+                var screen = KAutoHelper.ADBHelper.ScreenShoot(deviceID); // chup man hinh
+                var kiemtravao = KAutoHelper.ImageScanOpenCV.FindOutPoint(screen, FACEBOOK_OPEN);// so sanh hinh anh
+                if (kiemtravao != null)// kiem tra
+                {
+                    return;
+                }
+                else { }
+            }
+        }
+
+        private void Next(string deviceID)
+        {
+            WaitAndTapXML(deviceID, 20, "nextresource");
+            Thread.Sleep(500);
+        }
+
+        private void FindAndTap(string deviceID, Bitmap image, int time)
+        {
+            for (int i = 0; i < time; i++)
+            {
+                var screen = KAutoHelper.ADBHelper.ScreenShoot(deviceID); // chup man hinh
+                var next = KAutoHelper.ImageScanOpenCV.FindOutPoint(screen, image);// so sanh hinh anh
+                if (next != null)// kiem tra
+                {
+                    try
+                    {
+                        KAutoHelper.ADBHelper.Tap(deviceID, next.Value.X + image.Width / 2, next.Value.Y + image.Height / 2);// click vào hinh anh
+                        return;
+                    }
+                    catch (Exception)
+                    {
+                        Thread.Sleep(250);
+                    }
+                }
+            }
+        }
+        private void refreshBtn_Click(object sender, EventArgs e)
+        {
+            var listDevices = KAutoHelper.ADBHelper.GetDevices();
+            deviceIdBox.Items.Clear();
+            if (listDevices != null && listDevices.Count > 0)
+            {
+                selectedDevice = listDevices[listDevices.Count - 1];
+                for (int i = 0; i < listDevices.Count; i++)
+                {
+                    deviceIdBox.Items.Add(listDevices[i]);
+                }
+                deviceIdBox.SelectedIndex = listDevices.Count - 1;
+            }
+        }
+
+        private void checkBox1_CheckedChanged(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void checkBox1_CheckedChanged_1(object sender, EventArgs e)
+        {
+            if (maleCheckbox.Checked)
+            {
+                femaleCheckbox.Checked = false;
+            }
+        }
+
+        private void femaleCheckbox_CheckedChanged(object sender, EventArgs e)
+        {
+            if (femaleCheckbox.Checked)
+            {
+                maleCheckbox.Checked = false;
+            }
+        }
+
+        private void checkBox1_CheckedChanged_2(object sender, EventArgs e)
+        {
+
+        }
+
+        private void resetStatus_Click(object sender, EventArgs e)
+        {
+            fail = 0;
+            totalRun = 0;
+            regOk = 0;
+            noVerified = 0;
+            localDate = DateTime.Now;
+
+            var culture = new CultureInfo("en-US");
+            string startTime = localDate.ToString(culture);
+
+            label2.Text = "Start:" + startTime;
+            label3.Text = "";
+        }
+    }
+}
+

@@ -1,0 +1,1322 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace fb_reg.bk
+{
+    class form1bk
+    {
+            public void RegFbLiteLD(DeviceObject device)
+        {
+            try
+            {
+                device.isFinish = false;
+                if (holdingCheckBox.Checked)
+                {
+
+                    LogStatus(device, "Đang tạm nghỉ");
+                    Thread.Sleep(10 * 1000);
+                    device.blockCount = 0;
+                    return;
+                }
+
+                string deviceID = device.deviceId;
+                //Utility.WaitAndTapXML(deviceID, 2, "signup");
+                // string Cookies = FbUtil.GetCookieFromFbLite(deviceID);
+                //Utility.WaitAndTapXML(deviceID, 3, "");
+
+                Device.SelectAdbKeyboard(deviceID);
+
+                LogStatus(device, "Start");
+                if (device == null)
+                {
+                    return;
+                }
+
+
+                int delay = Convert.ToInt32(delayTextbox.Text);
+                string selectedDeviceName = "s7";
+
+                OrderObject order = new OrderObject();
+
+                order.code = "2fa";
+                order.has2Fa = set2faCheckbox.Checked;
+                order.hasAvatar = runAvatarCheckbox.Checked;
+                order.isHotmail = !TempMailcheckBox.Checked;
+                order.isVietNameseName = !InputEnglishNameCheckbox.Checked;
+                if (maleCheckbox.Checked)
+                {
+                    order.gender = Constant.MALE;
+                }
+                else if (femaleCheckbox.Checked)
+                {
+                    order.gender = Constant.FEMALE;
+                }
+
+                Thread.Sleep(2000);
+                FbUtil.OpenFacebookLiteApp(deviceID, fbLiteCheckbox, status);
+                Thread.Sleep(2000);
+                //LogStatus(device, "Chuyển sang tiếng anh");
+
+                //Device.TapByPercentDelay(deviceID, 16.2, 72.2, 2000);
+                LogStatus(device, "Tap to new account button");
+                Device.TapByPercentDelay(deviceID, 47.4, 56.1, 100);
+                Device.TapByPercentDelay(deviceID, 49.5, 57.4, 2000); // Create new account
+
+                Next(deviceID);
+
+                Thread.Sleep(1000);
+
+                // Random gender
+                string gender = GetGender(order);
+                Random n = new Random();
+                int yearOld = n.Next(Convert.ToInt32(yearOldFrom.Text), Convert.ToInt32(yearOldTo.Text));
+
+                Thread.Sleep(delay);
+                string password = Utility.GeneratePassword();
+                string name;
+
+                name = FlowNormalFbLiteLD(order, deviceID, gender, password, yearOld, delay, selectedDeviceName); // LD player
+
+                Thread.Sleep(1000 + delay);
+
+                Utility.Log("Tap sign up button", status);
+                device.status = "Tap sign up button";
+                UpdateStatus(listDeviceObject);
+                Thread.Sleep(2000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 46.7, 37.3);
+                Thread.Sleep(200);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 51.7, 37.2); // sign up button
+                Thread.Sleep(200);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 50.6, 44.8);// sign up button
+                Thread.Sleep(15000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 80.2, 94.6);
+                Thread.Sleep(1000);
+                Utility.StoreInfo(isServer, order, deviceID,
+                    password, "noveri|gmail", "", gender, yearOld, Constant.FALSE, "checking", true);
+                fail++;
+                device.blockCount++;
+                device.status = "Reg lite done";
+                UpdateStatus(listDeviceObject);
+                holdingCheckBox.Checked = true;
+                return;
+            }
+            catch (Exception e)
+            {
+                Utility.Log(e.Message, status);
+                device.blockCount++;
+                device.status = Constant.ACCOUNT_BLOCK;
+                UpdateStatus(listDeviceObject);
+            }
+        }
+        public void RegFbLite(DeviceObject device)
+        {
+            try
+            {
+                string deviceID = device.deviceId;
+
+                // Select Adb keyboard
+                Device.SelectAdbKeyboard(deviceID);
+                device.status = "Start";
+                UpdateStatus(listDeviceObject);
+                if (device == null)
+                {
+                    return;
+                }
+
+                int delay = Convert.ToInt32(delayTextbox.Text);
+                string selectedDeviceName = "s7";
+                if (deviceID.StartsWith("R"))
+                {
+                    selectedDeviceName = "a30";
+                }
+                else if (deviceID.StartsWith("33"))
+                {
+                    selectedDeviceName = "a7Cook";
+                }
+
+                OrderObject order = new OrderObject();
+
+                order.code = "2fa";
+                order.has2Fa = set2faCheckbox.Checked;
+                order.hasAvatar = runAvatarCheckbox.Checked;
+                order.isHotmail = !TempMailcheckBox.Checked;
+                order.isVietNameseName = !InputEnglishNameCheckbox.Checked;
+                if (maleCheckbox.Checked)
+                {
+                    order.gender = Constant.MALE;
+                }
+                else if (femaleCheckbox.Checked)
+                {
+                    order.gender = Constant.FEMALE;
+                }
+                // Stop proxy
+
+                if (deviceID.StartsWith(Constant.EMULATOR))
+                {
+                    if (ServerApi.GetChangeIp("http://longfb.ddns.net:10000", "proxy=longfb.ddns.net:6001") == Constant.FAIL)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    if (airplaneCheckBox.Checked)
+                    {
+                        if (!FbUtil.ChangeIp(deviceID))
+                        {
+                            fail++;
+                            return;
+                        }
+                    }
+                }
+
+                Thread.Sleep(1000);
+
+                if (!FbUtil.FakerPlusChange(deviceID, rebootFpCheckBox.Checked))
+                {
+                    fail++;
+                    return;
+                }
+
+                Thread.Sleep(2000);
+                FbUtil.OpenFacebookLiteApp(deviceID, fbLiteCheckbox, status);
+                Thread.Sleep(2000);
+
+                Utility.Log("Tap to new account button", status);
+                device.status = "Tap to new account button";
+                UpdateStatus(listDeviceObject);
+
+                Device.TapByPercentDelay(deviceID, 51.2, 87.4);
+                Device.TapByPercentDelay(deviceID, 51.2, 90.9);
+                Device.TapByPercentDelay(deviceID, 50.7, 80.6);
+                Device.TapByPercentDelay(deviceID, 49.4, 87.3);
+
+                Next(deviceID);
+                Thread.Sleep(1000);
+
+                // Random gender
+                string gender = GetGender(order);
+                Random n = new Random();
+                int yearOld = n.Next(Convert.ToInt32(yearOldFrom.Text), Convert.ToInt32(yearOldTo.Text));
+
+                Thread.Sleep(delay);
+                string password = Utility.GeneratePassword();
+                string name;
+
+                name = FlowNormalFbLite(order, deviceID, gender, password, yearOld, delay, selectedDeviceName);
+
+                Thread.Sleep(1000 + delay);
+
+                Utility.Log("Tap sign up button", status);
+                device.status = "Tap sign up button";
+                UpdateStatus(listDeviceObject);
+                Device.TapByPercentDelay(deviceID, 47.7, 29.4); // sign up button
+                Thread.Sleep(18000);
+
+                Utility.StoreInfo(isServer, order, deviceID,
+                    password, "noveri|gmail", "", gender, yearOld, Constant.FALSE, "checking", true);
+                fail++;
+                device.blockCount++;
+                device.status = "Reg lite done";
+                UpdateStatus(listDeviceObject);
+                return;
+            }
+            catch (Exception e)
+            {
+                Utility.Log(e.Message, status);
+                device.blockCount++;
+                device.status = Constant.ACCOUNT_BLOCK;
+                UpdateStatus(listDeviceObject);
+            }
+        }
+        public void AutocloneViet(DeviceObject device)
+        {
+            try
+            {
+                if (holdingCheckBox.Checked)
+                {
+
+                    LogStatus(device, "Đang tạm nghỉ");
+                    Thread.Sleep(10 * 1000);
+
+                    return;
+                }
+
+
+                ChangeSim(device);
+
+                string deviceID = device.deviceId;
+
+                Utility.WaitAndTapXML(deviceID, 2, "textääƒngkã½resource");
+                if (Utility.isScreenLock(deviceID) && !ldPlayerCheckBox.Checked)
+                {
+                    LogStatus(device, "Screen is locking screen - Opening it");
+
+                    Device.Unlockphone(deviceID);
+                }
+
+                if (proxyCheckBox.Checked)
+                {
+                    Device.OpenApp(deviceID, "com.cell47.College_Proxy");
+                    Thread.Sleep(2000);
+                    Device.TapByPercentDelay(deviceID, 44.9, 25.4);
+                    Device.TapByPercentDelay(deviceID, 49.4, 23.1);
+                    Thread.Sleep(2000);
+                }
+
+                // Select Adb keyboard
+                Device.SelectAdbKeyboard(deviceID);
+                device.status = "Start";
+                UpdateStatus(listDeviceObject);
+                if (device == null)
+                {
+                    return;
+                }
+
+                int delay = Convert.ToInt32(delayTextbox.Text);
+                string selectedDeviceName = "s7";
+                if (deviceID.StartsWith("R"))
+                {
+                    selectedDeviceName = "a30";
+                }
+                else if (deviceID.StartsWith("33"))
+                {
+                    selectedDeviceName = "a7Cook";
+                }
+
+                OrderObject order = new OrderObject();
+
+                order.code = "2fa";
+                order.has2Fa = set2faCheckbox.Checked;
+                order.hasAvatar = runAvatarCheckbox.Checked;
+                order.isHotmail = !TempMailcheckBox.Checked;
+                order.isVietNameseName = !InputEnglishNameCheckbox.Checked;
+                if (maleCheckbox.Checked)
+                {
+                    order.gender = Constant.MALE;
+                }
+                else if (femaleCheckbox.Checked)
+                {
+                    order.gender = Constant.FEMALE;
+                }
+                //if (ldPlayerCheckbox.Checked)
+                //{
+                //    if (ServerApi.GetChangeIp("http://longfb.ddns.net:10000", "proxy=longfb.ddns.net:6001") == Constant.FAIL)
+                //    {
+                //        return;
+                //    }
+                //} else 
+                if (deviceID.StartsWith(Constant.EMULATOR))
+                {
+
+                }
+                else
+                {
+                    if (supermanCheckBox.Checked)
+                    {
+                        FbUtil.ChangeIpRomNew(deviceID, selectedDeviceName, status);
+                    }
+                    else
+                    {
+                        if (airplaneCheckBox.Checked)
+                        {
+                            if (!FbUtil.ChangeIp(deviceID))
+                            {
+                                fail++;
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                Thread.Sleep(1000);
+                if (fakerPlusCheckbox.Checked)
+                {
+                    if (deviceID.StartsWith(Constant.EMULATOR))
+                    {
+
+                    }
+                    else
+                    {
+                        if (!FbUtil.FakerPlusChange(deviceID, rebootFpCheckBox.Checked))
+                        {
+                            fail++;
+                            return;
+                        }
+                    }
+                }
+
+
+
+                Thread.Sleep(2000);
+
+                FbUtil.OpenFacebookApp(device, status, clearFbLiteCheckBox.Checked);
+                Thread.Sleep(2000);
+
+                Utility.Log("Tap to new account button", status);
+                LogStatus(device, "Tap to new account button");
+
+
+
+                Device.TapByPercentDelay(deviceID, 51.2, 87.4, 1000);
+                Device.TapByPercentDelay(deviceID, 51.2, 90.9);
+                Device.TapByPercentDelay(deviceID, 50.7, 80.6);
+                Device.TapByPercentDelay(deviceID, 49.4, 87.3);
+                Device.TapByPercentDelay(deviceID, 48.5, 89.6);
+                //Device.TapByPercentDelay(deviceID, 50.6, 93.6);
+                Next(deviceID);
+                Thread.Sleep(1000);
+                Utility.Log("Allow all permission", status);
+
+                // Allow all
+                Thread.Sleep(1000);
+                Utility.WaitAndTapXML(deviceID, 3, Language.AllowAll());
+                Thread.Sleep(1000);
+                Utility.WaitAndTapXML(deviceID, 3, Language.AllowAll());
+
+                // Random gender
+                string gender = GetGender(order);
+                Random n = new Random();
+                int yearOld = n.Next(Convert.ToInt32(yearOldFrom.Text), Convert.ToInt32(yearOldTo.Text));
+                //Thread.Sleep(2000);
+                Thread.Sleep(delay);
+                string password = Utility.GeneratePassword();
+                string name;
+                if (Utility.checkScreen(deviceID, "MobileNumber"))
+                {
+                    name = flowMobile(order, device, gender, password, yearOld, delay, selectedDeviceName);
+                }
+                else
+                {
+                    name = FlowNormal(order, device, gender, password, yearOld, delay, selectedDeviceName);
+                }
+
+                Thread.Sleep(1000);
+                Thread.Sleep(delay);
+
+                Utility.Log("Tap sign up button", status);
+                LogStatus(device, "Tap sign up button");
+
+
+                if (proxyCheckBox.Checked)
+                {
+                    // Change proxy
+                    Device.OpenApp(deviceID, "com.cell47.College_Proxy");
+                    Thread.Sleep(2000);
+                    Device.TapByPercentDelay(deviceID, 50.0, 48.0);
+                    //Device.TapByPercentDelay(deviceID, 48.9, 41.8);
+                    Thread.Sleep(7000);
+                    Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                }
+
+                // Signup
+                Utility.WaitAndTapXML(deviceID, 2, "textääƒngkã½resource");
+
+                if (Utility.CheckTextExist(deviceID, "NoInternetConnection"))
+                {
+                    FbUtil.ChangeIp(deviceID);
+
+                    Thread.Sleep(1500);
+
+                    Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+
+
+
+                    Thread.Sleep(6000);
+                }
+
+                bool checkNotNow = false;
+                // Wait about 18s and check action
+                // Check Abusive
+                if (proxyCheckBox.Checked)
+                {
+                    Thread.Sleep(10000);
+                }
+                Thread.Sleep(1000);
+                if (Utility.CheckTextExist(deviceID, Constant.DEEMED))
+                {
+                    device.status = Constant.DEEMED;
+                    fail++;
+                    device.blockCount++;
+                    device.clearCache = true;
+                    UpdateStatus(listDeviceObject);
+
+                    return;
+                }
+                if (WaitAndTapXML(deviceID, 2, "CloseResource"))
+                {
+                    device.clearCache = true;
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+
+                    bool check = Utility.StoreInfo(isServer, order, deviceID,
+                            password, "noveri|noveri", "", gender, yearOld, Constant.FALSE);
+
+                    return;
+                }
+                if (CheckLock(deviceID))
+                {
+                    device.clearCache = false;
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+
+                    if (openMessageCheckBox.Checked)
+                    {
+                        FbUtil.OpenMessengerApp(device.deviceId, fbLiteCheckbox);
+                    }
+
+                    return;
+                }
+
+
+
+                Thread.Sleep(delay);
+                if (Utility.WaitAndTapXML(deviceID, 3, Language.NotNow()))
+                {
+                    Utility.Log("Have popup Not Now", status);
+                    Thread.Sleep(delay);
+                    Device.EnterPress(deviceID);
+                    Device.EnterPress(deviceID);
+                    Thread.Sleep(delay);
+                    checkNotNow = true;
+                    goto ENTER_CODE_CONFIRM_EMAIL;
+                }
+                if (CheckLock(deviceID))
+                {
+                    device.clearCache = false;
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    if (openMessageCheckBox.Checked)
+                    {
+                        FbUtil.OpenMessengerApp(device.deviceId, fbLiteCheckbox);
+                    }
+                    return;
+                }
+                if (Utility.CheckTextExist(deviceID, Constant.DEEMED))
+                {
+                    device.status = Constant.DEEMED;
+                    fail++;
+                    device.blockCount++;
+                    device.clearCache = true;
+
+                    UpdateStatus(listDeviceObject);
+
+                    return;
+                }
+                Thread.Sleep(delay);
+                Thread.Sleep(delay);
+                ScreenNameSuggestion(deviceID);
+
+                if (CheckLock(deviceID))
+                {
+                    device.clearCache = false;
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    if (openMessageCheckBox.Checked)
+                    {
+                        FbUtil.OpenMessengerApp(device.deviceId, fbLiteCheckbox);
+                    }
+                    return;
+                }
+                if (Utility.CheckTextExist(deviceID, Constant.DEEMED))
+                {
+                    device.status = Constant.DEEMED;
+                    fail++;
+                    device.blockCount++;
+                    device.clearCache = true;
+                    UpdateStatus(listDeviceObject);
+
+                    return;
+                }
+                if (Utility.WaitAndTapXML(deviceID, 3, Language.NotNow()))
+                {
+                    Utility.Log("Have popup Not Now", status);
+                    Thread.Sleep(delay);
+                    Device.EnterPress(deviceID);
+                    Device.EnterPress(deviceID);
+                    Thread.Sleep(delay);
+                    checkNotNow = true;
+                    goto ENTER_CODE_CONFIRM_EMAIL;
+                }
+                if (Utility.CheckTextExist(deviceID, "what their friends call them"))
+                {
+                    Utility.StoreErrorName(name);
+                    string[] aa = Utility.GetCordText(deviceID, "edittext");
+                    if (aa == null || aa.Length < 2)
+                    {
+                        fail++;
+                        return;
+                    }
+                    Device.TapDelay(deviceID, Convert.ToInt32(aa[2]) - 10, Convert.ToInt32(aa[3]) - 10);
+                    string nameReplace = Utility.GetFirtName(order.isVietNameseName, gender);
+
+                    Utility.InputVietVNIText(deviceID, nameReplace, inputStringCheckbox.Checked);
+                    Thread.Sleep(3000);
+                    Next(deviceID);
+                }
+                ScreenNameSuggestion(deviceID);
+
+                if (Utility.CheckTextExist(deviceID, "Phonenumberalreadyinuse"))
+                {
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    return;
+                }
+
+                if (Utility.CheckTextExist(deviceID, "ConfirmbyEmail"))
+                {
+                    goto ENTER_CODE_CONFIRM_EMAIL;
+                }
+
+                if (Utility.WaitAndTapXML(deviceID, 3, Language.NotNow()))
+                {
+                    Utility.Log("Have popup Not Now", status);
+                    Thread.Sleep(1000);
+                    Device.EnterPress(deviceID);
+                    Device.EnterPress(deviceID);
+                    Thread.Sleep(1000);
+                    checkNotNow = true;
+                }
+                if (Utility.CheckTextExist(deviceID, Constant.DEEMED))
+                {
+                    device.status = Constant.DEEMED;
+                    fail++;
+                    device.blockCount++;
+                    device.clearCache = true;
+                    UpdateStatus(listDeviceObject);
+
+                    return;
+                }
+            ENTER_CODE_CONFIRM_EMAIL:
+                if (!checkNotNow)
+                {
+                    device.clearCache = true;
+                    device.blockCount++;
+
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    return;
+                }
+                device.clearCache = true;
+                if (!verifiedCheckbox.Checked)
+                { // Noveri
+                    Utility.StoreInfo(isServer, order, deviceID,
+                    password, "noveri|tempmail", "", gender, yearOld, Constant.FALSE);
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    return;
+                }
+                if (device.regByMail)
+                {
+                    if (!Utility.WaitAndTapXML(deviceID, 5, "ChangeEmailAddress"))
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 32.6, 55.4); // tap change email address again
+                        if (!Utility.WaitAndTapXML(deviceID, 5, "ConfirmByEmail"))
+                        {
+                            bool check = Utility.StoreInfo(isServer, order, deviceID,
+                                password, "noveri|noveri", "", gender, yearOld, Constant.FALSE);
+                            // fail++;
+                            if (check)
+                            {
+                                device.successInHour++;
+                                totalSucc++;
+                                device.globalSuccess++;
+                                device.status = "Reg noveri";
+                                UpdateStatus(listDeviceObject);
+                            }
+                            else
+                            {
+                                device.blockCount++;
+
+                                device.status = Constant.ACCOUNT_BLOCK;
+                                UpdateStatus(listDeviceObject);
+                            }
+
+                            return;
+                        }
+                    }
+                }
+                else
+                {
+                    if (!Utility.WaitAndTapXML(deviceID, 5, Language.ConfirmByEmail()))
+                    {
+                        fail++;
+                        device.blockCount++;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        return;
+                    }
+                }
+
+
+
+                string Hotmail = "";
+                string[] TKMK;
+                Utility.Log("Tap text box email address", status);
+                Utility.WaitAndTapXML(deviceID, 3, "editText");
+
+                Hotmail = GetMail(true, order.isHotmail, 3, isServer);
+                LogStatus(device, Hotmail);
+
+                if (Hotmail == Constant.FAIL)
+                {
+                    Utility.StoreInfo(isServer, order, deviceID,
+                    password, Hotmail, "", gender, yearOld, Constant.FALSE);
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    return;
+                }
+                TKMK = Hotmail.Split('|');
+                Thread.Sleep(1300);
+                Utility.Log("Put email:" + TKMK[0], status);
+                //Device.InputText(deviceID, TKMK[0]);
+                Utility.InputVietVNIText(deviceID, TKMK[0], true);
+                //Thread.Sleep(2000);
+                Thread.Sleep(delay);
+                Utility.WaitAndTapXML(deviceID, 2, "updateemail");
+                Utility.Log("Tap button continue", status);
+                Utility.WaitAndTapXML(deviceID, 10, Language.Continue());
+
+                Thread.Sleep(1500);
+                if (Utility.CheckTextExist(deviceID, "thatemailisalready"))
+                {
+                    Utility.StoreInfo(isServer, order, deviceID,
+                    password, Hotmail, "", gender, yearOld, Constant.FALSE);
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    return;
+                }
+                Utility.Log("Check enter screen enter code - if not - return", status);
+
+                //if (!Utility.WaitXML(deviceID, 20, "Enterthecode"))
+                //{
+                //    fail++;
+                //    Utility.StoreInfo(isServer, order, deviceID,
+                //    password, Hotmail, "", gender, yearOld, Constant.FALSE);
+                //    device.blockCount++;
+                //    device.status = Constant.ACCOUNT_BLOCK;
+                //    UpdateStatus(listDeviceObject);
+                //    return;
+                //}
+
+                string code = Utility.GetMailCode(Hotmail);
+                string code1 = code;
+                Utility.Log("tap to confirm code11:" + code, status);
+                if (code == Constant.FAIL || string.IsNullOrEmpty(code))
+                {
+                    if (Hotmail.Split('|')[1] == "tempmail")
+                    {
+                        Utility.StoreInfo(isServer, order, deviceID,
+                            password, Hotmail, "", gender, yearOld, Constant.FALSE);
+
+                        noVerified++;
+                        device.noveri++;
+                        device.blockCount++;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        return;
+                    }
+                    // Resend mail
+                    Utility.Log("Get verify code fail", status);
+                    Utility.WaitAndTapXML(deviceID, 3, "sendemailagain");
+                    Thread.Sleep(5000);
+                    code = Utility.GetMailCode(Hotmail);
+                    if (code == Constant.FAIL || string.IsNullOrEmpty(code))
+                    {
+                        Utility.StoreInfo(isServer, order, deviceID,
+                            password, Hotmail, "", gender, yearOld, Constant.FALSE, Constant.CONFIRM_CODE_FAIL);
+
+                        noVerified++;
+                        device.noveri++;
+                        device.blockCount++;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        Thread.Sleep(2 * 60 * 1000);
+                        return;
+                    }
+                }
+                //code = Utility.GetMailCode(Hotmail);
+                //if (code1 != code)
+                //{
+                //    Utility.Log("error------------" + code, status);
+                //}
+                Utility.Log("tap to confirm code 222:" + code, status);
+                Device.TapByPercentDelay(deviceID, 17.1, 31.5);
+                Utility.WaitAndTapXML(deviceID, 3, "editText");
+
+                Utility.Log("Input code:" + code, status);
+                //Device.InputText(deviceID, code);
+
+                LogStatus(device, "Confirm code:" + code);
+
+
+                Utility.InputVietVNIText(deviceID, code, true);
+                //Thread.Sleep(2200);
+                Thread.Sleep(delay);
+                Utility.WaitAndTapXML(deviceID, 10, "Confirmresource");
+                Device.TapByPercentDelay(deviceID, 49.4, 39.4);
+                Thread.Sleep(2000);
+                // Check confirm code error
+                if (CheckTextExist(deviceID, "confirmation code"))
+                {
+                    // Clear old code
+                    Device.DeleteChars(device.deviceId, 7);
+                    if (Hotmail.Split('|')[1] == "tempmail")
+                    {
+                        Utility.StoreInfo(isServer, order, deviceID,
+                            password, Hotmail, "", gender, yearOld, Constant.FALSE);
+
+                        noVerified++;
+                        device.noveri++;
+                        device.blockCount++;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        return;
+                    }
+                    // Resend mail
+                    Utility.Log("Get verify code fail", status);
+                    Utility.WaitAndTapXML(deviceID, 3, "sendemailagain");
+                    Thread.Sleep(5000);
+                    code = Utility.GetMailCode(Hotmail);
+                    if (code == Constant.FAIL || string.IsNullOrEmpty(code))
+                    {
+                        Utility.StoreInfo(isServer, order, deviceID,
+                            password, Hotmail, "", gender, yearOld, Constant.FALSE, Constant.CONFIRM_CODE_FAIL);
+
+                        noVerified++;
+                        device.noveri++;
+                        device.blockCount++;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        Thread.Sleep(2 * 60 * 1000);
+                        return;
+                    }
+
+                    code = Utility.GetMailCode(Hotmail);
+                    if (code1 != code)
+                    {
+                        Utility.Log("error------------" + code, status);
+                    }
+                    Utility.Log("tap to confirm code 222:" + code, status);
+                    Utility.WaitAndTapXML(deviceID, 3, "editText");
+
+                    Utility.Log("Input code:" + code, status);
+                    //Device.InputText(deviceID, code);
+                    Device.DeleteChars(device.deviceId, 5);
+                    Utility.InputVietVNIText(deviceID, code, true);
+                    //Thread.Sleep(2200);
+                    Thread.Sleep(delay);
+                    Utility.WaitAndTapXML(deviceID, 10, "Confirmresource");
+                    Device.TapByPercentDelay(deviceID, 50.9, 39.8);
+
+                    Thread.Sleep(2000);
+                    if (Utility.CheckTextExist(deviceID, "ChooseFromGallery", 1))
+                    {
+                        goto CHOOSE_PHOTO_AVATAR;
+                    }
+                    if (CheckTextExist(deviceID, "invalid confirmation code"))
+                    {
+                        noVerified++;
+                        device.noveri++;
+                        Utility.StoreInfo(isServer, order, deviceID,
+                            password, Hotmail, "", gender, yearOld, Constant.FALSE);
+                        device.blockCount++;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        Thread.Sleep(2 * 60 * 1000);
+                        return;
+                    }
+                }
+                if (Utility.CheckTextExist(deviceID, "ChooseFromGallery", 1))
+                {
+                    goto CHOOSE_PHOTO_AVATAR;
+                }
+                if (CheckLock(deviceID))
+                {
+                    device.clearCache = false;
+                    fail++;
+                    device.blockCount++;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    if (openMessageCheckBox.Checked)
+                    {
+                        FbUtil.OpenMessengerApp(device.deviceId, fbLiteCheckbox);
+                    }
+                    return;
+                }
+                device.clearCache = true;
+                //Thread.Sleep(2000);
+
+                if (noSuggestCheckbox.Checked)
+                {
+                    Utility.StorePhoneUsed(name);
+                    regOk++;
+                    LogStatus(device, "OK");
+
+                    device.blockCount = 0;
+                    device.successInHour++;
+                    totalSucc++;
+                    device.globalSuccess++;
+                    Utility.StoreInfo(isServer, order, deviceID,
+                        password, Hotmail, "", gender, yearOld, Constant.TRUE);
+                    return;
+                }
+            //Thread.Sleep(1000);
+            CHOOSE_PHOTO_AVATAR:
+                if (order.hasAvatar && Utility.CheckTextExist(deviceID, "ChooseFromGallery", 4))
+                {
+                    device.status = "Up avatar";
+                    UpdateStatus(listDeviceObject);
+                    Device.PushAvatar(deviceID, gender, order.isVietNameseName);
+                    if (!Utility.WaitAndTapXML(deviceID, 4, "ChooseFromGallery"))
+                    {
+                        noVerified++;
+                        device.noveri++;
+                        Utility.StoreInfo(isServer, order, deviceID,
+                            password, Hotmail, "", gender, yearOld, Constant.FALSE);
+                        return;
+                    }
+
+                    Utility.WaitAndTapXML(deviceID, 3, "Allowresource");
+
+                    Thread.Sleep(2000);
+                    if (selectedDeviceName == "a30")
+                    {
+                        Device.TapByPercentDelay(deviceID, 14, 16.7);
+                    }
+                    else
+                    {
+                        Device.TapByPercentDelay(deviceID, 14.9, 18.7);
+                    }
+
+                    // Check select image ok
+                    //if (!Utility.CheckImageExist(deviceID, STICK_IMAGE_AVATAR))
+                    //{
+                    //    Console.WriteLine("");
+                    //}
+                    if (!Utility.WaitAndTapXML(deviceID, 2, Language.Done()))
+                    {
+                        Device.TapByPercentDelay(deviceID, 56.8, 19.4);
+                        if (!Utility.WaitAndTapXML(deviceID, 2, Language.Done()))
+                        {
+                            Device.TapByPercentDelay(deviceID, 82.9, 20.1);
+                            Utility.WaitAndTapXML(deviceID, 2, Language.Done());
+                        }
+                    }
+
+                    Utility.WaitAndTapXML(deviceID, 3, Language.Save());
+                    Thread.Sleep(9000);
+                }
+                else
+                {
+                    Utility.Log("Skip upload photo ", status);
+                    Utility.WaitAndTapXML(deviceID, 20, "Skipresource");
+                }
+                Thread.Sleep(3000);
+
+                string qrCode = "";
+
+                // Invite your friend
+                Utility.Log("Invite friend tap", status);
+
+                Utility.WaitAndTapXML(deviceID, 2, "add5friendsresource");
+                Utility.WaitAndTapXML(deviceID, 1, "add5friendsresource");
+                //Thread.Sleep(2000);
+                Utility.WaitAndTapXML(deviceID, 5, "InviteAll");
+
+                Utility.WaitAndTapXML(deviceID, 1, "Skipresource");
+                Utility.WaitAndTapXML(deviceID, 1, "add5friendsresource");
+                if (Utility.CheckTextExist(deviceID, "SaveYourLoginInfo"))
+                {
+                    Utility.WaitAndTapXML(deviceID, 5, "okresource");
+                    goto DENY_LOCATION_AND_STORE_DATA;
+                }
+                Utility.WaitAndTapXML(deviceID, 1, "add5friendsresource");
+                Utility.WaitAndTapXML(deviceID, 5, "YESresource");
+
+                Utility.WaitAndTapXML(deviceID, 5, "OKresource");
+
+                Utility.Log("Save login info", status);
+
+            // Done
+            DENY_LOCATION_AND_STORE_DATA:
+                regOk++;
+                device.status = "OK";
+                UpdateStatus(listDeviceObject);
+                device.blockCount = 0;
+                device.successInHour++;
+                totalSucc++;
+                device.globalSuccess++;
+                //return;
+                Thread.Sleep(3000);
+                if (Utility.CheckTextExist(deviceID, "allowfacebooktoaccessyourlocation"))
+                {
+                    // Deny access location
+                    if (selectedDeviceName == "a30")
+                    {
+                        Thread.Sleep(2000);
+                        Device.TapByPercentDelay(deviceID, 58.2, 59.9);
+                    }
+                    else
+                    {
+                        Device.TapByPercentDelay(deviceID, 58.4, 63.3);
+                    }
+                }
+                else
+                {
+                    if (selectedDeviceName == "a30")
+                    {
+                        Thread.Sleep(2000);
+                        Device.TapByPercentDelay(deviceID, 51.1, 85.6);
+                    }
+                    else
+                    {
+                        Utility.WaitAndTapXML(deviceID, 3, "deny");
+                    }
+                }
+
+                Thread.Sleep(1000);
+                if (addFriendCheckBox.Checked)
+                {
+                    FbUtil.AddFriend(deviceID);
+                    Thread.Sleep(1000);
+
+                }
+                if (profileCheckBox.Checked)
+                {
+                    Thread.Sleep(1000);
+                    FbUtil.AddProfile(deviceID);
+                    Thread.Sleep(1000);
+                }
+                if (miniProfileCheckBox.Checked)
+                {
+                    LogStatus(device, "Add mini profile");
+                    FbUtil.AddMiniProfile(deviceID);
+                }
+                if (order.has2Fa)
+                {
+                    device.status = "Set 2fa";
+                    UpdateStatus(listDeviceObject);
+                    qrCode = Set2fa(deviceID, selectedDeviceName, delay);
+                }
+                Utility.Log("Store information account facebook", status);
+
+                device.status = "Storing information";
+                UpdateStatus(listDeviceObject);
+                Utility.StorePhoneUsed(name);
+                Utility.StoreInfo(isServer, order, deviceID,
+                    password, Hotmail, qrCode, gender, yearOld, Constant.TRUE);
+                //LogoutFB(deviceID);
+
+            }
+            catch (Exception e)
+            {
+                Utility.Log(e.Message, status);
+                device.blockCount++;
+                device.status = Constant.ACCOUNT_BLOCK;
+                UpdateStatus(listDeviceObject);
+            }
+
+        }
+
+
+        public void AutocloneLD(DeviceObject device)
+        {
+            try
+            {
+                device.isFinish = false;
+                if (holdingCheckBox.Checked)
+                {
+
+                    LogStatus(device, "Đang tạm nghỉ");
+                    Thread.Sleep(10 * 1000);
+
+                    return;
+                }
+                //holdingCheckBox.Checked = true;
+                string deviceID = device.deviceId;
+
+                // Select Adb keyboard
+               // Device.SelectAdbKeyboard(deviceID);
+                device.status = "Start";
+                UpdateStatus(listDeviceObject);
+                if (device == null)
+                {
+                    return;
+                }
+
+                int delay = Convert.ToInt32(delayTextbox.Text);
+                string selectedDeviceName = "LD";
+
+
+                OrderObject order = new OrderObject();
+
+                order.code = "2fa";
+                order.has2Fa = set2faCheckbox.Checked;
+                order.hasAvatar = runAvatarCheckbox.Checked;
+                order.isHotmail = !TempMailcheckBox.Checked;
+                
+                if (maleCheckbox.Checked)
+                {
+                    order.gender = Constant.MALE;
+                }
+                else if (femaleCheckbox.Checked)
+                {
+                    order.gender = Constant.FEMALE;
+                }
+
+
+                Thread.Sleep(1000);
+
+                if (androidIDCheckBox.Checked)
+                {
+                    //FbUtil.ChangeAndroidID(deviceID);
+                    Device.RandomAndroidID(deviceID);
+                }
+
+                Thread.Sleep(2000);
+
+                FbUtil.OpenFacebookApp(device, clearFbLiteCheckBox.Checked);
+                Thread.Sleep(2000);
+
+                Utility.Log("Tap to new account button", status);
+                LogStatus(device, "Tap to new account button");
+
+
+
+                Device.TapByPercentDelay(deviceID, 51.2, 87.4, 1000);
+                Device.TapByPercentDelay(deviceID, 51.2, 90.9);
+
+                Next(deviceID);
+                Thread.Sleep(1000);
+                Utility.Log("Allow all permission", status);
+
+                // Allow all
+                Thread.Sleep(1000);
+                Utility.WaitAndTapXML(deviceID, 3, "chophã‰p");
+                Thread.Sleep(1000);
+                Utility.WaitAndTapXML(deviceID, 3, "chophã‰p");
+
+                // Random gender
+                string gender = GetGender(order);
+                Random n = new Random();
+                int yearOld = n.Next(Convert.ToInt32(yearOldFrom.Text), Convert.ToInt32(yearOldTo.Text));
+                //Thread.Sleep(2000);
+                Thread.Sleep(delay);
+                string password = Utility.GeneratePassword();
+                string name;
+                if (Utility.checkScreen(deviceID, "MobileNumber"))
+                {
+                    name = flowMobile(order, device, gender, password, yearOld, delay, selectedDeviceName);
+                }
+                else
+                {
+                    name = FlowNormal(order, device, gender, password, yearOld, delay, selectedDeviceName);
+                }
+
+                Thread.Sleep(1000);
+                Thread.Sleep(delay);
+
+                Utility.Log("Tap sign up button", status);
+                LogStatus(device, "Tap sign up button");
+
+
+                Utility.WaitAndTapXML(deviceID, 1, Language.Skipresource());
+                Utility.WaitAndTapXML(deviceID, 10, Language.SignUp());
+                bool checkNotNow = false;
+                LogStatus(device, "Tap sign up button");
+                Random ran = new Random();
+                Device.Swipe(deviceID, 300, 300, 420, 1200);
+                Thread.Sleep(ran.Next(1000, 2000));
+                Device.PushAvatar(deviceID, gender, order.language);
+
+
+                // Check screen
+                string uiXML = "";
+                for (int i = 0; i < 5; i++)
+                {
+                    uiXML = GetUIXml(deviceID);
+
+                    WaitAndTapXML(deviceID, 1, Language.Skipresource(), uiXML);
+                    WaitAndTapXML(deviceID, 10, Language.SignUp(), uiXML);
+                    if (Utility.WaitAndTapXML(deviceID, 3, Language.NotNow(), uiXML))
+                    {
+                        Utility.Log("Have popup Not Now", status);
+                        Thread.Sleep(delay);
+                        Device.EnterPress(deviceID);
+                        Device.EnterPress(deviceID);
+                        Thread.Sleep(delay);
+                        checkNotNow = true;
+                        LogStatus(device, "Reg OK 1");
+                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Constant.green1;
+                        goto ENTER_CODE_CONFIRM_EMAIL;
+                    }
+                    if (CheckLock(deviceID))
+                    {
+                        device.clearCache = false;
+                        fail++;
+                        device.blockCount++;
+                        device.isBlocking = true;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        return;
+                    }
+                    WaitAndTapXML(deviceID, 2, "texttáº£idanhbáº¡lãªnresourceidcomfacebookkatanaidnameremovedclassandroidwidgetbutton", uiXML);
+                    WaitAndTapXML(deviceID, 2, Language.UploadContactDialog(), uiXML);
+                    if (Utility.CheckTextExist(deviceID, Language.ConfirmByEmail(), 1, uiXML))
+                    {
+                        goto ENTER_CODE_CONFIRM_EMAIL;
+                    }
+
+
+                    if (Utility.CheckTextExist(deviceID, Constant.DEEMED, 1, uiXML))
+                    {
+                        device.status = Constant.DEEMED;
+                        fail++;
+                        device.blockCount++;
+                        device.isBlocking = true;
+                        device.clearCache = true;
+                        UpdateStatus(listDeviceObject);
+
+                        return;
+                    }
+                    WaitAndTapXML(deviceID, 1, "báº­tresource", uiXML);
+                    if (CheckTextExist(deviceID, "báº®tä", 1, uiXML))
+                    {
+                        device.clearCache = false;
+                        fail++;
+                        device.blockCount++;
+                        device.isBlocking = true;
+                        device.status = Constant.ACCOUNT_BLOCK;
+                        UpdateStatus(listDeviceObject);
+                        return;
+                    }
+                }
+
+ENTER_CODE_CONFIRM_EMAIL:
+                if (!checkNotNow)
+                {
+                    device.clearCache = false;
+                    fail++;
+                    device.blockCount++;
+                    device.isBlocking = true;
+                    device.status = Constant.ACCOUNT_BLOCK;
+                    UpdateStatus(listDeviceObject);
+                    return;
+                }
+                // Reg noveri
+                device.isBlocking = false;
+                device.blockCount = 0;
+                device.successInHour++;
+                device.globalSuccess++;
+                totalSucc++;
+
+                regOk++;
+                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Constant.green3;
+                LogStatus(device, "Reg noveri OK");
+                if (nvrUpAvatarCheckBox.Checked)
+                {
+                    LogStatus(device, "NVR222 -   Up Avatar profile");
+                    UploadAvatarProfile2(deviceID, gender, order, noveriCoverCheckBox.Checked, uploadContactCheckBox.Checked);
+                }
+                if (uploadContactCheckBox.Checked)
+                {
+                    if (UploadContact(device))
+                    {
+                        UploadAvatarProfile(deviceID, gender, order, noveriCoverCheckBox.Checked);
+                        Utility.storeAccWithThread(isServer, order, deviceID,
+                                password, "noveri|tempmail", "Noveri_hasFriend", gender, yearOld, Constant.FALSE);
+                        //Utility.StoreInfo(isServer, order, deviceID,
+                        //        password, "noveri|tempmail", "Noveri_hasFriend", gender, yearOld, Constant.FALSE);
+                        LogStatus(device, "Reg noveri success - has friend");
+                        return;
+                    }
+                }
+
+                Utility.StoreInfo(isServer, order, deviceID,
+                    password, "noveri|gmail", "", gender, yearOld, Constant.FALSE);
+
+                return;
+
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+         public void ScanVia(DeviceObject device)
+        {
+            string deviceID = device.deviceId;
+
+
+            Device.Unlockphone(deviceID);
+            ChangeInforDevice(device);
+            device.clearCache = true;
+            FbUtil.OpenFacebookApp(device, status, clearFbLiteCheckBox.Checked);
+            Thread.Sleep(3000);
+            if (!WaitAndTapXML(deviceID, 2, "ForgotPassword\\?"))
+            {
+                return;
+            }
+            Thread.Sleep(3000);
+            WaitAndTapXML(deviceID, 2, "AllowResource");
+            WaitAndTapXML(deviceID, 2, "AllowResource");
+            Thread.Sleep(2000);
+            // Get phone
+
+            string phone = Utility.GetPhoneOtpSim();
+            string[] ll = phone.Split('|');
+            if (ll != null && ll.Length >= 2)
+            {
+
+                InputVietVNIText(deviceID, "0" + ll[0], inputStringCheckbox.Checked);
+                Thread.Sleep(2000);
+                WaitAndTapXML(deviceID, 2, "findyouraccountcheckable");
+                Thread.Sleep(2000);
+                // Check account exist
+                if (CheckTextExist(deviceID, "NoAccounts"))
+                {
+                    Utility.CancelWaitSms(ll[1]);
+                    device.phoneReg = ll[0];
+                    Autoclone(device);
+                    return;
+                }
+                WaitAndTapXML(deviceID, 2, "Get Code");
+                Thread.Sleep(2000);
+                WaitAndTapXML(deviceID, 2, "Confirm via SMS");
+                Thread.Sleep(1000);
+                WaitAndTapXML(deviceID, 2, "Continue");
+                Thread.Sleep(2000);
+                string otp = GeCodeOtpSim(ll[1]);
+
+                InputVietVNIText(deviceID, otp, inputStringCheckbox.Checked);
+                Thread.Sleep(2000);
+                WaitAndTapXML(deviceID, 2, "Continue");
+                Thread.Sleep(4000);
+                WaitAndTapXML(deviceID, 2, "Continue");
+            }
+
+        }
+
+    }
+}
