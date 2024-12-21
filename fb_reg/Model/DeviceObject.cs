@@ -4,6 +4,7 @@ namespace fb_reg
 {
     public class DeviceObject
     {
+        public OrderObject order;
         public bool change2UsLanguage = false;
         public bool change2VnLanguage = true;
         public string ipLan;
@@ -70,7 +71,7 @@ namespace fb_reg
         public bool regByMail;
         public string keyProxy;
         
-        public Proxy proxy;
+        public Proxy proxyDevice;
         public bool isRunProxy = false;
         public int reInstallFbLite = 0;
         public int reInstallBusiness = 0;

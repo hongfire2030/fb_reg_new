@@ -6,6 +6,7 @@ using System.IO;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading;
+using static fb_reg.OutsideServer;
 using static fb_reg.ServerApi;
 
 namespace fb_reg

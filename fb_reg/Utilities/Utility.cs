@@ -27,6 +27,8 @@ using Pop3Client = OpenPop.Pop3.Pop3Client;
 using Message = OpenPop.Mime.Message;
 using System.Net.NetworkInformation;
 using EAGetMail;
+using static fb_reg.CacheServer;
+using System.Globalization;
 
 namespace fb_reg
 {
@@ -1211,20 +1213,20 @@ class Utility
         public static MailObject CheckLiveHotmailByOAuth2(MailObject mail)
         {
            // return mail;
-            mail = ServerApi.CheckHotmailByUnlimit(mail);
+            mail = OutsideServer.CheckHotmailByUnlimit(mail);
             if (mail.status != Constant.FAIL)
             {
                 return mail;
             }
 
-            mail = ServerApi.CheckHotmailByVandong(mail);
+            mail = OutsideServer.CheckHotmailByVandong(mail);
             if (mail.status != Constant.FAIL)
             {
                 return mail;
             }
 
             // Check again
-            mail = ServerApi.CheckHotmailByVandong(mail);
+            mail = OutsideServer.CheckHotmailByVandong(mail);
             if (mail.status != Constant.FAIL)
             {
                 return mail;
@@ -1417,18 +1419,19 @@ class Utility
             zuesProxy,
             zuesProxy4G,
             impulseProxy,
-            tunProxy
+            tunProxy,
+            wwProxy
         }
         public static Proxy GetProxy(string domain, string apiKey, string allowIp, string location)
         {
 
             if (domain == ProxyDomain.Softlike.ToString())
             {
-                return ServerApi.getProxyShoplike(apiKey, location);
+                return OutsideServer.getProxyShoplike(apiKey, location);
             }
             else if (domain == ProxyDomain.Tinsoft.ToString())
             {
-                return ServerApi.getProxyTinsoft(apiKey);
+                return OutsideServer.getProxyTinsoft(apiKey);
             }
             else if (domain == ProxyDomain.TinProxy.ToString())
             {
@@ -1436,19 +1439,18 @@ class Utility
                 {
                     return null;
                 }
-                return ServerApi.getProxyTinProxy(apiKey, allowIp);
+                return OutsideServer.getProxyTinProxy(apiKey, allowIp);
 
             }
             else if (domain == ProxyDomain.TmProxy.ToString())
             {
-                return ServerApi.getProxyTmProxy(apiKey);
+                return OutsideServer.getProxyTmProxy(apiKey);
             }
             else if (domain == ProxyDomain.dtProxy.ToString())
             {
-                Proxy p = ServerApi.getProxyDtProxy(apiKey, allowIp);
+                Proxy p = OutsideServer.getProxyDtProxy(apiKey, allowIp);
 
                 return p;
-
             }
             else if (domain == ProxyDomain.fastProxy.ToString())
             {
@@ -1464,6 +1466,9 @@ class Utility
                 p.pass = kk[3];
                 p.hasProxy = true;
                 return p;
+            } else if (domain == ProxyDomain.wwProxy.ToString())
+            {
+                return WwProxy.GetProxyWwProxy(apiKey);
             }
 
             return null;
@@ -1623,7 +1628,7 @@ class Utility
             else
             {
                 Random random = new Random();
-                AvatarObject cacheName = ServerApi.GetAvatarLocalCache(SERVER_LOCAL, gender, deviceID);
+                AvatarObject cacheName = CacheServer.GetAvatarLocalCache(SERVER_LOCAL, gender, deviceID);
                 string filePath = "";
                 if (!string.IsNullOrEmpty(cacheName.localPath))
                 {
@@ -2083,11 +2088,11 @@ class Utility
                 Utility.InputText(deviceID, text, false);
             }
         }
-        public static bool StoreInfo(bool isServer, OrderObject order, string deviceID, string password, string Hotmail, string qrCode,
-            string gender, int yearOld, string isVerified, string status = "checking", bool isLite = false)
+        public static bool StoreInfo(bool namServer, bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
+            string gender, int yearOld, string isVerified, string status = "checking")
         {
             //var watch = Stopwatch.StartNew();
-
+            string deviceID = device.deviceId;
             string cookies = FbUtil.GetCookieFromPhone(deviceID);
             if ((order.isReverify || order.reupFullInfoAcc) && cookies.Length < 178)
             {
@@ -2148,7 +2153,7 @@ class Utility
                     if (order.hasAvatar)
                     {
                         Device.GotoFbProfileEdit(deviceID);
-
+                        Thread.Sleep(3000);
                         if (CheckTextExist(deviceID, "nodeindex0textchỉnhsửaresourceidclassandroidwidgettextviewpackagecomfacebookkatanacontentdesccheckablefalsecheckedfalseclickablefalseenabledtruefocusablefalsefocusedfalsescrollablefalselongclickablefalsepasswordfalseselectedfalseboundsxxx1115,3", 2)) // đã có avatar rồi
                         {
                             fileName = fileName + "avatar";
@@ -2207,18 +2212,23 @@ class Utility
             {
                 Console.WriteLine(ex.Message);
             }
-
+            bool verified;
             if (isVerified == Constant.TRUE)
             {
                 fileName = fileName + "_veri";
+                verified = true;
             }
             else
             {
+                verified = false;
                 fileName = fileName + "_Noveri";
             }
 
 
-
+            if (order.checkAccHasCover)
+            {
+                status = status + "|cover";
+            }
             string data = rawData + "|" + hasAvatar + "|" + has2Fa
                 + "|" + order.language + "|" + emailType + "|" + isVerified
                 + "|" + Environment.MachineName + "|" + deviceID;
@@ -2277,21 +2287,64 @@ class Utility
                 }
                 ServerApi.DeleteAccWait2Veri(uid);
             }
+            
+
+            try
+            {
+                
+                Account acc = new Account();
+                acc.uid = uid;
+               
+                acc.data = data;
+                acc.pass = password;
+                if (hasAvatar == Constant.TRUE)
+                {
+                    acc.hasAvatar = true;
+                }
+                if (!namServer)
+                {
+                    acc.pass = "";
+                    
+                    acc.data = acc.data.Replace(password, "");
+                }
+                acc.qrCode = qrCode;
+                
+                acc.email = Hotmail.Split('|')[0];
+
+                acc.emailPass = Hotmail.Split('|')[1];
+                acc.emailType = order.currentMail.type;
+                acc.gender = gender;
+                acc.language = order.language;
+                acc.pcName = Environment.MachineName;
+                acc.verified = verified;
+
+                string fbVersion = Device.GetVersionFB(deviceID);
+                string fbLiteVersion = Device.GetVersionFBLite(deviceID);
+                string fbBusinessVersion = Device.GetVersionFBBusiness(deviceID);
+                order.versionFb = fbVersion + "|" + fbLiteVersion + "|" + fbBusinessVersion;
+                NamServer.PostData(acc, order, device);
+            } catch(Exception eee)
+            {
+
+            }
+            
+            
+            
 
             //watch.Stop();
             //long second = watch.ElapsedMilliseconds / 1000;
             //Console.WriteLine($"---------------------Store Time: {second} s");
             return true;
         }
-        public static bool storeAccWithThread(bool isServer, OrderObject order, string deviceID, string password, string Hotmail, string qrCode,
-            string gender, int yearOld, string isVerified, string status, bool isLite = false)
+        public static bool storeAccWithThread(bool namServer, bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
+            string gender, int yearOld, string isVerified, string status)
         {
             if (!order.set2FaSuccess)
             {
                 qrCode = "";
             }
-            return StoreInfo(isServer, order, deviceID, password, Hotmail, qrCode,
-                 gender, yearOld, isVerified, status, isLite);
+            return StoreInfo(namServer, isServer, order, device, password, Hotmail, qrCode,
+                 gender, yearOld, isVerified, status);
         }
 
         public static string getPublicIPThread(string deviceID)
@@ -3046,7 +3099,7 @@ class Utility
                 {
                     if (!string.IsNullOrEmpty(inMail.refreshToken))
                     {
-                        code = ServerApi.GetOtpByOAuth2(inMail);
+                        code = OutsideServer.GetOtpByOAuth2(inMail);
                     } else
                     {
 
@@ -3263,9 +3316,12 @@ class Utility
         }
         public static string GetUIXml(string deviceID)
         {
+            //string XML = Device.ExecuteCMD("adb -s " + deviceID + " shell uiautomator dump /dev/stdout");
             string XML = Device.ExecuteCMD("adb -s " + deviceID + " shell uiautomator dump /dev/stdout");
-            //Device.ExecuteCMD("adb -s " + deviceID + " shell uiautomator dump /sdcard/uidump.xml");
-            //string XML = Device.ExecuteCMD("adb -s " + deviceID + " shell cat /sdcard/uidump.xml");
+           
+            //string XML = Device.ExecuteCMD("adb -s " + deviceID + " exec-out uiautomator dump /dev/tty");
+            //Device.ExecuteCMD("adb -s " + deviceID + " shell uiautomator dump ");
+            //string XML = Device.ExecuteCMD("adb -s " + deviceID + " shell cat /sdcard/window_dump.xml");
             XML = Decode_UTF8(XML);
             XML = XML.Replace(" ", "");
             XML = XML.Replace("=", "");
@@ -3862,6 +3918,10 @@ class Utility
             {
                 time = 1;
             }
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
             for (int i = 0; i < time; i++)
             {
                 if (Utility.CheckAndTap(deviceID, text, xml))
@@ -4162,49 +4222,7 @@ class Utility
             return ipType;
         }
 
-        public static MailObject GetMailMaxclone(string type)
-        {
-            ResponseMaxcloneMail mailRes = ServerApi.GetMaxcloneMail("99286fe7bcd14317919aba8238d7d9a4a2010e4159ce45c4b790609e7b8f2b86", type, 1);
-            if (mailRes != null && mailRes.Data != null && mailRes.Data.Emails != null && mailRes.Data.Emails.Length > 0)
-            {
-                MailObject mail = new MailObject();
-                
-                mail.email = mailRes.Data.Emails[0].Email;
-                mail.password = mailRes.Data.Emails[0].Password;
-                
-                return mail;
-            } else
-            {
-                mailRes = ServerApi.GetMaxcloneMail("99286fe7bcd14317919aba8238d7d9a4a2010e4159ce45c4b790609e7b8f2b86", type, 1);
-                if (mailRes != null && mailRes.Data != null && mailRes.Data.Emails != null && mailRes.Data.Emails.Length > 0)
-                {
-                    MailObject mail = new MailObject();
-
-                    mail.email = mailRes.Data.Emails[0].Email;
-                    mail.password = mailRes.Data.Emails[0].Password;
-
-                    return mail;
-                }
-                else
-                {
-                    mailRes = ServerApi.GetMaxcloneMail("99286fe7bcd14317919aba8238d7d9a4a2010e4159ce45c4b790609e7b8f2b86", type, 1);
-                    if (mailRes != null && mailRes.Data != null && mailRes.Data.Emails != null && mailRes.Data.Emails.Length > 0)
-                    {
-                        MailObject mail = new MailObject();
-
-                        mail.email = mailRes.Data.Emails[0].Email;
-                        mail.password = mailRes.Data.Emails[0].Password;
-
-                        return mail;
-                    }
-                    else
-                    {
-                        return null;
-                    }
-                }
-            }
-        }
-
+        
         public static string GetWifiName(string deviceID)
         {
             string wifiName = "";
@@ -4267,6 +4285,36 @@ class Utility
                 }
             }
             
+        }
+
+        public static string ConvertList2String(List<String> dd)
+        {
+            string result = "";
+
+            if (dd != null)
+            {
+                if (dd.Count == 1)
+                {
+                    result = dd[0];
+                }
+                else
+                {
+                    for (int i = 0; i < dd.Count - 1; i++)
+                    {
+                        result = result + dd[i] + "|";
+                    }
+                    result = result + dd[dd.Count - 1];
+                }
+            }
+            return result;
+        }
+        static string _generateFileName(int sequence)
+        {
+            DateTime currentDateTime = DateTime.Now;
+            return string.Format("{0}-{1:000}-{2:000}.eml",
+                currentDateTime.ToString("yyyyMMddHHmmss", new CultureInfo("en-US")),
+                currentDateTime.Millisecond,
+                sequence);
         }
     }
 }

@@ -564,7 +564,7 @@ namespace fb_reg
             Thread.Sleep(500);
             Device.Home(deviceID);
         }
-        public static void ClearCacheFb(DeviceObject device, bool oldClearCache = false)
+        public static void ClearCacheFb(DeviceObject device)
         {
             string deviceID = device.deviceId;
             
@@ -572,52 +572,52 @@ namespace fb_reg
             Thread.Sleep(500);
             Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
 
-            Device.ForceStop(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
-            Thread.Sleep(300);
-            Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
+            //Device.ForceStop(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
+            //Thread.Sleep(300);
+            //Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
             //Device.ForceStop(deviceID, Constant.MESSENGER_PACKAGE);
-            Thread.Sleep(300);
-            Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
-            Thread.Sleep(300);
+            //Thread.Sleep(300);
+            //Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
+            //Thread.Sleep(300);
 
             //Device.ForceStop(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
             //Thread.Sleep(300);
-            Device.ClearCache(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
-            Thread.Sleep(300);
+            //Device.ClearCache(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
+            //Thread.Sleep(300);
 
-            Device.ClearCache(deviceID, "com.instagram.android");
+            //Device.ClearCache(deviceID, "com.instagram.android");
             
-            Device.ClearCache(deviceID, "com.android.vending");
+            //Device.ClearCache(deviceID, "com.android.vending");
 
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell pm grant com.facebook.katana android.permission.READ_CONTACTS");
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell pm grant com.facebook.katana android.permission.CALL_PHONE");
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell pm grant com.facebook.katana android.permission.READ_PHONE_STATE");
-            if (oldClearCache)
-            {
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.lite");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.orca");
+            
+            KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.katana");
+            KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.lite");
+            KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.orca");
 
 
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658361600000/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658448000000/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658534400000/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/package_cache/ed7486ac91e92ac3b5593a85da1abf446cc40561");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658361600000/com.facebook.katana");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658448000000/com.facebook.katana");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658534400000/com.facebook.katana");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/package_cache");
 
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /Android/media/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /Android/media/com.facebook.lite");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /Android/media/com.facebook.orca");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /Android/media/com.facebook.katana");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /Android/media/com.facebook.lite");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /Android/media/com.facebook.orca");
 
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/data/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/data/com.facebook.lite");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/data/com.facebook.orca");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/data/com.facebook.katana");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/data/com.facebook.lite");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/data/com.facebook.orca");
 
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.katana");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.lite");
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.orca");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.katana");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.lite");
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.orca");
 
-                KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -rf /data/system_ce/0/launch_params/com.facebook.katana_.activity.FbMainTabActivity.xm");
-            }
+            //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -rf /data/system_ce/0/launch_params/com.facebook.katana_.activity.FbMainTabActivity.xm");
+            
 
 
         }
@@ -818,6 +818,7 @@ namespace fb_reg
             string uixml;
             Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
             Thread.Sleep(10000);
+            WaitAndTapXML(deviceID, 1, "cho phép re");
             if (!moiKatana)
             {
                
@@ -838,6 +839,15 @@ namespace fb_reg
                     if (CheckTextExist(deviceID, "createnewAccountCheckable", 1, uixml))
                     {
                         break;
+                    }
+                    if (CheckTextExist(deviceID, new string[] { "tạotin", "chưaxem", "làmbạn", "lúc khác" }))
+                    {
+                        Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
+                        Thread.Sleep(2000);
+                        if (CheckTextExist(deviceID, new string[] {"tiếp", "next" }))
+                        {
+                            return true;
+                        }
                     }
                 }
                 if (CheckTextExist(deviceID, "trangnàyhiệnkhônghiểnthị", 1))
@@ -881,11 +891,20 @@ namespace fb_reg
                     {
                         return true;
                     }
+                    if (CheckTextExist(deviceID, new string[] { "tạotin", "chưaxem", "làmbạn", "lúc khác" }))
+                    {
+                        Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
+                        Thread.Sleep(2000);
+                        if (CheckTextExist(deviceID, new string[] { "tiếp", "next" }))
+                        {
+                            return true;
+                        }
+                    }
                 }
-                for (int k = 0; k < 10; k++)
+                for (int k = 0; k < 20; k++)
                 {
                     uixml = GetUIXml(deviceID);
-                    if (WaitAndTapXML(deviceID, new string[] { "tiếp", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable", "getstarted" }, uixml))
+                    if (WaitAndTapXML(deviceID, new string[] { "get started", "tiếp", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable", "getstarted" }, uixml))
                     {
                         return true;
                     }
@@ -893,6 +912,15 @@ namespace fb_reg
                     if (CheckTextExist(deviceID, new string[] { "refresh", "làm mới", "trangnàyhiệnkhônghiểnthịr" }, uixml))
                     {
                         return false;
+                    }
+                    if (CheckTextExist(deviceID, new string[] { "tạotin", "chưaxem", "làmbạn", "lúc khác" }))
+                    {
+                        Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
+                        Thread.Sleep(2000);
+                        if (CheckTextExist(deviceID, new string[] { "tiếp", "next" }))
+                        {
+                            return true;
+                        }
                     }
                 }
             }
@@ -917,11 +945,19 @@ namespace fb_reg
                     break;
                 }
 
-                else if (WaitAndTapXML(deviceID, new string[] { "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable" }))
+                else if (WaitAndTapXML(deviceID, new string[] {"get started", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable" }))
                 {
                     return true;
                 }
-                
+                if (CheckTextExist(deviceID, new string[] { "tạotin", "chưaxem", "làmbạn" }))
+                {
+                    Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
+                    Thread.Sleep(2000);
+                    if (CheckTextExist(deviceID, new string[] { "tiếp", "next" }))
+                    {
+                        return true;
+                    }
+                }
             }
 
             if (WaitAndTapXML(deviceID, new string[] { "descthayđổicàiđặtcheckable", "textthayđổicàiđặtresourceid" }))
@@ -1494,9 +1530,8 @@ namespace fb_reg
             }
         }
 
-        public static string SetProxy(DeviceObject device, bool isLdplayer)
+        public static string SetProxy(OrderObject order, DeviceObject device, bool isLdplayer)
         {
-
             string deviceID = device.deviceId;
             Device.ClearCache(deviceID, "org.proxydroid");
             Thread.Sleep(500);
@@ -1514,7 +1549,7 @@ namespace fb_reg
 
             KAutoHelper.ADBHelper.TapByPercent(deviceID, 47.8, 51.1); // tap to text
             //Device.DeleteChars(deviceID, 16);
-            Device.InputText(deviceID, device.proxy.host);
+            Device.InputText(deviceID, order.proxy.host);
 
             Thread.Sleep(500);
             Utility.WaitAndTapXML(deviceID, 2, "Okresource");
@@ -1534,7 +1569,7 @@ namespace fb_reg
                 KAutoHelper.ADBHelper.TapByPercent(deviceID, 47.8, 51.1); // tap to text
             }
             Device.DeleteChars(deviceID, 7);
-            Device.InputText(deviceID, device.proxy.port);
+            Device.InputText(deviceID, order.proxy.port);
 
             Thread.Sleep(500);
             Utility.WaitAndTapXML(deviceID, 2, "Okresource");

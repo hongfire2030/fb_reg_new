@@ -8,7 +8,13 @@ namespace fb_reg
 {
     public class OrderObject
     {
-
+        public string source; // binh duong/ q7
+        public string versionFb;
+        public string phoneReg;
+        public string phoneRegType;
+        public string proxyDomain = "";
+        public string pcName;
+        public Proxy proxy;
         public bool upContactNew = false;
         public bool upCoverNew = false;
         public bool usDeviceLanguage = false;
@@ -17,6 +23,7 @@ namespace fb_reg
         public bool proxyWfi = false;
         public string oldType = "";
         public bool proxyFromServer = false;
+        public bool proxyFromLocal = false;
         public string regPhone = "";
         public bool changePhoneNumber = false;
         public bool forceAvatarUs = false;
@@ -54,6 +61,7 @@ namespace fb_reg
         public bool isRun = false;
         public bool isVeriOk = false;
         public bool hasOtp = false;
+        public string otp = "";
         public bool nvrUpAvatar;
         public string qrCode;
         public bool isReverify;
@@ -87,9 +95,6 @@ namespace fb_reg
 
         public bool isEnglish;
         public string language;
-
-        public string pcName;
-        
 
         public bool verified;
 

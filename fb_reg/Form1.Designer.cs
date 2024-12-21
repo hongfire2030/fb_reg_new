@@ -222,6 +222,9 @@ namespace fb_reg
             this.drkDomainTextbox = new System.Windows.Forms.TextBox();
             this.nvrByDeviceCheckBox = new System.Windows.Forms.CheckBox();
             this.startButtonGroupBox = new System.Windows.Forms.GroupBox();
+            this.namServercheckBox = new System.Windows.Forms.CheckBox();
+            this.InitialPhonecheckBox = new System.Windows.Forms.CheckBox();
+            this.proxyKeycheckBox = new System.Windows.Forms.CheckBox();
             this.runBoxLancheckBox = new System.Windows.Forms.CheckBox();
             this.ipRangeLantextBox = new System.Windows.Forms.TextBox();
             this.UsLanguagecheckBox = new System.Windows.Forms.CheckBox();
@@ -230,10 +233,8 @@ namespace fb_reg
             this.proxyWificheckBox = new System.Windows.Forms.CheckBox();
             this.chayuploadContactcheckBox = new System.Windows.Forms.CheckBox();
             this.proxyCMDcheckBox = new System.Windows.Forms.CheckBox();
-            this.needEditProxycheckBox = new System.Windows.Forms.CheckBox();
             this.findPhonecheckBox = new System.Windows.Forms.CheckBox();
             this.changePhoneNumbercheckBox = new System.Windows.Forms.CheckBox();
-            this.oldClearCachecheckBox = new System.Windows.Forms.CheckBox();
             this.otpVandongcheckBox = new System.Windows.Forms.CheckBox();
             this.getTrustMailcheckBox = new System.Windows.Forms.CheckBox();
             this.fastcheckBox = new System.Windows.Forms.CheckBox();
@@ -368,8 +369,9 @@ namespace fb_reg
             this.dauso12CheckBox = new System.Windows.Forms.CheckBox();
             this.dauso12TextBox = new System.Windows.Forms.TextBox();
             this.proxyGroupBox = new System.Windows.Forms.GroupBox();
+            this.proxyFromLocalcheckBox = new System.Windows.Forms.CheckBox();
+            this.wwProxyradioButton = new System.Windows.Forms.RadioButton();
             this.tunProxyradioButton = new System.Windows.Forms.RadioButton();
-            this.checkBox1 = new System.Windows.Forms.CheckBox();
             this.s5ProxyradioButton = new System.Windows.Forms.RadioButton();
             this.zuesProxy4G = new System.Windows.Forms.RadioButton();
             this.impulseradioButton = new System.Windows.Forms.RadioButton();
@@ -397,7 +399,6 @@ namespace fb_reg
             this.label21 = new System.Windows.Forms.Label();
             this.numberClearAccSettingTextBox = new System.Windows.Forms.TextBox();
             this.dausoCheckBox = new System.Windows.Forms.CheckBox();
-            this.reImportContactButton = new System.Windows.Forms.Button();
             this.label13 = new System.Windows.Forms.Label();
             this.reinstallFbCountTextBox = new System.Windows.Forms.TextBox();
             this.reinstallFbCheckBox = new System.Windows.Forms.CheckBox();
@@ -1031,10 +1032,10 @@ namespace fb_reg
             // 
             // mailTextbox
             // 
-            this.mailTextbox.Location = new System.Drawing.Point(442, 471);
+            this.mailTextbox.Location = new System.Drawing.Point(411, 471);
             this.mailTextbox.Margin = new System.Windows.Forms.Padding(2);
             this.mailTextbox.Name = "mailTextbox";
-            this.mailTextbox.Size = new System.Drawing.Size(281, 20);
+            this.mailTextbox.Size = new System.Drawing.Size(220, 20);
             this.mailTextbox.TabIndex = 54;
             // 
             // getCodeButton
@@ -1088,7 +1089,7 @@ namespace fb_reg
             this.totalLabel.AutoSize = true;
             this.totalLabel.Font = new System.Drawing.Font("MS Gothic", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.totalLabel.ForeColor = System.Drawing.Color.Red;
-            this.totalLabel.Location = new System.Drawing.Point(1473, 293);
+            this.totalLabel.Location = new System.Drawing.Point(143, 48);
             this.totalLabel.Margin = new System.Windows.Forms.Padding(2, 0, 2, 0);
             this.totalLabel.Name = "totalLabel";
             this.totalLabel.Size = new System.Drawing.Size(34, 24);
@@ -1279,7 +1280,7 @@ namespace fb_reg
             this.maxAccBlockRuntextBox.Name = "maxAccBlockRuntextBox";
             this.maxAccBlockRuntextBox.Size = new System.Drawing.Size(111, 20);
             this.maxAccBlockRuntextBox.TabIndex = 82;
-            this.maxAccBlockRuntextBox.Text = "4";
+            this.maxAccBlockRuntextBox.Text = "6";
             // 
             // timebreakDeadLocktextBox
             // 
@@ -1935,7 +1936,7 @@ namespace fb_reg
             this.shoplikeTextBox1.Location = new System.Drawing.Point(18, 41);
             this.shoplikeTextBox1.Multiline = true;
             this.shoplikeTextBox1.Name = "shoplikeTextBox1";
-            this.shoplikeTextBox1.Size = new System.Drawing.Size(263, 70);
+            this.shoplikeTextBox1.Size = new System.Drawing.Size(263, 43);
             this.shoplikeTextBox1.TabIndex = 156;
             this.shoplikeTextBox1.TextChanged += new System.EventHandler(this.shoplikeTextBox1_TextChanged);
             // 
@@ -2248,7 +2249,7 @@ namespace fb_reg
             // 
             // executeAdbButton
             // 
-            this.executeAdbButton.Location = new System.Drawing.Point(608, 650);
+            this.executeAdbButton.Location = new System.Drawing.Point(638, 468);
             this.executeAdbButton.Name = "executeAdbButton";
             this.executeAdbButton.Size = new System.Drawing.Size(93, 26);
             this.executeAdbButton.TabIndex = 183;
@@ -2498,6 +2499,9 @@ namespace fb_reg
             // 
             // startButtonGroupBox
             // 
+            this.startButtonGroupBox.Controls.Add(this.namServercheckBox);
+            this.startButtonGroupBox.Controls.Add(this.InitialPhonecheckBox);
+            this.startButtonGroupBox.Controls.Add(this.proxyKeycheckBox);
             this.startButtonGroupBox.Controls.Add(this.runBoxLancheckBox);
             this.startButtonGroupBox.Controls.Add(this.ipRangeLantextBox);
             this.startButtonGroupBox.Controls.Add(this.UsLanguagecheckBox);
@@ -2506,10 +2510,8 @@ namespace fb_reg
             this.startButtonGroupBox.Controls.Add(this.proxyWificheckBox);
             this.startButtonGroupBox.Controls.Add(this.chayuploadContactcheckBox);
             this.startButtonGroupBox.Controls.Add(this.proxyCMDcheckBox);
-            this.startButtonGroupBox.Controls.Add(this.needEditProxycheckBox);
             this.startButtonGroupBox.Controls.Add(this.findPhonecheckBox);
             this.startButtonGroupBox.Controls.Add(this.changePhoneNumbercheckBox);
-            this.startButtonGroupBox.Controls.Add(this.oldClearCachecheckBox);
             this.startButtonGroupBox.Controls.Add(this.otpVandongcheckBox);
             this.startButtonGroupBox.Controls.Add(this.getTrustMailcheckBox);
             this.startButtonGroupBox.Controls.Add(this.fastcheckBox);
@@ -2560,6 +2562,7 @@ namespace fb_reg
             this.startButtonGroupBox.Controls.Add(this.label15);
             this.startButtonGroupBox.Controls.Add(this.delayAfterDieTextBox);
             this.startButtonGroupBox.Controls.Add(this.label14);
+            this.startButtonGroupBox.Controls.Add(this.totalLabel);
             this.startButtonGroupBox.Controls.Add(this.maxFailClearTextBox);
             this.startButtonGroupBox.Controls.Add(this.veriByProxyCheckBox);
             this.startButtonGroupBox.Controls.Add(this.releaseNoteLabel);
@@ -2586,6 +2589,38 @@ namespace fb_reg
             this.startButtonGroupBox.TabIndex = 219;
             this.startButtonGroupBox.TabStop = false;
             this.startButtonGroupBox.Text = "Start Button";
+            // 
+            // namServercheckBox
+            // 
+            this.namServercheckBox.AutoSize = true;
+            this.namServercheckBox.Location = new System.Drawing.Point(1240, 231);
+            this.namServercheckBox.Name = "namServercheckBox";
+            this.namServercheckBox.Size = new System.Drawing.Size(79, 17);
+            this.namServercheckBox.TabIndex = 313;
+            this.namServercheckBox.Text = "NamServer";
+            this.namServercheckBox.UseVisualStyleBackColor = true;
+            // 
+            // InitialPhonecheckBox
+            // 
+            this.InitialPhonecheckBox.AutoSize = true;
+            this.InitialPhonecheckBox.Location = new System.Drawing.Point(625, 56);
+            this.InitialPhonecheckBox.Name = "InitialPhonecheckBox";
+            this.InitialPhonecheckBox.Size = new System.Drawing.Size(98, 17);
+            this.InitialPhonecheckBox.TabIndex = 312;
+            this.InitialPhonecheckBox.Text = "Khởi tạo phone";
+            this.InitialPhonecheckBox.UseVisualStyleBackColor = true;
+            // 
+            // proxyKeycheckBox
+            // 
+            this.proxyKeycheckBox.AutoSize = true;
+            this.proxyKeycheckBox.Checked = true;
+            this.proxyKeycheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.proxyKeycheckBox.Location = new System.Drawing.Point(241, 196);
+            this.proxyKeycheckBox.Name = "proxyKeycheckBox";
+            this.proxyKeycheckBox.Size = new System.Drawing.Size(44, 17);
+            this.proxyKeycheckBox.TabIndex = 312;
+            this.proxyKeycheckBox.Text = "Key";
+            this.proxyKeycheckBox.UseVisualStyleBackColor = true;
             // 
             // runBoxLancheckBox
             // 
@@ -2667,18 +2702,6 @@ namespace fb_reg
             this.proxyCMDcheckBox.Text = "ProxyCMD";
             this.proxyCMDcheckBox.UseVisualStyleBackColor = true;
             // 
-            // needEditProxycheckBox
-            // 
-            this.needEditProxycheckBox.AutoSize = true;
-            this.needEditProxycheckBox.Checked = true;
-            this.needEditProxycheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.needEditProxycheckBox.Location = new System.Drawing.Point(158, 236);
-            this.needEditProxycheckBox.Name = "needEditProxycheckBox";
-            this.needEditProxycheckBox.Size = new System.Drawing.Size(72, 17);
-            this.needEditProxycheckBox.TabIndex = 303;
-            this.needEditProxycheckBox.Text = "Edit proxy";
-            this.needEditProxycheckBox.UseVisualStyleBackColor = true;
-            // 
             // findPhonecheckBox
             // 
             this.findPhonecheckBox.AutoSize = true;
@@ -2698,18 +2721,6 @@ namespace fb_reg
             this.changePhoneNumbercheckBox.TabIndex = 301;
             this.changePhoneNumbercheckBox.Text = "Đổi số điện thoại";
             this.changePhoneNumbercheckBox.UseVisualStyleBackColor = true;
-            // 
-            // oldClearCachecheckBox
-            // 
-            this.oldClearCachecheckBox.AutoSize = true;
-            this.oldClearCachecheckBox.Checked = true;
-            this.oldClearCachecheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.oldClearCachecheckBox.Location = new System.Drawing.Point(1080, 161);
-            this.oldClearCachecheckBox.Name = "oldClearCachecheckBox";
-            this.oldClearCachecheckBox.Size = new System.Drawing.Size(101, 17);
-            this.oldClearCachecheckBox.TabIndex = 300;
-            this.oldClearCachecheckBox.Text = "Old clear cache";
-            this.oldClearCachecheckBox.UseVisualStyleBackColor = true;
             // 
             // otpVandongcheckBox
             // 
@@ -2918,6 +2929,8 @@ namespace fb_reg
             // showIpcheckBox
             // 
             this.showIpcheckBox.AutoSize = true;
+            this.showIpcheckBox.Checked = true;
+            this.showIpcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.showIpcheckBox.Location = new System.Drawing.Point(280, 196);
             this.showIpcheckBox.Name = "showIpcheckBox";
             this.showIpcheckBox.Size = new System.Drawing.Size(66, 17);
@@ -3538,7 +3551,7 @@ namespace fb_reg
             this.releaseNoteLabel.Name = "releaseNoteLabel";
             this.releaseNoteLabel.Size = new System.Drawing.Size(112, 46);
             this.releaseNoteLabel.TabIndex = 226;
-            this.releaseNoteLabel.Text = "1813";
+            this.releaseNoteLabel.Text = "1843";
             this.releaseNoteLabel.Click += new System.EventHandler(this.releaseNoteLabel_Click);
             // 
             // forceDungMayCheckBox
@@ -4147,8 +4160,9 @@ namespace fb_reg
             // 
             // proxyGroupBox
             // 
+            this.proxyGroupBox.Controls.Add(this.proxyFromLocalcheckBox);
+            this.proxyGroupBox.Controls.Add(this.wwProxyradioButton);
             this.proxyGroupBox.Controls.Add(this.tunProxyradioButton);
-            this.proxyGroupBox.Controls.Add(this.checkBox1);
             this.proxyGroupBox.Controls.Add(this.s5ProxyradioButton);
             this.proxyGroupBox.Controls.Add(this.zuesProxy4G);
             this.proxyGroupBox.Controls.Add(this.impulseradioButton);
@@ -4175,6 +4189,29 @@ namespace fb_reg
             this.proxyGroupBox.TabStop = false;
             this.proxyGroupBox.Text = "Proxy";
             // 
+            // proxyFromLocalcheckBox
+            // 
+            this.proxyFromLocalcheckBox.AutoSize = true;
+            this.proxyFromLocalcheckBox.Location = new System.Drawing.Point(124, 173);
+            this.proxyFromLocalcheckBox.Name = "proxyFromLocalcheckBox";
+            this.proxyFromLocalcheckBox.Size = new System.Drawing.Size(100, 17);
+            this.proxyFromLocalcheckBox.TabIndex = 176;
+            this.proxyFromLocalcheckBox.Text = "Proxy from local";
+            this.proxyFromLocalcheckBox.UseVisualStyleBackColor = true;
+            this.proxyFromLocalcheckBox.CheckedChanged += new System.EventHandler(this.proxyFromLocalcheckBox_CheckedChanged);
+            // 
+            // wwProxyradioButton
+            // 
+            this.wwProxyradioButton.AutoSize = true;
+            this.wwProxyradioButton.Checked = true;
+            this.wwProxyradioButton.Location = new System.Drawing.Point(20, 184);
+            this.wwProxyradioButton.Name = "wwProxyradioButton";
+            this.wwProxyradioButton.Size = new System.Drawing.Size(72, 17);
+            this.wwProxyradioButton.TabIndex = 175;
+            this.wwProxyradioButton.TabStop = true;
+            this.wwProxyradioButton.Text = "WWproxy";
+            this.wwProxyradioButton.UseVisualStyleBackColor = true;
+            // 
             // tunProxyradioButton
             // 
             this.tunProxyradioButton.AutoSize = true;
@@ -4182,19 +4219,8 @@ namespace fb_reg
             this.tunProxyradioButton.Name = "tunProxyradioButton";
             this.tunProxyradioButton.Size = new System.Drawing.Size(70, 17);
             this.tunProxyradioButton.TabIndex = 174;
-            this.tunProxyradioButton.TabStop = true;
             this.tunProxyradioButton.Text = "TunProxy";
             this.tunProxyradioButton.UseVisualStyleBackColor = true;
-            // 
-            // checkBox1
-            // 
-            this.checkBox1.AutoSize = true;
-            this.checkBox1.Location = new System.Drawing.Point(3, 22);
-            this.checkBox1.Name = "checkBox1";
-            this.checkBox1.Size = new System.Drawing.Size(80, 17);
-            this.checkBox1.TabIndex = 173;
-            this.checkBox1.Text = "checkBox1";
-            this.checkBox1.UseVisualStyleBackColor = true;
             // 
             // s5ProxyradioButton
             // 
@@ -4203,7 +4229,6 @@ namespace fb_reg
             this.s5ProxyradioButton.Name = "s5ProxyradioButton";
             this.s5ProxyradioButton.Size = new System.Drawing.Size(64, 17);
             this.s5ProxyradioButton.TabIndex = 172;
-            this.s5ProxyradioButton.TabStop = true;
             this.s5ProxyradioButton.Text = "S5Proxy";
             this.s5ProxyradioButton.UseVisualStyleBackColor = true;
             this.s5ProxyradioButton.CheckedChanged += new System.EventHandler(this.s5ProxyradioButton_CheckedChanged);
@@ -4215,7 +4240,6 @@ namespace fb_reg
             this.zuesProxy4G.Name = "zuesProxy4G";
             this.zuesProxy4G.Size = new System.Drawing.Size(89, 17);
             this.zuesProxy4G.TabIndex = 171;
-            this.zuesProxy4G.TabStop = true;
             this.zuesProxy4G.Text = "ZeusProxy4G";
             this.zuesProxy4G.UseVisualStyleBackColor = true;
             // 
@@ -4226,7 +4250,6 @@ namespace fb_reg
             this.impulseradioButton.Name = "impulseradioButton";
             this.impulseradioButton.Size = new System.Drawing.Size(61, 17);
             this.impulseradioButton.TabIndex = 170;
-            this.impulseradioButton.TabStop = true;
             this.impulseradioButton.Text = "Impulse";
             this.impulseradioButton.UseVisualStyleBackColor = true;
             this.impulseradioButton.CheckedChanged += new System.EventHandler(this.impulseradioButton_CheckedChanged);
@@ -4238,7 +4261,6 @@ namespace fb_reg
             this.zuesProxyradioButton.Name = "zuesProxyradioButton";
             this.zuesProxyradioButton.Size = new System.Drawing.Size(110, 17);
             this.zuesProxyradioButton.TabIndex = 169;
-            this.zuesProxyradioButton.TabStop = true;
             this.zuesProxyradioButton.Text = "ZuesProxyByPass";
             this.zuesProxyradioButton.UseVisualStyleBackColor = true;
             this.zuesProxyradioButton.CheckedChanged += new System.EventHandler(this.radioButton1_CheckedChanged);
@@ -4259,7 +4281,6 @@ namespace fb_reg
             this.fastProxyRadioButton.Name = "fastProxyRadioButton";
             this.fastProxyRadioButton.Size = new System.Drawing.Size(70, 17);
             this.fastProxyRadioButton.TabIndex = 167;
-            this.fastProxyRadioButton.TabStop = true;
             this.fastProxyRadioButton.Text = "Fastproxy";
             this.fastProxyRadioButton.UseVisualStyleBackColor = true;
             this.fastProxyRadioButton.CheckedChanged += new System.EventHandler(this.fastProxyRadioButton_CheckedChanged);
@@ -4280,7 +4301,6 @@ namespace fb_reg
             this.dtProxyRadioButton.Name = "dtProxyRadioButton";
             this.dtProxyRadioButton.Size = new System.Drawing.Size(64, 17);
             this.dtProxyRadioButton.TabIndex = 165;
-            this.dtProxyRadioButton.TabStop = true;
             this.dtProxyRadioButton.Text = "Dt proxy";
             this.dtProxyRadioButton.UseVisualStyleBackColor = true;
             this.dtProxyRadioButton.CheckedChanged += new System.EventHandler(this.dtProxyRadioButton_CheckedChanged);
@@ -4301,7 +4321,6 @@ namespace fb_reg
             this.tmProxyRadioButton.Name = "tmProxyRadioButton";
             this.tmProxyRadioButton.Size = new System.Drawing.Size(65, 17);
             this.tmProxyRadioButton.TabIndex = 163;
-            this.tmProxyRadioButton.TabStop = true;
             this.tmProxyRadioButton.Text = "Tmproxy";
             this.tmProxyRadioButton.UseVisualStyleBackColor = true;
             // 
@@ -4346,22 +4365,20 @@ namespace fb_reg
             // 
             // tinsoftTextBox
             // 
-            this.tinsoftTextBox.Location = new System.Drawing.Point(19, 135);
+            this.tinsoftTextBox.Location = new System.Drawing.Point(19, 109);
             this.tinsoftTextBox.Multiline = true;
             this.tinsoftTextBox.Name = "tinsoftTextBox";
-            this.tinsoftTextBox.Size = new System.Drawing.Size(261, 73);
+            this.tinsoftTextBox.Size = new System.Drawing.Size(261, 53);
             this.tinsoftTextBox.TabIndex = 158;
             this.tinsoftTextBox.TextChanged += new System.EventHandler(this.tinsoftTextBox_TextChanged);
             // 
             // tinsoftRadioButton
             // 
             this.tinsoftRadioButton.AutoSize = true;
-            this.tinsoftRadioButton.Checked = true;
-            this.tinsoftRadioButton.Location = new System.Drawing.Point(19, 104);
+            this.tinsoftRadioButton.Location = new System.Drawing.Point(19, 81);
             this.tinsoftRadioButton.Name = "tinsoftRadioButton";
             this.tinsoftRadioButton.Size = new System.Drawing.Size(57, 17);
             this.tinsoftRadioButton.TabIndex = 1;
-            this.tinsoftRadioButton.TabStop = true;
             this.tinsoftRadioButton.Text = "Tinsoft";
             this.tinsoftRadioButton.UseVisualStyleBackColor = true;
             this.tinsoftRadioButton.CheckedChanged += new System.EventHandler(this.tinsoftRadioButton_CheckedChanged);
@@ -4387,7 +4404,6 @@ namespace fb_reg
             this.controlGroupBox.Controls.Add(this.label21);
             this.controlGroupBox.Controls.Add(this.numberClearAccSettingTextBox);
             this.controlGroupBox.Controls.Add(this.dausoCheckBox);
-            this.controlGroupBox.Controls.Add(this.reImportContactButton);
             this.controlGroupBox.Controls.Add(this.label13);
             this.controlGroupBox.Controls.Add(this.reinstallFbCountTextBox);
             this.controlGroupBox.Controls.Add(this.reinstallFbCheckBox);
@@ -4603,17 +4619,6 @@ namespace fb_reg
             this.dausoCheckBox.Text = "Đầu số";
             this.dausoCheckBox.UseVisualStyleBackColor = true;
             // 
-            // reImportContactButton
-            // 
-            this.reImportContactButton.ForeColor = System.Drawing.Color.Red;
-            this.reImportContactButton.Location = new System.Drawing.Point(10, 772);
-            this.reImportContactButton.Name = "reImportContactButton";
-            this.reImportContactButton.Size = new System.Drawing.Size(106, 48);
-            this.reImportContactButton.TabIndex = 227;
-            this.reImportContactButton.Text = "Re Import Contact";
-            this.reImportContactButton.UseVisualStyleBackColor = true;
-            this.reImportContactButton.Click += new System.EventHandler(this.reImportContactButton_Click);
-            // 
             // label13
             // 
             this.label13.AutoSize = true;
@@ -4629,7 +4634,7 @@ namespace fb_reg
             this.reinstallFbCountTextBox.Name = "reinstallFbCountTextBox";
             this.reinstallFbCountTextBox.Size = new System.Drawing.Size(46, 20);
             this.reinstallFbCountTextBox.TabIndex = 218;
-            this.reinstallFbCountTextBox.Text = "10";
+            this.reinstallFbCountTextBox.Text = "6";
             // 
             // reinstallFbCheckBox
             // 
@@ -5488,7 +5493,6 @@ namespace fb_reg
             this.Controls.Add(this.clearAccSettingcheckBox);
             this.Controls.Add(this.accMoilabel);
             this.Controls.Add(this.removeAccFblitecheckBox);
-            this.Controls.Add(this.totalLabel);
             this.Controls.Add(this.reupRegCheckBox);
             this.Controls.Add(this.moiFbLitecheckBox);
             this.Controls.Add(this.openfblitecheckBox);
@@ -5766,7 +5770,6 @@ namespace fb_reg
         private System.Windows.Forms.TextBox delayTimeTextBox;
         private System.Windows.Forms.TextBox dauso12TextBox;
         private System.Windows.Forms.CheckBox dauso12CheckBox;
-        private System.Windows.Forms.Button reImportContactButton;
         private System.Windows.Forms.Button clearContactButton;
         private System.Windows.Forms.CheckBox veriByProxyCheckBox;
         private System.Windows.Forms.TextBox maxFailClearTextBox;
@@ -5957,7 +5960,6 @@ namespace fb_reg
         private System.Windows.Forms.CheckBox name3wordcheckBox;
         private System.Windows.Forms.RadioButton s5ProxyradioButton;
         private System.Windows.Forms.CheckBox proxy4GcheckBox;
-        private System.Windows.Forms.CheckBox checkBox1;
         private System.Windows.Forms.Button waitAndTapbutton;
         private System.Windows.Forms.TextBox testTaptextBox;
         private System.Windows.Forms.TextBox xmltextBox;
@@ -5997,11 +5999,9 @@ namespace fb_reg
         private System.Windows.Forms.RadioButton oneSecradioButton;
         private System.Windows.Forms.CheckBox getTrustMailcheckBox;
         private System.Windows.Forms.CheckBox otpVandongcheckBox;
-        private System.Windows.Forms.CheckBox oldClearCachecheckBox;
         private System.Windows.Forms.RadioButton tunProxyradioButton;
         private System.Windows.Forms.CheckBox changePhoneNumbercheckBox;
         private System.Windows.Forms.CheckBox findPhonecheckBox;
-        private System.Windows.Forms.CheckBox needEditProxycheckBox;
         private System.Windows.Forms.CheckBox randomVersionAfterverifailcheckBox;
         private System.Windows.Forms.CheckBox proxyCMDcheckBox;
         private System.Windows.Forms.CheckBox chayuploadContactcheckBox;
@@ -6017,6 +6017,11 @@ namespace fb_reg
         private System.Windows.Forms.CheckBox runBoxLancheckBox;
         private System.Windows.Forms.CheckBox coverNewcheckBox;
         private System.Windows.Forms.CheckBox uploadContactNewCheckbox;
+        private System.Windows.Forms.RadioButton wwProxyradioButton;
+        private System.Windows.Forms.CheckBox proxyFromLocalcheckBox;
+        private System.Windows.Forms.CheckBox proxyKeycheckBox;
+        private System.Windows.Forms.CheckBox InitialPhonecheckBox;
+        private System.Windows.Forms.CheckBox namServercheckBox;
     }
 }
 

@@ -8,6 +8,7 @@ namespace fb_reg
 {
     public class Proxy
     {
+        public string proxyType = "";
         public string proxyId;
         public bool hasProxy = false;
         public string proxyDomain;
@@ -18,9 +19,15 @@ namespace fb_reg
         public int timeout;
         public bool isWait;
         public string message;
+        public string key;
         public string toString()
         {
-            return host + ":" + port;
+            return host 
+                + "|" + port 
+                + "|" + username 
+                + "|" + pass
+                + "|" + key
+                + "|" + proxyDomain;
         }
     }
 }

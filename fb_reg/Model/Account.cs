@@ -8,6 +8,7 @@ namespace fb_reg
 {
     public class Account
     {
+        public string emailType;
         public string deviceID;
         public string cookie;
         public string status;
@@ -17,6 +18,8 @@ namespace fb_reg
         public string language;
         public string message;
         public string token;
+        public string birthday;
+        public bool verified;
         public string note { get; set; }
         
         public string uid { get; set; }

@@ -73,6 +73,14 @@ namespace fb_reg
             Console.WriteLine("ddd:" + ddd);
         }
 
+        public static void PushFileRootPhone(string deviceID)
+        {
+            string cmd = "";
+            cmd = string.Format(CONSOLE_ADB + " rm -rf /sdcard/Download/* ", deviceID);
+            string ddd = ExecuteCMD(cmd);
+            cmd = string.Format(CONSOLE_ADB + " push \"root_rom\\initial\\root\" /sdcard/Download ", deviceID);
+            ddd = ExecuteCMD(cmd);
+        }
 
         public static string GetSerialNo(string deviceID)
         {
@@ -411,8 +419,8 @@ namespace fb_reg
                 temp = temp.Substring(250);
             }
             temp = temp.Replace(" ", "").Replace("\\r", "").Replace("\\n", "");
-            return temp;
-            //return Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "region_name\":\"(.*?)\"").Groups[1].ToString();
+            //return temp;
+            return Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "name\":\"(.*?)\"").Groups[1].ToString();
         }
         public static void DisableWifi(string deviceID)
         {
@@ -512,6 +520,7 @@ namespace fb_reg
         }
         public static void SetScreenTimeout(string deviceID, int timeoutMinutes)
         {
+            timeoutMinutes = timeoutMinutes * 60000;
             string cmd = string.Format(CONSOLE_ADB + " shell settings put system screen_off_timeout {1}", deviceID, timeoutMinutes);
              ExecuteCMD(cmd);
         }
@@ -1888,6 +1897,50 @@ namespace fb_reg
                 return true;
             }
             return false;
+        }
+
+        public static void RebootRecovery(string deviceID)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " reboot recovery", deviceID);
+            ExecuteCMD(cmd);
+        }
+        public static void WaitForRecovery(string deviceID)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " wait-for-recovery", deviceID);
+            ExecuteCMD(cmd);
+        }
+
+        public static void HienInfo(string deviceID)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " hien infoce" + deviceID, deviceID);
+            ExecuteCMD(cmd);
+        }
+        public static void TwrpWipeData(string deviceID)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " shell twrp wipe data" , deviceID);
+            ExecuteCMD(cmd);
+            cmd = string.Format(CONSOLE_ADB + " shell twrp wipe cache" , deviceID);
+            ExecuteCMD(cmd);
+            cmd = string.Format(CONSOLE_ADB + " shell twrp wipe dalvik" , deviceID);
+            ExecuteCMD(cmd);
+            cmd = string.Format(CONSOLE_ADB + " shell twrp wipe system" , deviceID);
+            ExecuteCMD(cmd);
+        }
+        public static void PushRom10(string deviceID)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " push Rom10 /sdcard/", deviceID);
+            ExecuteCMD(cmd);
+        }
+
+        public static void InstallRom(string deviceID, string file)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " shell twrp install /sdcard/Rom10/" + file, deviceID);
+            ExecuteCMD(cmd);
+        }
+
+        public static void ExecuteFileBat(string batFile)
+        {
+            Process.Start(batFile).WaitForExit();
         }
     }
 }

@@ -9,6 +9,7 @@ using MailKit.Search;
 using System.Net;
 using ActiveUp.Net.Mail;
 using static fb_reg.ServerApi;
+using static fb_reg.OutsideServer;
 
 namespace fb_reg
 {
@@ -227,7 +228,7 @@ namespace fb_reg
             {
                 if (isHotmail)
                 {
-                    mail = ServerApi.GetHotmailLocalCache(server, type);
+                    mail = CacheServer.GetHotmailLocalCache(server, type);
                     
                     if (mail == null)
                     {
@@ -235,30 +236,30 @@ namespace fb_reg
                         {
                             string type2 = Constant.OUTLOOK;
                             string type3 = Constant.HOTMAIL;
-                            mail = ServerApi.GetHotmailLocalCache(server, type2);
+                            mail = CacheServer.GetHotmailLocalCache(server, type2);
                             if (mail == null)
                             {
-                                mail = ServerApi.GetHotmailLocalCache(server, type3);
+                                mail = CacheServer.GetHotmailLocalCache(server, type3);
                             }
                         }
                         if (type == Constant.OUTLOOK)
                         {
                             string type2 = Constant.OUTLOOK_DOMAIN;
                             string type3 = Constant.HOTMAIL;
-                            mail = ServerApi.GetHotmailLocalCache(server, type2);
+                            mail = CacheServer.GetHotmailLocalCache(server, type2);
                             if (mail == null)
                             {
-                                mail = ServerApi.GetHotmailLocalCache(server, type3);
+                                mail = CacheServer.GetHotmailLocalCache(server, type3);
                             }
                         }
                         if (type == Constant.HOTMAIL)
                         {
                             string type2 = Constant.OUTLOOK_DOMAIN;
                             string type3 = Constant.OUTLOOK;
-                            mail = ServerApi.GetHotmailLocalCache(server, type2);
+                            mail = CacheServer.GetHotmailLocalCache(server, type2);
                             if (mail == null)
                             {
-                                mail = ServerApi.GetHotmailLocalCache(server, type3);
+                                mail = CacheServer.GetHotmailLocalCache(server, type3);
                             }
                         }
                     }
@@ -335,7 +336,7 @@ namespace fb_reg
 
         public static MailObject Get1SecMail()
         {
-            MailObject mail = ServerApi.Get1SecMail();
+            MailObject mail = OutsideServer.Get1SecMail();
             return mail;
         }
 
@@ -520,7 +521,7 @@ namespace fb_reg
 
         public static MailObject GetTempmailLol()
         {
-            MailObject mail = ServerApi.getTempmailLol(); 
+            MailObject mail = OutsideServer.getTempmailLol(); 
            
             mail.password = "tempmail";
             return mail;
@@ -528,10 +529,10 @@ namespace fb_reg
 
         public static MailObject GetGmailSellGmail(string server)
         {
-            MailObject mail = ServerApi.GetSellGmailLocalCache(server);
+            MailObject mail = CacheServer.GetSellGmailLocalCache(server);
             if (Utility.IsMailEmpty(mail))
             {
-                mail = ServerApi.GetGmailSellGmail();
+                mail = OutsideServer.GetGmailSellGmail();
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
                     mail.message = "sell gmail from cache";
@@ -546,10 +547,10 @@ namespace fb_reg
 
         public static MailObject GetGmailSuperGmail(string server)
         {
-            MailObject mail = ServerApi.GetSuperGmailLocalCache(server);
+            MailObject mail = CacheServer.GetSuperGmailLocalCache(server);
             if (Utility.IsMailEmpty(mail))
             {
-                mail = ServerApi.GetGmailSuperTeam();
+                mail = OutsideServer.GetGmailSuperTeam();
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
                     mail.message = "sell gmail from cache";
@@ -564,10 +565,10 @@ namespace fb_reg
 
         public static MailObject GetGmailOtp(string server)
         {
-            MailObject mail = ServerApi.GetGmailOtpLocalCache(server);
+            MailObject mail = CacheServer.GetGmailOtpLocalCache(server);
             if (Utility.IsMailEmpty(mail))
             {
-                mail = ServerApi.GetGmailOtp();
+                mail = OutsideServer.GetGmailOtp();
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
                     mail.message = "sell gmail from cache";
@@ -583,10 +584,10 @@ namespace fb_reg
         public static MailObject GetGmailDichVuGmail(string server)
         {
 
-            MailObject mail = ServerApi.GetDichvuGmailLocalCache(server);
+            MailObject mail = CacheServer.GetDichvuGmailLocalCache(server);
             if (Utility.IsMailEmpty(mail))
             {
-                mail = ServerApi.GetGmailDichVuGmail("Facebook", "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ");
+                mail = OutsideServer.GetGmailDichVuGmail("Facebook", "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ");
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
                     mail.message = "dichvu gmail from cache";
@@ -602,29 +603,29 @@ namespace fb_reg
 
         public static MailObject GetMailOtpGmail()
         {
-            MailObject mail = ServerApi.GetMailOtp();
+            MailObject mail = OutsideServer.GetMailOtp();
             return mail;
         }
         public static MailObject GetMail48hGmail()
         {
-            MailObject mail = ServerApi.GetGmail48h();
+            MailObject mail = OutsideServer.GetGmail48h();
             return mail;
         }
         public static MailObject GetGmail30Min()
         {
-            MailObject mail = ServerApi.GetGmail30Min();
+            MailObject mail = OutsideServer.GetGmail30Min();
             return mail;
         }
 
         public static MailObject GetGmailOtpGmail()
         {
-            MailObject mail = ServerApi.GetGmailOtp();
+            MailObject mail = OutsideServer.GetGmailOtp();
             return mail;
         }
 
         public static MailObject GetGmailSuperTeam()
         {
-            MailObject mail = ServerApi.GetGmailSuperTeam();
+            MailObject mail = OutsideServer.GetGmailSuperTeam();
             return mail;
         }
 
@@ -836,7 +837,7 @@ namespace fb_reg
             {
                 for (int i = 0;i < time; i ++)
                 {
-                    string code = ServerApi.getCodeTempmailLol(token);
+                    string code = OutsideServer.getCodeTempmailLol(token);
                     if (!string.IsNullOrEmpty(code))
                     {
                         return code;
@@ -862,7 +863,7 @@ namespace fb_reg
             {
                 for (int i = 0; i < 30; i++)
                 {
-                    string code = ServerApi.GetCodeMailOtp(orderId);
+                    string code = OutsideServer.GetCodeMailOtp(orderId);
                     if (!string.IsNullOrEmpty(code))
                     {
                         return code;
@@ -885,7 +886,7 @@ namespace fb_reg
             {
                 for (int i = 0; i < time; i++)
                 {
-                    string code = ServerApi.GetOtpGmailOtp(inMail.orderId);
+                    string code = OutsideServer.GetOtpGmailOtp(inMail.orderId);
                     if (!string.IsNullOrEmpty(code))
                     {
                         return code;
@@ -908,7 +909,7 @@ namespace fb_reg
             {
                 for (int i = 0; i < time; i++)
                 {
-                    string code = ServerApi.GetOtpGmailSuperTeam(inMail.email);
+                    string code = OutsideServer.GetOtpGmailSuperTeam(inMail.email);
                     if (!string.IsNullOrEmpty(code))
                     {
                         return code;
@@ -948,7 +949,7 @@ namespace fb_reg
             {
                 for (int i = 0; i < time; i++)
                 {
-                    string code = ServerApi.GetOtpGmail48h(inMail.orderId);
+                    string code = OutsideServer.GetOtpGmail48h(inMail.orderId);
                     if (!string.IsNullOrEmpty(code))
                     {
                         return code;
@@ -1057,7 +1058,7 @@ namespace fb_reg
         {
             for (int i = 0; i < time; i ++)
             {
-                string otp = ServerApi.GetOtpSellGmail(mail.email);
+                string otp = OutsideServer.GetOtpSellGmail(mail.email);
                 if (!string.IsNullOrEmpty(otp))
                 {
                     if (otp == "0")
@@ -1079,7 +1080,7 @@ namespace fb_reg
             int count = time + 5;
             for (int i = 0; i < count; i++)
             {
-                string otp = ServerApi.GetGmailDichVuGmailOtp(mail.token);
+                string otp = OutsideServer.GetGmailDichVuGmailOtp(mail.token);
                 if (!string.IsNullOrEmpty(otp))
                 {
                     return otp;
@@ -1096,7 +1097,7 @@ namespace fb_reg
         {
             for (int i = 0; i < time; i++)
             {
-                string otp = ServerApi.GetGmailDichVuGmailOtp(mail.token, "eY33ElMh9EHWJmImm14D50V74ryl56M0");
+                string otp = OutsideServer.GetGmailDichVuGmailOtp(mail.token, "eY33ElMh9EHWJmImm14D50V74ryl56M0");
                 if (!string.IsNullOrEmpty(otp))
                 {
                     return otp;
@@ -1158,7 +1159,7 @@ namespace fb_reg
                         mail = ServerApi.GetMailServer(type);
                     } else
                     {
-                        mail = ServerApi.GetHotmailLocalCache(server, type);
+                        mail = CacheServer.GetHotmailLocalCache(server, type);
                     }
                     
 
@@ -1175,7 +1176,7 @@ namespace fb_reg
                             }
                             else
                             {
-                                mail = ServerApi.GetHotmailLocalCache(server, type2);
+                                mail = CacheServer.GetHotmailLocalCache(server, type2);
                             }
                             if (mail == null)
                             {
@@ -1185,7 +1186,7 @@ namespace fb_reg
                                 }
                                 else
                                 {
-                                    mail = ServerApi.GetHotmailLocalCache(server, type3);
+                                    mail = CacheServer.GetHotmailLocalCache(server, type3);
                                 }
                             }
                         }
@@ -1199,7 +1200,7 @@ namespace fb_reg
                             }
                             else
                             {
-                                mail = ServerApi.GetHotmailLocalCache(server, type2);
+                                mail = CacheServer.GetHotmailLocalCache(server, type2);
                             }
                             if (mail == null)
                             {
@@ -1209,7 +1210,7 @@ namespace fb_reg
                                 }
                                 else
                                 {
-                                    mail = ServerApi.GetHotmailLocalCache(server, type3);
+                                    mail = CacheServer.GetHotmailLocalCache(server, type3);
                                 }
                             }
                         }
@@ -1223,7 +1224,7 @@ namespace fb_reg
                             }
                             else
                             {
-                                mail = ServerApi.GetHotmailLocalCache(server, type2);
+                                mail = CacheServer.GetHotmailLocalCache(server, type2);
                             }
                             if (mail == null)
                             {
@@ -1233,7 +1234,7 @@ namespace fb_reg
                                 }
                                 else
                                 {
-                                    mail = ServerApi.GetHotmailLocalCache(server, type3);
+                                    mail = CacheServer.GetHotmailLocalCache(server, type3);
                                 }
                             }
                         }

@@ -19,10 +19,9 @@ using System.Windows.Forms;
 using static fb_reg.Utility;
 using static fb_reg.Form1Util;
 using OtpNet;
-using System.Net.NetworkInformation;
-using System.Net.Sockets;
-using Rssdp;
 using static fb_reg.ServerApi;
+using static fb_reg.OutsideServer;
+using static fb_reg.CacheServer;
 
 namespace fb_reg
 {
@@ -171,7 +170,7 @@ namespace fb_reg
                     device.clearCacheFailCount = 2;
                     device.clearCacheLiveCount = 2;
                     device.currentStatus = Constant.REG;
-                    device.proxy = new Proxy();
+                    device.proxyDevice = new Proxy();
                     listDeviceObject.Add(device);
 
                     device.allEmuStatus = Properties.Settings.Default.allEmuStatus;
@@ -203,111 +202,106 @@ namespace fb_reg
                 dgvc.SortMode = DataGridViewColumnSortMode.NotSortable;
             }
 
-            //string add = "D’Alia";
-
-            //const string WithoutUnicodeCharacter = "an ANSI character:Æ";
-
-            //bool hasUnicode;
-            //var regexItem = new Regex("^[a-zA-Z ]*$");
-
-            //bool cc = regexItem.IsMatch(add);
-            ////true
-            //hasUnicode = ContainsUnicodeCharacter(add);
-            //Console.WriteLine(hasUnicode);
-
-            //false
-            //hasUnicode = ContainsUnicodeCharacter(WithoutUnicodeCharacter);
-            //generateName();
-
-            //ServerApi.GetAllPopularName();
             serverOnlineCheckBox.Checked = true;
+
+            //WwProxy.GetListKey("API-486991c2-5eb1-46de-8f03-7d801066d74f");
+
+            
             LoadFbVersion();
         }
+
         public bool ContainsUnicodeCharacter(string input)
         {
             const int MaxAnsiCode = 255;
 
             return input.Any(c => c > MaxAnsiCode);
         }
-        static string _generateFileName(int sequence)
-        {
-            DateTime currentDateTime = DateTime.Now;
-            return string.Format("{0}-{1:000}-{2:000}.eml",
-                currentDateTime.ToString("yyyyMMddHHmmss", new CultureInfo("en-US")),
-                currentDateTime.Millisecond,
-                sequence);
-        }
+
+        
 
 
         public bool StartProxy(OrderObject order, DeviceObject device)
         {
             string deviceID = device.deviceId;
-            if (order.hasproxy)
+            if (!order.hasproxy )
             {
-                TurnOffAirPlane(deviceID, false);
-                if (!proxy4GcheckBox.Checked && !deviceID.Contains(":"))
-                {   // Check wifi before
-                    string ssid = "";
-                    for (int i = 0; i < 4; i++)
-                    {
-                        ssid = GetWifiName(deviceID);
-                        LogStatus(device, "Wifi:" + ssid);
-                        if (!ssid.Contains("unknown"))
-                        {
-                            break;
-                        }
-                        Thread.Sleep(10000);
-                        ssid = GetWifiName(deviceID);
-                        LogStatus(device, "Wifi:" + ssid);
-                        if (!ssid.Contains("unknown"))
-                        {
-                            break;
-                        }
-                        else
-                        {
-                            Device.DisableWifi(deviceID);
-                            Thread.Sleep(1000);
-                            Device.EnableWifi(deviceID);
-                            Device.OpenWifiSetting(deviceID);
-                            LogStatus(device, "Bật wifi lại - chờ láy ip");
-                            Thread.Sleep(20000);
-                            ssid = GetWifiName(deviceID);
-                            LogStatus(device, "Wifi:" + ssid);
-                            if (!ssid.Contains("unknown"))
-                            {
-                                break;
-                            }
-                        }
-                        if (i == 3)
-                        {
-                            LogStatus(device, "Can not access wifi");
-                            return false;
-                        }
-                        Thread.Sleep(10000);
-                    }
+                Device.DisableWifi(deviceID);
+                return true;
+            }
+            if (order.proxyWfi)
+            {
+                return true;
+            }
+            if (proxy4GcheckBox.Checked)
+            {
+                Device.DisableWifi(deviceID);
+            }
+            TurnOffAirPlane(deviceID, false);
+            if (!proxy4GcheckBox.Checked && !deviceID.Contains(":"))
+            {   // Check wifi before
+                string ssid = "";
+                for (int i = 0; i < 4; i++)
+                {
                     ssid = GetWifiName(deviceID);
-                    if (ssid.Contains("unknown"))
+                    LogStatus(device, "Wifi:" + ssid);
+                    if (!ssid.Contains("unknown"))
                     {
-                        LogStatus(device, "Không Thể start proxy - Chạy lại");
+                        break;
+                    }
+                    Thread.Sleep(10000);
+                    ssid = GetWifiName(deviceID);
+                    LogStatus(device, "Wifi:" + ssid);
+                    if (!ssid.Contains("unknown"))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Device.DisableWifi(deviceID);
+                        Thread.Sleep(1000);
+                        Device.EnableWifi(deviceID);
+                        Device.OpenWifiSetting(deviceID);
+                        LogStatus(device, "Bật wifi lại - chờ láy ip");
+                        Thread.Sleep(20000);
+                        ssid = GetWifiName(deviceID);
+                        LogStatus(device, "Wifi:" + ssid);
+                        if (!ssid.Contains("unknown"))
+                        {
+                            break;
+                        }
+                    }
+                    if (i == 3)
+                    {
+                        LogStatus(device, "Can not access wifi");
                         return false;
                     }
+                    Thread.Sleep(10000);
                 }
+                ssid = GetWifiName(deviceID);
+                if (ssid.Contains("unknown"))
+                {
+                    LogStatus(device, "Không Thể start proxy - Chạy lại");
+                    return false;
+                }
+            }
+           
 
-                if (order.proxyWfi)
-                {
-                    return true;
-                }
-                if (proxy4GcheckBox.Checked)
-                {
-                    Device.DisableWifi(deviceID);
-                }
-                if (!order.proxyWfi && device.globalTotal % 50 == 0)
-                {
-                    LogStatus(device, "Chay set proxy mới   -tttttttttttttt-----------");
-                    if (!SetProxySuperProxy(device))
+            if (proxyCMDcheckBox.Checked)
+            {
+                string proxyPort = device.proxyDevice.host + ":" + device.proxyDevice.port;
+                Device.SetProxyCmd(deviceID, proxyPort);
+                return true;
+            } 
+               
+            if (order.proxyFromServer)
+            {
+
+                
+                LogStatus(device, "Chay set proxy mới   -tttttttttttttt-----------");
+
+                    if (!SetProxySuperProxy(order, device))
                     {
-                        LogStatus(device, "Can not set proxy ----ttttttttt-------return -test ");
-                        Thread.Sleep(6000);
+                        LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
                         device.loadNewProxy = true;
                         return false;
                     }
@@ -315,171 +309,150 @@ namespace fb_reg
                     {
 
                         device.loadNewProxy = false;
+                        return true;
                     }
+                //} else
+                //{
+                //    if (device.globalTotal != 0 && needEditProxycheckBox.Checked && !EditProxySuperProxy(device))
+                //    {
+                //        LogStatus(device, "Can not EDIT proxy ----ttttttttt-------return ", 6000);
+                //        device.loadNewProxy = true;
+                //        return false;
+                //    }
+                //    else
+                //    {
+
+                //        device.loadNewProxy = false;
+                //        return true;
+                //    }
+                //}
+            }
+            if (order.proxyFromLocal)
+            {
+                if (!SetProxySuperProxy(order, device))
+                {
+                    LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
+                    device.loadNewProxy = true;
+                    return false;
                 }
-
-                if (proxyCMDcheckBox.Checked)
+                else
                 {
-                    string proxyPort = device.proxy.host + ":" + device.proxy.port;
-                    Device.SetProxyCmd(deviceID, proxyPort);
-                } else
-                {
-
-                    bool runProxy = true;
-
-                    //if (order.isReverify)
-                    //{
-                    //    if (device.globalTotal % 2 == 0)
-                    //    {
-                    //        runProxy = true;
-                    //    } else
-                    //    {
-                    //        runProxy = false;
-                    //    }
-                    //} else
-                    //{
-                    //    runProxy = true;
-                    //}
-
-                    if (runProxy)
-                    {
-                        if (device.loadNewProxy)
-                        {
-                            LogStatus(device, "Chay set proxy mới   -tttttttttttttt-----------");
-
-                            if (!SetProxySuperProxy(device))
-                            {
-                                LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
-                                device.loadNewProxy = true;
-                                return false;
-                            }
-                            else
-                            {
-
-                                device.loadNewProxy = false;
-                                return true;
-                            }
-                        } else
-                        {
-                            if (device.globalTotal != 0 && needEditProxycheckBox.Checked && !EditProxySuperProxy(device))
-                            {
-                                LogStatus(device, "Can not EDIT proxy ----ttttttttt-------return ", 6000);
-                                device.loadNewProxy = true;
-                                return false;
-                            }
-                            else
-                            {
-
-                                device.loadNewProxy = false;
-                                return true;
-                            }
-                        }
-                    }
-                }
-
-                if (!superProxycheckBox.Checked && s5ProxyradioButton.Checked)
-                {
-                    string domain = "";
-                    if (tinsoftRadioButton.Checked)
-                    {
-                        domain = ProxyDomain.Tinsoft.ToString();
-                    }
-                    else if (fastProxyRadioButton.Checked)
-                    {
-                        domain = ProxyDomain.fastProxy.ToString();
-                    }
-                    else if (zuesProxyradioButton.Checked)
-                    {
-                        domain = ProxyDomain.zuesProxy.ToString();
-                    }
-                    else if (zuesProxy4G.Checked)
-                    {
-                        domain = ProxyDomain.zuesProxy4G.ToString();
-                    }
-                    else if (tunProxyradioButton.Checked)
-                    {
-                        domain = ProxyDomain.tunProxy.ToString();
-                    }
-                    else if (impulseradioButton.Checked)
-                    {
-                        domain = ProxyDomain.impulseProxy.ToString();
-                    }
-                    else if (shopLike1RadioButton.Checked)
-                    {
-                        domain = ProxyDomain.Softlike.ToString();
-                    }
-                    else if (tinProxyRadioButton.Checked)
-                    {
-                        device.currentPublicIp = GetPublicIp(device);
-                        dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
-                        if (string.IsNullOrEmpty(device.currentPublicIp))
-                        {
-                            LogStatus(device, "Gỡ proxy khi không lấy được ip");
-
-                            RemoveAllProxy(deviceID);
-                        }
-                        domain = ProxyDomain.TinProxy.ToString();
-                    }
-                    else if (tmProxyRadioButton.Checked)
-                    {
-                        domain = ProxyDomain.TmProxy.ToString();
-                    }
-                    else if (dtProxyRadioButton.Checked)
-                    {
-                        device.currentPublicIp = GetPublicIp(device);
-                        dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
-                        if (string.IsNullOrEmpty(device.currentPublicIp))
-                        {
-                            // TODO
-                        }
-                        domain = ProxyDomain.dtProxy.ToString();
-                    }
-                    int proxyTime = 4;
-                    if (getProyx20timecheckBox.Checked)
-                    {
-                        proxyTime = 20;
-                    }
-                    for (int i = 0; i < 3; i++)
-                    {
-                        LogStatus(device, "Getting proxy ... lần : " + (i + 1));
-                        if (device.proxy != null && device.proxy.hasProxy)
-                        {
-                            break;
-                        }
-                        device.proxy = Utility.GetProxy(domain, device.keyProxy, device.currentPublicIp, locationProxyTextBox.Text);
-                        // Handle timeout
-                        if (device.proxy != null && device.proxy.isWait)
-                        {
-                            LogStatus(device, "Proxy timeout:" + device.proxy.timeout);
-                            Thread.Sleep(device.proxy.timeout * 1000 + 5000);
-                            device.proxy = Utility.GetProxy(domain, device.keyProxy, device.currentPublicIp, locationProxyTextBox.Text);
-                        }
-                        if (device.proxy != null && device.proxy.hasProxy)
-                        {
-                            break;
-                        }
-                        Thread.Sleep(3000);
-                    }
-
-                    if (device.proxy != null && !device.proxy.hasProxy)
-                    {
-                        LogStatus(device, "error:" + device.proxy.message);
-
-
-                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DeepPink;
-                        Thread.Sleep(10000);
-                    }
-                }
-
-                if (proxy4GcheckBox.Checked)
-                {
-                    Device.DisableWifi(deviceID);
+                    return true;
                 }
             }
-            else
+            
+            string domain = "";
+            if (tinsoftRadioButton.Checked)
+            {
+                domain = ProxyDomain.Tinsoft.ToString();
+            }
+            else if (fastProxyRadioButton.Checked)
+            {
+                domain = ProxyDomain.fastProxy.ToString();
+            }
+            else if (zuesProxyradioButton.Checked)
+            {
+                domain = ProxyDomain.zuesProxy.ToString();
+            }
+            else if (zuesProxy4G.Checked)
+            {
+                domain = ProxyDomain.zuesProxy4G.ToString();
+            }
+            else if (tunProxyradioButton.Checked)
+            {
+                domain = ProxyDomain.tunProxy.ToString();
+            }
+            else if (impulseradioButton.Checked)
+            {
+                domain = ProxyDomain.impulseProxy.ToString();
+            }
+            else if (shopLike1RadioButton.Checked)
+            {
+                domain = ProxyDomain.Softlike.ToString();
+            }
+            else if (tinProxyRadioButton.Checked)
+            {
+                device.currentPublicIp = GetPublicIp(device);
+                dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
+                if (string.IsNullOrEmpty(device.currentPublicIp))
+                {
+                    LogStatus(device, "Gỡ proxy khi không lấy được ip");
+
+                    RemoveAllProxy(deviceID);
+                }
+                domain = ProxyDomain.TinProxy.ToString();
+            }
+            else if (tmProxyRadioButton.Checked)
+            {
+                domain = ProxyDomain.TmProxy.ToString();
+            }
+            else if (dtProxyRadioButton.Checked)
+            {
+                device.currentPublicIp = GetPublicIp(device);
+                dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
+                if (string.IsNullOrEmpty(device.currentPublicIp))
+                {
+                    // TODO
+                }
+                domain = ProxyDomain.dtProxy.ToString();
+            } else if (wwProxyradioButton.Checked)
+            {
+                domain = ProxyDomain.wwProxy.ToString();
+
+            }
+            int proxyTime = 4;
+            if (getProyx20timecheckBox.Checked)
+            {
+                proxyTime = 20;
+            }
+            for (int i = 0; i < 3; i++)
+            {
+                LogStatus(device, "Getting proxy ... lần : " + (i + 1));
+                if (device.proxyDevice != null && device.proxyDevice.hasProxy && !string.IsNullOrEmpty(device.proxyDevice.host))
+                {
+                    break;
+                }
+                device.proxyDevice = Utility.GetProxy(domain, device.proxyDevice.key, device.currentPublicIp, locationProxyTextBox.Text);
+                // Handle timeout
+                if (device.proxyDevice != null && device.proxyDevice.isWait)
+                {
+                    LogStatus(device, "Proxy timeout:" + device.proxyDevice.timeout);
+                    Thread.Sleep(device.proxyDevice.timeout * 1000 + 5000);
+                    device.proxyDevice = Utility.GetProxy(domain, device.proxyDevice.key, device.currentPublicIp, locationProxyTextBox.Text);
+                }
+                if (device.proxyDevice != null && device.proxyDevice.hasProxy)
+                {
+                    string proxyPort = device.proxyDevice.host + ":" + device.proxyDevice.port;
+                    if (!SetProxySuperProxy(order, device))
+                    {
+                        LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
+                        device.loadNewProxy = true;
+                        return false;
+                    }
+                    return true;
+                    //break;
+                }
+                Thread.Sleep(3000);
+            }
+
+            if (device.proxyDevice != null && !device.proxyDevice.hasProxy)
+            {
+                LogStatus(device, "error:" + device.proxyDevice.message);
+
+
+                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DeepPink;
+                Thread.Sleep(10000);
+            }
+            
+
+            if (proxy4GcheckBox.Checked)
             {
                 Device.DisableWifi(deviceID);
             }
+
+           
+
+
             return true;
         }
         public OrderObject PreProcess(DeviceObject device, OrderObject order)
@@ -498,22 +471,27 @@ namespace fb_reg
                 LogStatus(device, ex.Message);
             }
 
-            string serverIp = ServerApi.GetServerIp(serverCacheMailTextbox.Text);
+            string serverIp = CacheServer.GetServerIp(serverCacheMailTextbox.Text);
             if (!string.IsNullOrEmpty(serverIp) && serverIp != serverPathTextBox.Text)
             {
                 serverPathTextBox.Text = serverIp;
             }
 
-            order.moiTruocProxy = moiTruocProxycheckBox.Checked;
-            //Device.ForceStop(device.deviceId, "com.android.vending");
-            //Device.ForceStop(device.deviceId, "com.google.android.gms");
-            //Device.ForceStop(device.deviceId, "com.google.android.youtube");
-            //Device.ForceStop(device.deviceId, "com.google.android.gsf");
-            //Device.ForceStop(device.deviceId, "com.google.android.gsf.login");
-            //Device.ForceStop(device.deviceId, "com.android.chrome");
-            //Device.ForceStop(device.deviceId, "com.google.android.ext.services");
-            //Device.ForceStop(device.deviceId, "com.google.android.googlequicksearchbox");
+
+            Device.ForceStop(device.deviceId, "com.android.vending");
+            Device.ForceStop(device.deviceId, "com.google.android.gms");
+            Device.ForceStop(device.deviceId, "com.google.android.youtube");
+            Device.ForceStop(device.deviceId, "com.google.android.gsf");
+            Device.ForceStop(device.deviceId, "com.google.android.gsf.login");
+            Device.ForceStop(device.deviceId, "com.android.chrome");
+            Device.ForceStop(device.deviceId, "com.google.android.ext.services");
+            Device.ForceStop(device.deviceId, "com.google.android.googlequicksearchbox");
             LogStatus(device, "Chạy preprocesss-------------");
+
+
+            LogStatus(device, "Clear app facebook");
+            FbUtil.ClearCacheFb(device);
+            LogStatus(device, "Clear app facebook -----xong");
 
 
 
@@ -529,7 +507,7 @@ namespace fb_reg
                 return order;
             }
             string deviceID = device.deviceId;
-            //GetHotmail(device, serverCacheMailTextbox.Text, order.emailType, order.getHotmailKieumoi);
+
             if (device.installFb)
             {
                 LogStatus(device, "Install facebook " + fbVersioncomboBox.SelectedItem.ToString());
@@ -628,75 +606,6 @@ namespace fb_reg
                 Device.Unlockphone(deviceID);
             }
 
-            if (order.proxyFromServer)
-            {
-                LogStatus(device, "Get proxy from server");
-
-                Proxy pp = GetProxyFromServer();
-                if (pp != null)
-                {
-
-                    Device.EnableWifi(deviceID);
-                    device.keyProxy = "Host:" + pp.host + "  -Port:" + pp.port;
-                    order.hasproxy = true;
-                    if (device.proxy == null || device.proxy.host != pp.host)
-                    {
-                        device.loadNewProxy = true;
-                    }
-                    device.proxy = pp;
-                    
-                }
-                else
-                {
-                    device.keyProxy = "";
-                    Device.DisableWifi(deviceID);
-                }
-
-            } else if (order.proxyWfi)
-            {
-                StopProxySuper(device);
-                Device.EnableWifi(deviceID);
-                Proxy pp = new Proxy();
-                pp.host = "1.1.1.1";
-                pp.port = "1111";
-                device.keyProxy = "Host:" + pp.host + "  -Port:" + pp.port;
-                order.hasproxy = true;
-                if (device.proxy == null || device.proxy.host != pp.host)
-                {
-                    device.loadNewProxy = true;
-                }
-                device.proxy = pp;
-            }
-            else
-            {
-                StopProxySuper(device);
-                device.keyProxy = "";
-                if ((tunProxyradioButton.Checked || s5ProxyradioButton.Checked) && device.proxy != null && device.proxy.hasProxy)
-                {
-                    order.hasproxy = true;
-                }
-                else
-                {
-                    Device.DisableWifi(deviceID);
-                }
-            }
-            if (!order.moiTruocProxy)
-            {
-                if (!StartProxy(order, device))
-                {
-                    Device.DisableWifi(deviceID);
-                    order.error_code = -1;
-                    return order;
-                }
-                else
-                {
-                    if (showIpcheckBox.Checked)
-                    {
-                        device.currentPublicIp = Device.GetPublicIpSmartProxy(deviceID);
-                        dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
-                    }
-                }
-            }
             device.regStatus = "";
 
             if (device.index == 0) statusTextBox.Text = statusSim;
@@ -759,57 +668,9 @@ namespace fb_reg
                 Language.language = Constant.LANGUAGE_US;
             }
 
+            
 
 
-
-            LogStatus(device, "Clear app facebook");
-            FbUtil.ClearCacheFb(device, oldClearCachecheckBox.Checked);
-            LogStatus(device, "Clear app facebook -----xong");
-
-            if (findPhonecheckBox.Checked)
-            {
-                Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-
-                LogStatus(device, "Tìm số dt chưa có tk fb --------");
-
-                if (!WaitAndTapXML(deviceID, 20, "descbạnquênmậtkhẩuư\\?checkablefal"))
-                {
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 59.2, 69.6);
-                }
-                WaitAndTapXML(deviceID, 4, "từ chối");
-                WaitAndTapXML(deviceID, 3, "từ chối");
-                if (CheckTextExist(deviceID, "tìm tài khoản", 2))
-                {
-                    for (int i = 0; i < 100; i++)
-                    {
-                        // Get phone from server
-                        order.regPhone = ServerApi.GetPhones(true, device.network);
-
-                        InputText(deviceID, order.regPhone, true);
-
-                        WaitAndTapXML(deviceID, 3, "tiếp tục");
-                        Thread.Sleep(4000);
-                        if (CheckTextExist(deviceID, new string[] { "tiếp tục", "thử cách khác", "chọn tài khoản" }))
-                        //if (CheckTextExist(deviceID, "thử cách khác", 3))
-                        {
-                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 7.1, 6.9); //
-                            Thread.Sleep(1000);
-                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.7, 25.1);
-                        }
-                        else
-                        {
-                            break;
-                        }
-                    }
-
-                    if (WaitAndTapXML(deviceID, 2, "tạotàikhoảnmớiresourceid"))
-                    {
-                        WaitAndTapXML(deviceID, 2, "bắt đầu");
-                        Thread.Sleep(2000);
-                    }
-                }
-
-            }
 
             if (randomNewContactCheckBox.Checked || randomOldContactCheckBox.Checked)
             {
@@ -876,7 +737,8 @@ namespace fb_reg
             {
                 dataGridView.Rows[device.index].Cells[14].Value = ddd;
             }
-            if (device.globalTotal % 7 == 0 && changer60checkBox.Checked && Device.CheckAppInstall(deviceID, "com.phoneinfo.changerpro"))
+            Device.RandomAndroidID(deviceID);
+            if (device.globalTotal > 0 && device.globalTotal % 3 == 0 && changer60checkBox.Checked && Device.CheckAppInstall(deviceID, "com.phoneinfo.changerpro"))
             {
                 LogStatus(device, "Change infor device");
 
@@ -925,8 +787,6 @@ namespace fb_reg
                 LogStatus(device, "Screen is locking screen - Opening it");
                 Device.Unlockphone(deviceID);
             }
-
-
 
 
             device.isBlocking = false;
@@ -1098,33 +958,33 @@ LOGIN_FB_LITE:
                 if (!FbUtil.OpenFacebookApp2Login(device, device.clearCacheLite))
                 {
                     LogStatus(device, "--- Can not open facebook->  try again 1");
-                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Bisque;
+                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Coral;
                     Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
 
                     if (!FbUtil.OpenFacebookApp2Login(device, device.clearCacheLite))
                     {
-                        LogStatus(device, "Can not open facebook -> try again 2 - > reboot device - chờ 5 phút");
+                        LogStatus(device, "Can not open facebook -> try again 2 -");
 
-                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.BlueViolet;
+                        //dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.BlueViolet;
 
-                        LogStatus(device, "Check fb install and fblite install");
-                        if (!Device.CheckAppInstall(deviceID, Constant.FACEBOOK_PACKAGE))
-                        {
-                            LogStatus(device, "Fb not install -> install it");
-                            if (!FbUtil.InstallMissingFb(deviceID))
-                            {
-                                LogStatus(device, "Check file APK trong 'data/fb'------------");
-                                Thread.Sleep(5000);
-                            }
-                        }
-                        else
-                        {
-                            Thread.Sleep(1000);
-                            //Device.RebootByCmd(deviceID);
-                            Thread.Sleep(30000);
-                        }
-                        LogStatus(device, "Không thể mở fb lần 2, chạy lại ", 5000);
-                        Device.RebootByCmd(deviceID);
+                        //LogStatus(device, "Check fb install and fblite install");
+                        //if (!Device.CheckAppInstall(deviceID, Constant.FACEBOOK_PACKAGE))
+                        //{
+                        //    LogStatus(device, "Fb not install -> install it");
+                        //    if (!FbUtil.InstallMissingFb(deviceID))
+                        //    {
+                        //        LogStatus(device, "Check file APK trong 'data/fb'------------");
+                        //        Thread.Sleep(5000);
+                        //    }
+                        //}
+                        //else
+                        //{
+                        //    Thread.Sleep(1000);
+                        //    //Device.RebootByCmd(deviceID);
+                        //    Thread.Sleep(30000);
+                        //}
+                        //LogStatus(device, "Không thể mở fb lần 2, chạy lại ", 5000);
+                        //Device.RebootByCmd(deviceID);
                         //device.loadNewProxy = true;
                         //Thread.Sleep(30000);
                         order.error_code = -1;
@@ -1700,13 +1560,36 @@ LOGIN_FB_LITE:
                 }
             }
 
+
+            
+
+            //if (!StartProxy(order, device))
+            //{
+            //    Device.DisableWifi(deviceID);
+            //    order.error_code = -1;
+            //    if (order.proxy != null && !string.IsNullOrEmpty(order.proxy.key))
+            //    {
+            //        CacheServer.deleteKeyProxy(serverCacheMailTextbox.Text, order.proxy.key);
+            //    }
+
+            //    return order;
+            //}
+            //else
+            //{
+            //    if (showIpcheckBox.Checked)
+            //    {
+            //        device.currentPublicIp = Device.GetPublicIpSmartProxy(deviceID);
+            //        dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
+            //    }
+            //}
             return order;
         }
 
         public OrderObject InitialOrder(DeviceObject device)
         {
             OrderObject order = new OrderObject();
-
+            
+            order.moiTruocProxy = moiTruocProxycheckBox.Checked;
             order.upContactNew = uploadContactNewCheckbox.Checked;
             order.upCoverNew = coverNewcheckBox.Checked;
             order.usDeviceLanguage = UsLanguagecheckBox.Checked;
@@ -1715,6 +1598,7 @@ LOGIN_FB_LITE:
             order.forceAvatarUs = forceAvatarUsCheckBox.Checked;
             order.loginByUserPassword = loginByUserPassCheckBox.Checked;
             order.hasproxy = false;
+            order.proxyFromLocal = proxyFromLocalcheckBox.Checked;
             order.getHotmailKieumoi = getHotmailKieumoicheckBox.Checked;
             if (!randomProxySim2checkBox.Checked)
             {
@@ -1981,7 +1865,7 @@ LOGIN_FB_LITE:
             try
             {
                 device.log = "";
-
+                device.order = order;
                 var watchAll = System.Diagnostics.Stopwatch.StartNew();
                 order.phoneT.cookie = cookieCodeTextNowtextBox.Text;
                 var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -2430,6 +2314,28 @@ LOGIN_FB_LITE:
 
                                 goto STORE_INFO;
                             }
+                        } else
+                        {
+                            Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                            Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                            Thread.Sleep(10000);
+                            if (CheckTextExist(deviceID, new string[] { "đăng nhập", "nhập mã xác nhận" }))
+                            {
+                                LogStatus(device, "Xác nhận qua email, ----------- bỏ acc", 1000);
+                                return;
+                                goto ENTER_CODE_CONFIRM_EMAIL;
+                            }
+
+                            if (!order.doitenAcc && WaitAndTapXML(deviceID, new string[] { "lúc khác", "bỏ qua" }))
+                            {
+                                
+                            }
+                            dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Green;
+                            order.accType = Constant.ACC_TYPE_REUP_DOI_TEN_DA_DOI_TEN;
+                            order.isSuccess = true;
+
+                            UploadAvatarProfile(deviceID, order, coverCheckBox.Checked);
+                            goto STORE_INFO;
                         }
 
                         if (order.doitenAcc && CheckTextExist(deviceID, new string[] { "nhắntin", "thêm ảnh", "lúc khác" }))
@@ -2910,7 +2816,7 @@ LOGIN_FB_LITE:
                         string firstname = " " + GetFirtName(Constant.LANGUAGE_VN, acc.gender, nameVnUscheckBox.Checked);
 
 
-                        NameObject nnn = ServerApi.GetNameLocalCache(serverCacheMailTextbox.Text, acc.gender, Constant.LANGUAGE_VN);
+                        NameObject nnn = CacheServer.GetNameLocalCache(serverCacheMailTextbox.Text, acc.gender, Constant.LANGUAGE_VN);
                         if (nnn != null && !string.IsNullOrEmpty(nnn.name))
                         {
                             firstname = nnn.name;
@@ -2997,7 +2903,7 @@ if (order.isReverify)
                         {
 
                             LogStatus(device, "--- Can not open facebook->  try again 1");
-                            dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Bisque;
+                            //dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Bisque;
                             Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
                             Thread.Sleep(1000);
                             if (!FbUtil.OpenFacebookAppRegnormal(device, device.clearCacheLite, order.loginAccMoiKatana, fastcheckBox.Checked))
@@ -3008,6 +2914,11 @@ if (order.isReverify)
                                     LogStatus(device, "Can not open facebook khi có proxy - đổi port -> return");
                                     dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Bisque;
                                     StopProxySuper(device);
+                                    if (order.proxy != null && !string.IsNullOrEmpty(order.proxy.key))
+                                    {
+                                        CacheServer.deleteKeyProxy(serverCacheMailTextbox.Text, order.proxy.key);
+                                        device.keyProxy = "";
+                                    }
                                     return;
                                 }
                                 dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.BlueViolet;
@@ -3726,66 +3637,115 @@ if (order.isReverify)
                 }
                 Console.WriteLine("pre-----1 : " + watch.ElapsedMilliseconds);
             REG_NORMAL:
+                LogStatus(device, "start reg acc normal");
                 Device.Home(deviceID);
-                if (!FbUtil.OpenFacebookAppRegnormal(device, device.clearCacheLite, order.loginAccMoiKatana, fastcheckBox.Checked))
+                bool find = false;
+                if (findPhonecheckBox.Checked)
                 {
+                    Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
 
-                    if (WaitAndTapXML(deviceID, 2, "thửlạiresourceid"))
+                    LogStatus(device, "Tìm số dt chưa có tk fb --------");
+
+                    if (!WaitAndTapXML(deviceID, 20, "descbạnquênmậtkhẩuư\\?checkablefal"))
                     {
-                        LogStatus(device, "Thử lại lần nữa");
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 59.2, 69.6);
                     }
-                    LogStatus(device, "Can not load Vietnamese, Try again 1", 2000);
-                    Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
-                    FbUtil.ClearAccountFbInSetting(deviceID, true);
-                    Device.PermissionAppReadContact(deviceID, Constant.FACEBOOK_PACKAGE);
-                    //dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Brown;
-                    openFacebookFailCount++;
-                    Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                    WaitAndTapXML(deviceID, 4, "từ chối");
+                    WaitAndTapXML(deviceID, 3, "từ chối");
+                    if (CheckTextExist(deviceID, "tìm tài khoản", 2))
+                    {
+                        for (int i = 0; i < 5; i++)
+                        {
+                            // Get phone from server
+                            order.regPhone = ServerApi.GetPhones(true, device.network);
 
+                            InputText(deviceID, order.regPhone, true);
+
+                            WaitAndTapXML(deviceID, 3, "tiếp tục");
+                            Thread.Sleep(4000);
+                            if (CheckTextExist(deviceID, new string[] { "tiếp tục", "thử cách khác", "chọn tài khoản" }))
+                            {
+                                KAutoHelper.ADBHelper.TapByPercent(deviceID, 7.1, 6.9); //
+                                Thread.Sleep(1000);
+                                KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.7, 25.1);
+                            }
+                            else
+                            {
+                                find = true;
+                                break;
+                            }
+                        }
+                       
+                        if (WaitAndTapXML(deviceID, 2, "tạotàikhoảnmớiresourceid"))
+                        {
+                            WaitAndTapXML(deviceID, 4, "bắt đầu");
+                            WaitAndTapXML(deviceID, 2, "cho phép re");
+                        }
+                    } 
+                } 
+                if (!find) {
                     if (!FbUtil.OpenFacebookAppRegnormal(device, device.clearCacheLite, order.loginAccMoiKatana, fastcheckBox.Checked))
                     {
-                        if (order.proxyFromServer)
-                        {
-                            LogStatus(device, "Can not open facebook khi có proxy - đổi port -> return");
-                            dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Bisque;
-                            StopProxySuper(device);
-                            return;
-                        }
-                        //dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkCyan;
 
-                        if (CheckTextExist(deviceID, Language.Next(), 1, uiXML))
+                        if (WaitAndTapXML(deviceID, 2, "thửlạiresourceid"))
                         {
-                            LogStatus(device, "Open fb ok -------------");
+                            LogStatus(device, "Thử lại lần nữa");
                         }
-                        else
+                        LogStatus(device, "Can not load Vietnamese, Try again 1", 2000);
+                        Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
+                        FbUtil.ClearAccountFbInSetting(deviceID, true);
+                        Device.PermissionAppReadContact(deviceID, Constant.FACEBOOK_PACKAGE);
+                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Brown;
+                        openFacebookFailCount++;
+                        Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+
+                        if (!FbUtil.OpenFacebookAppRegnormal(device, device.clearCacheLite, order.loginAccMoiKatana, fastcheckBox.Checked))
                         {
-                            for (int i = 2; i < 4; i++)
+                            if (order.proxyFromServer || order.proxyFromLocal)
                             {
-                                LogStatus(device, "Can not load Vietnamese, Try again " + i);
-                                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkCyan;
-                                if (order.removeProxy || (device.proxy != null && !device.proxy.hasProxy))
-                                {
-                                    if (FbUtil.ChangeIpByAirplane(device))
-                                    {
-                                        LogStatus(device, "Change ip successful: ");
-                                    }
-                                }
+                                LogStatus(device, "Can not open facebook khi có proxy - đổi port -> return");
+                                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Bisque;
+                                StopProxySuper(device);
+                                return;
+                            }
+                            //dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkCyan;
 
-                                Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                                if (FbUtil.OpenFacebookAppRegnormal(device, device.clearCacheLite, order.loginAccMoiKatana, fastcheckBox.Checked))
+                            if (CheckTextExist(deviceID, Language.Next(), 1, uiXML))
+                            {
+                                LogStatus(device, "Open fb ok -------------");
+                            }
+                            else
+                            {
+                                for (int i = 2; i < 4; i++)
                                 {
-                                    device.clearCache = true;
-                                    break;
+                                    LogStatus(device, "Can not load Vietnamese, Try again " + i);
+                                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkCyan;
+                                    if (order.removeProxy || (device.proxyDevice != null && !device.proxyDevice.hasProxy))
+                                    {
+                                        if (FbUtil.ChangeIpByAirplane(device))
+                                        {
+                                            LogStatus(device, "Change ip successful: ");
+                                        }
+                                    }
+
+                                    Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                                    if (FbUtil.OpenFacebookAppRegnormal(device, device.clearCacheLite, order.loginAccMoiKatana, fastcheckBox.Checked))
+                                    {
+                                        device.clearCache = true;
+                                        break;
+                                    }
                                 }
                             }
                         }
                     }
                 }
 
+                
 
+                LogStatus(device, "Open facebook xong ------------------");
                 if (CheckTextExist(deviceID, "thửlạiresource", 1))
                 {
-                    LogStatus(device, "vào màn hình lỗi --- chạy lại ");
+                   LogStatus(device, "vào màn hình lỗi --- chạy lại ");
                     return;
                     Thread.Sleep(3000);
                     KAutoHelper.ADBHelper.TapByPercent(deviceID, 57.8, 86.9);
@@ -3928,7 +3888,7 @@ if (order.isReverify)
 
                     if (string.IsNullOrEmpty(uidLocal111) || FbUtil.CheckLiveWall(uidLocal111) == Constant.DIE)
                     {
-                        LogStatus(device, "checklivewall - Check live acc -Acc die --- , return--- color:Orange");
+                        LogStatus(device, "checklivewall - Check live acc -Acc die --- , return--- color:Orange", 2000);
 
                         fail++;
                         device.blockCount++;
@@ -4684,7 +4644,7 @@ if (order.isReverify)
                         }
                         if (UploadContact(device, order.numberOfFriendRequest))
                         {
-                            storeAccWithThread(isServer, order, deviceID,
+                            storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                     password, "noveri|tempmail", device.androidId, order.gender, yearOld, Constant.FALSE, device.log);
                             LogStatus(device, "Reg noveri success - has friend");
                             dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Constant.green3;
@@ -4692,7 +4652,7 @@ if (order.isReverify)
                         }
                         else
                         {
-                            Utility.storeAccWithThread(isServer, order, deviceID,
+                            Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                              password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                             LogStatus(device, "Reg noveri success - No Contact");
                             return;
@@ -4700,7 +4660,7 @@ if (order.isReverify)
                     }
                     else
                     {
-                        Utility.storeAccWithThread(isServer, order, deviceID,
+                        Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                         password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                         LogStatus(device, "Reg noveri success - No Contact");
                         FbUtil.ClearAccountFbInSetting(deviceID, true);
@@ -5070,7 +5030,7 @@ if (order.isReverify)
 
 
                                     // store nvr
-                                    Utility.storeAccWithThread(isServer, order, deviceID,
+                                    Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                 password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                                     fail++;
                                     device.blockCount++;
@@ -5185,7 +5145,7 @@ if (order.isReverify)
                             {
                                 LogStatus(device, "Không thể lấy gmail -> store nvr - color: DarkSeaGreen");
                                 // store nvr
-                                Utility.storeAccWithThread(isServer, order, deviceID,
+                                Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                             password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                                 fail++;
                                 device.blockCount++;
@@ -5484,7 +5444,7 @@ if (order.isReverify)
                     if (order.veriDirectByPhone)
                     {
                         LogStatus(device, "Get code fail: Storing noveri");
-                        Utility.storeAccWithThread(isServer, order, deviceID,
+                        Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                             password, order.phoneT.phone + "|phone", "", order.gender, yearOld, Constant.FALSE, device.log);
 
                         noVerified++;
@@ -5585,7 +5545,7 @@ if (order.isReverify)
                         order.currentMail.mailRepository = null;
                         if (!string.IsNullOrEmpty(order.currentMail.refreshToken))
                         {
-                            order.currentMail.accessToken = ServerApi.GetAccessToken(order.currentMail.clientId, order.currentMail.refreshToken);
+                            order.currentMail.accessToken = OutsideServer.GetAccessToken(order.currentMail.clientId, order.currentMail.refreshToken);
                         }
                         otp = GetOtp(deviceID, order.tempmailType, order.currentMail, 20);
                         if (otp == Constant.FAIL || string.IsNullOrEmpty(otp))
@@ -5604,6 +5564,7 @@ if (order.isReverify)
 
                     InputConfirmCode(deviceID, otp);
                     order.hasOtp = true;
+                    order.otp = otp;
                     if (choPutOtpcheckBox.Checked)
                     {
                         LogStatus(device, "Chờ put otp : 60s");
@@ -5626,7 +5587,7 @@ if (order.isReverify)
                         // Delete acc in wait to veri
                         //....
 
-                        Utility.storeAccWithThread(isServer, order, deviceID,
+                        Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                             password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                         return;
                     }
@@ -5677,6 +5638,29 @@ if (order.isReverify)
                     LogStatus(device, "Vào lại màn hình nhập mã xác nhận---1---check again", 10000);
                     if (CheckTextExist(deviceID, "Nhập mã xác nhận", 1))
                     {
+                        WaitAndTapXML(deviceID, 1, "tiếp");
+                        Thread.Sleep(5000);
+                        WaitAndTapXML(deviceID, 3, "ok");
+
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 39.6, 28.4);
+                        Thread.Sleep(1000);
+                        LogStatus(device, "Confirm code: " + otp);
+
+                        InputConfirmCode(deviceID, otp);
+                        
+                        
+                        WaitAndTapXML(deviceID, 1, "tiếp");
+                        Thread.Sleep(5000);
+                        WaitAndTapXML(deviceID, 3, "ok");
+                        if (!WaitAndTapXML(deviceID, 8, Language.ConfirmResource()))
+                        {
+                            Device.TapByPercentDelay(deviceID, 49.4, 39.4);
+                            Device.TapByPercentDelay(deviceID, 49.4, 39.4);
+                        }
+                        if (order.isReverify && CheckTextExist(deviceID, "Lưu thông tin"))
+                        {
+                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 74.0 + ran.Next(1, 10), 95.6);
+                        }
                         string bbb1;
                         if (!string.IsNullOrEmpty(order.uid))
                         {
@@ -5857,7 +5841,7 @@ if (order.isReverify)
                 {
                     LogStatus(device, "Veri fail mà không biết ----", 2000);
                     order.isSuccess = false;
-                    Utility.storeAccWithThread(isServer, order, deviceID,
+                    Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                 password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                     fail++;
                     device.blockCount++;
@@ -6976,7 +6960,7 @@ if (order.isReverify)
                         {
                             LogStatus(device, "Veri fail mà không biết ----", 2000);
                             order.isSuccess = false;
-                            Utility.storeAccWithThread(isServer, order, deviceID,
+                            Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                         password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                             fail++;
                             device.blockCount++;
@@ -7038,7 +7022,7 @@ if (order.isReverify)
                         fail++;
                         device.blockCount++;
                         dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Maroon;
-                        Utility.storeAccWithThread(isServer, order, deviceID,
+                        Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                     password, "noveri|tempmail", device.androidId, order.gender, yearOld, Constant.FALSE, device.log);
                         Thread.Sleep(10000);
                         order.isSuccess = false;
@@ -7103,7 +7087,7 @@ if (order.isReverify)
                     ProfileMini(deviceID);
                 }
                 //UploadCoverProfile(deviceID, order, true);
-                if (!order.isReverify && (forceReupContactCheckBox.Checked || !order.hasAddFriend))
+                if (!order.reupFullInfoAcc && !order.isReverify && (forceReupContactCheckBox.Checked || !order.hasAddFriend))
                 {
                     LogStatus(device, "FORCE - Reupload contact");
                     if (CheckTextExist(deviceID, "truycậpvịtrí", 1))
@@ -7151,7 +7135,7 @@ if (order.isReverify)
                         {
                             LogStatus(device, "Veri fail mà không biết ----", 2000);
                             order.isSuccess = false;
-                            Utility.storeAccWithThread(isServer, order, deviceID,
+                            Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                         password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                             fail++;
                             device.blockCount++;
@@ -7163,8 +7147,6 @@ if (order.isReverify)
 
                         }
                     }
-
-
                 }
 
                 if (order.has2Fa)
@@ -7630,7 +7612,7 @@ if (order.isReverify)
                     {
                         LogStatus(device, "Veri fail mà không biết ----", 2000);
                         order.isSuccess = false;
-                        Utility.storeAccWithThread(isServer, order, deviceID,
+                        Utility.storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                                     password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                         fail++;
                         device.blockCount++;
@@ -7645,6 +7627,16 @@ if (order.isReverify)
                 if (order.hasAvatar && !order.checkAccHasAvatar)
                 {
                     LogStatus(device, "Recheck - Avatar trước khi lưu");
+                    if (CheckTextExist(deviceID, "đăng nhập", 1))
+                    {
+                        LogStatus(device, "Acc login lỗi", 2000);
+                        fail++;
+                        device.blockCount++;
+                        device.isBlocking = true;
+                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkSeaGreen;
+                        order.isSuccess = false;
+                        return;
+                    }
                     FbUtil.UploadAvatarProfile3(deviceID, order);
                 }
                 // Set active Duoimail
@@ -7667,7 +7659,7 @@ if (order.isReverify)
                 }
 
 
-                bool checkStoreOK = storeAccWithThread(isServer, order, deviceID,
+                bool checkStoreOK = storeAccWithThread(namServercheckBox.Checked, isServer, order, device,
                     password, order.currentMail.toString(), order.qrCode, order.gender, yearOld, Constant.TRUE, device.log);
                 LogStatus(device, "Stored information");
 
@@ -7675,7 +7667,7 @@ if (order.isReverify)
                 {
                     Text = Text + "------------------------------Kiểm tra kết nối server";
                     // Check server ip
-                    string serverIp = ServerApi.GetServerIp(serverCacheMailTextbox.Text);
+                    string serverIp = CacheServer.GetServerIp(serverCacheMailTextbox.Text);
                     if (!string.IsNullOrEmpty(serverIp) && serverIp != serverPathTextBox.Text)
                     {
                         serverPathTextBox.Text = serverIp;
@@ -7687,7 +7679,7 @@ if (order.isReverify)
                     Text = Text.Replace("------------------------------Kiểm tra kết nối server", "");
 
                     LogStatus(device, "Clear acc cache in setting ----------");
-                    FbUtil.ClearAccountFbInSetting(deviceID, clearAllAccSettingcheckBox.Checked);
+                    //FbUtil.ClearAccountFbInSetting(deviceID, clearAllAccSettingcheckBox.Checked);
                 }
                 if (addAccSettingCheckBox.Checked)
                 {
@@ -8038,6 +8030,8 @@ if (order.isReverify)
 
         public bool StopProxySuper(DeviceObject device)
         {
+           
+            Device.RemoveProxy(device.deviceId);
             Device.ForceStop(device.deviceId, "com.scheler.superproxy");
             //string deviceID = device.deviceId;
             //Device.OpenApp(deviceID, "com.scheler.superproxy");
@@ -8076,24 +8070,41 @@ if (order.isReverify)
                 device.startTime = startTime;
             }
             string deviceID = device.deviceId;
-            if (!Device.CheckAppInstall(deviceID, Constant.FACEBOOK_PACKAGE))
+
+
+            if (deviceID.Contains("recovery"))
             {
-                LogStatus(device, "Fb not install -> install it");
-                if (!FbUtil.InstallMissingFb(deviceID))
+                deviceID = deviceID.Replace("\trecovery", "");
+                device.deviceId = deviceID;
+                Device.RebootByCmd(deviceID);
+                LogStatus(device, "Đang reset chế độ recovery", 60000);
+            }
+
+
+
+
+            if (!InitialPhonecheckBox.Checked)
+            {
+                if (!Device.CheckAppInstall(deviceID, Constant.FACEBOOK_PACKAGE))
                 {
-                    LogStatus(device, "Check file APK trong 'data/fb'------------");
-                    Thread.Sleep(5000);
+                    LogStatus(device, "Fb not install -> install it");
+                    if (!FbUtil.InstallMissingFb(deviceID))
+                    {
+                        LogStatus(device, "Check file APK trong 'data/fb'------------");
+                        Thread.Sleep(5000);
+                    }
+                }
+                if (!Device.CheckAppInstall(deviceID, Constant.FACEBOOK_LITE_PACKAGE))
+                {
+                    LogStatus(device, "Fblite not install -> install it");
+                    if (!FbUtil.InstallMissingFblite(deviceID))
+                    {
+                        LogStatus(device, "Check file APK trong 'data/fb'------------");
+                        Thread.Sleep(5000);
+                    }
                 }
             }
-            if (!Device.CheckAppInstall(deviceID, Constant.FACEBOOK_LITE_PACKAGE))
-            {
-                LogStatus(device, "Fblite not install -> install it");
-                if (!FbUtil.InstallMissingFblite(deviceID))
-                {
-                    LogStatus(device, "Check file APK trong 'data/fb'------------");
-                    Thread.Sleep(5000);
-                }
-            }
+            
 
             while (true)
             {
@@ -8101,8 +8112,53 @@ if (order.isReverify)
                 {
 
                     Device.AdbConnect(deviceID);
-                    //FbUtil.AddSingleCover(deviceID);
 
+
+
+
+                    if (InitialPhonecheckBox.Checked)
+                    {
+                        LogStatus(device, "Bắt đầu chạy config phone");
+                        if (Utility.isScreenLock(deviceID))
+                        {
+                            Device.Unlockphone(deviceID);
+                        }
+                        LogStatus(device, "Set screen timeout 30 phut");
+                        Device.SetScreenTimeout(deviceID, 10);
+
+                        for (int i = 1; i < 13; i++)
+                        {
+                            LogStatus(device, "Next màn hình :" + i);
+                            WaitAndTapXML(deviceID, new string[] { "next", "navbarnext", "tiếp theo" });
+                        }
+
+                        //Thread.Sleep(3000);
+
+                        Device.Uninstall(deviceID, "com.android.vending");
+                        Device.Uninstall(deviceID, "com.android.deskclock");
+                        LogStatus(device, "Config phone xong -> cài phần mềm cơ bản");
+
+                        string[] fileNames = Directory.GetFiles("root_rom\\initial\\apk", "*.apk");
+                        if (fileNames != null && fileNames.Length > 0)
+                        {
+                            for (int i = 0; i < fileNames.Length; i++)
+                            {
+                                string fileName = fileNames[i];
+                                LogStatus(device, "Install file: " + fileName);
+                                Thread.Sleep(1000);
+                                Device.InstallApp(deviceID, fileName);
+                            }
+                        }
+                        Device.ChangeLanguageVN(deviceID);
+                        LogStatus(device, "Cài phần mềm cơ bản xong", 1000);
+                        LogStatus(device, "Root rom");
+                        Device.PushChargerFile(deviceID);
+                        Device.PushFileRootPhone(deviceID);
+
+                        return;
+                    }
+                //FbUtil.AddSingleCover(deviceID);
+                //ServerApi.GetProxyWwProxy("UK-33ae056a-8e55-4517-a4c8-032a2af827f2");
                 //ServerApi.GetBackupAcc("61562184406467");
                 //ServerApi.Get1SecMail();
                 // Testcode
@@ -8154,10 +8210,10 @@ if (order.isReverify)
                 //{
                 //    return code;
                 //}
-               // MailObject mail = GetHotmail(device, serverCacheMailTextbox.Text,  Constant.OUTLOOK_DOMAIN, true, 5 , false); 
+                // MailObject mail = GetHotmail(device, serverCacheMailTextbox.Text,  Constant.OUTLOOK_DOMAIN, true, 5 , false); 
                 BEGIN_:
 
-                    if (proxyWificheckBox.Checked || (proxyFromServercheckBox.Checked && !proxy4GcheckBox.Checked))
+                    if (proxyWificheckBox.Checked || (proxyFromServercheckBox.Checked && !proxy4GcheckBox.Checked) || wwProxyradioButton.Checked)
                     {
 
                     }
@@ -8226,7 +8282,7 @@ if (order.isReverify)
                         device.successInHour = 0;
                         LogStatus(device, "Đổi tên lỗi nhiều quá, tạm dừng kiểm tra lại --------", 5000);
                     }
-                    if (proxyWificheckBox.Checked || (proxyFromServercheckBox.Checked && !proxy4GcheckBox.Checked))
+                    if (proxyWificheckBox.Checked ||  (proxyFromServercheckBox.Checked && !proxy4GcheckBox.Checked))
                     {
 
                     }
@@ -8307,11 +8363,15 @@ if (order.isReverify)
                     if (device.fistTime)
                     {
                         LogStatus(device, "Chạy lần đầu tiên mở app");
-                        
+                        if (Utility.isScreenLock(deviceID))
+                        {
+                            Device.Unlockphone(deviceID);
+                        }
                         Device.PortraitRotate(deviceID);
                         device.showVersion = true;
 
                         CheckOnSim(device);
+                        FbUtil.ClearAccountFbInSetting(deviceID, true);
                     }
                     LogStatus(device, "Pre process");
 
@@ -8324,6 +8384,15 @@ if (order.isReverify)
                         continue;
                     }
                     Device.Home(deviceID);
+                    if (order.proxyFromServer && !proxy4GcheckBox.Checked)
+                    {
+                        LogStatus(device, "Enable wifi");
+                        Device.EnableWifi(deviceID);
+
+                    }
+
+
+
                     order = PreProcess(device, order);
 
 
@@ -8345,31 +8414,136 @@ if (order.isReverify)
                         LogStatus(device, "Không thể lấy acc mồi - nghỉ 6s", 6000);
                         continue;
                     }
-                    if (order != null && order.moiTruocProxy)
+
+                    if (order.proxyFromServer)
+                    {
+                        LogStatus(device, "Get proxy from server");
+
+                        Proxy pp = GetProxyFromServer();
+                        if (pp != null)
+                        {
+                            if (!proxy4GcheckBox.Checked)
+                            {
+                                Device.EnableWifi(deviceID);
+                            }
+                            
+                            device.keyProxy = pp.proxyDomain +  "-" + pp.host + ":" + pp.port + ":" + pp.key;
+                            order.hasproxy = true;
+                            if (device.proxyDevice == null || device.proxyDevice.host != pp.host)
+                            {
+                                device.loadNewProxy = true;
+                            }
+                            order.proxy = pp;
+                        }
+                        else
+                        {
+                            device.keyProxy = "";
+                            Device.DisableWifi(deviceID);
+                        }
+
+                    }
+                    else if (order.proxyWfi)
+                    {
+                        StopProxySuper(device);
+                        Device.EnableWifi(deviceID);
+                        Proxy pp = new Proxy();
+                        pp.host = "1.1.1.1";
+                        pp.port = "1111";
+                        device.keyProxy = ":" + pp.host + ":" + pp.port;
+                        order.hasproxy = true;
+                        if (device.proxyDevice == null || device.proxyDevice.host != pp.host)
+                        {
+                            device.loadNewProxy = true;
+                        }
+                        order.proxy = pp;
+                    }
+                    else if (order.proxyFromLocal)
+                    {
+                        LogStatus(device, "Get proxy from Local");
+
+                        Proxy pp = GetProxyFromLocal(device);
+                        if (pp != null)
+                        {
+
+                            Device.EnableWifi(deviceID);
+                            device.keyProxy = ":" + pp.host + ":" + pp.port + ":" + pp.key;
+                            order.hasproxy = true;
+                            if (device.proxyDevice == null || device.proxyDevice.host != pp.host)
+                            {
+                                device.loadNewProxy = true;
+                            }
+                            order.proxy = pp;
+                        }
+                        else
+                        {
+                            device.keyProxy = "";
+                            Device.DisableWifi(deviceID);
+                        }
+                    }
+                    else
+                    {
+                        StopProxySuper(device);
+                        device.keyProxy = "";
+                        if ((wwProxyradioButton.Checked || tunProxyradioButton.Checked || order.proxyFromServer) && device.proxyDevice != null && device.proxyDevice.hasProxy)
+                        {
+                            order.hasproxy = true;
+                        }
+                        else
+                        {
+                            Device.DisableWifi(deviceID);
+                        }
+                    }
+                    string ssid = Device.GetWifiStatus(deviceID);
+                    if (!ssid.Contains("unknown") && order != null && order.proxy == null)
+                    {
+                        LogStatus(device, "Máy không có proxy mà lại chạy Wifi - chạy lại", 3000);
+                        continue;
+                    }
+                    if (order != null && order.proxy != null && order.proxy.hasProxy )
                     {
                         if (!StartProxy(order, device))
                         {
                             Device.DisableWifi(deviceID);
+                            CacheServer.deleteKeyProxy(serverCacheMailTextbox.Text, order.proxy.key);
+                            device.keyProxy = "";
                             continue;
                         }
                         else
                         {
-                            if (showIpcheckBox.Checked)
-                            {
-                                device.currentPublicIp = Device.GetPublicIpSmartProxy(deviceID);
-                                dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
-                            }
+                            
                         }
                     }
+                    if (showIpcheckBox.Checked)
+                    {
+                        device.currentPublicIp = Device.GetPublicIpSmartProxy(deviceID);
+                        if (order != null && order.proxy != null && order.proxy.hasProxy && device.currentPublicIp.Length < 5)
+                        {
+                            
+                            Device.DisableWifi(deviceID);
+                            CacheServer.deleteKeyProxy(serverCacheMailTextbox.Text, order.proxy.key);
+                            device.keyProxy = "";
+                            LogStatus(device, "Set proxy không có mạng --------", 2000);
+                            continue;
+                        }
+
+                            dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
+                    }
+                    //LogStatus(device, "Clear app facebook");
+                    //FbUtil.ClearCacheFb(device);
+                    //LogStatus(device, "Clear app facebook -----xong");
                     Console.WriteLine("pre process:" + watch.ElapsedMilliseconds);
                     WaitAndTapXML(deviceID, new[] { "ok", "hủy" });
 
 
                     Autoclone(device, order);
 
+                    Device.ForceStop(deviceID, Constant.FACEBOOK_PACKAGE);
+                    //FbUtil.ClearCacheFb(device);
                     if (order.hasproxy)
                     {
                         StopProxySuper(device);
+                        CacheServer.deleteKeyProxy(serverCacheMailTextbox.Text, order.proxy.key);
+                        device.keyProxy = "";
                     }
                     if (device.fistTime)
                     {
@@ -8775,7 +8949,10 @@ if (order.isReverify)
 
             Device.PushAvatar(deviceID, order);
 
-
+            if (WaitAndTapXML(deviceID, new string[] { "lúc khác", "bỏ qua" }))
+            {
+                Thread.Sleep(2000);
+            }
             bool checkUpAvatar = false;
             for (int i = 0; i < 6; i++)
             {
@@ -8853,7 +9030,7 @@ if (order.isReverify)
             }
 
 
-            if (FindImage(deviceID, THU_VIEN_ANH, 2) || CheckTextExist(deviceID, "gầnđây", 1))
+            if (FindImage(deviceID, THU_VIEN_ANH, 2) || CheckTextExist(deviceID, new string[] { "mới đây", "gầnđây" }))
             {
                 Device.TapByPercent(deviceID, 12.9, 23.8, 1000); //  choose avatar image
 
@@ -8924,6 +9101,7 @@ if (order.isReverify)
                     ui = GetUIXml(deviceID);
                     if (CheckTextExist(deviceID, new[] { "chỉnhsửaảnhbìa" }, ui)) // đã có avatar rồi
                     {
+                        order.checkAccHasCover = true;
                         break;
                     }
                 }
@@ -9902,23 +10080,7 @@ if (order.isReverify)
             }
             else //////////////////  Reg by phone
             {
-                //LogStatus(device, "Log mail giả");
-                //Utility.WaitAndTapXML(deviceID, 3, Language.SignUpWithemail());
-                //Thread.Sleep(1000);
-                //MailObject mail = Mail.MailGenerator(mailSuffixtextBox.Text, gender, order.language); // random mail
 
-
-                //LogStatus(device, "Reg by Mail:" + mail.email);
-                //Utility.InputVietVNIText(deviceID, mail.email);
-
-                //Next(deviceID);
-
-
-                //Device.Back(deviceID);
-                //Device.Back(deviceID);
-
-                //Utility.WaitAndTapXML(deviceID, 3, "số di động");
-                //Thread.Sleep(1000);
                 LogRegStatus(dataGridView, device, "Reg by phone");
                 Device.TapDelay(deviceID, 1360, 959);
                 if (order.carryCodePhone)
@@ -10014,6 +10176,7 @@ if (order.isReverify)
                 LogStatus(device, "Reg by Phone flow normal:" + phone);
                 device.log = phone;
                 //phone = phone.Replace("+84", "0");
+                order.phoneReg = phone;
                 InputText(deviceID, Utility.ConvertToUnsign(phone), inputStringMailCheckBox.Checked);
 
                 Next(deviceID);
@@ -10057,6 +10220,7 @@ if (order.isReverify)
             string selectedDeviceName)
         {
             string deviceID = device.deviceId;
+            WaitAndTapXML(deviceID,1, "allowre");
             string name = InputNameNewUS(device, order, deviceID, gender);
             LogStatus(device, "Name:" + name);
             string phone = "";
@@ -10641,7 +10805,8 @@ if (order.isReverify)
                 Device.DeleteAllChars(deviceID);
                 //Thread.Sleep(1000);
                 //phone = phone.Replace("+84", "0");
-                InputText(deviceID, Utility.ConvertToUnsign(phone), inputStringMailCheckBox.Checked);
+                order.phoneReg = phone;
+                InputMail(deviceID, Utility.ConvertToUnsign(phone), false);
             }
             // Device.TapByPercent(deviceID, 89.0, 95.7); // Hạ bàn phím
             Thread.Sleep(1000);
@@ -10650,8 +10815,8 @@ if (order.isReverify)
             {
                 KAutoHelper.ADBHelper.TapByPercent(deviceID, 46.6, 47.9);// tiếp
             }
-
-            for (int i = 0; i < 4; i ++)
+            Thread.Sleep(2000);
+            for (int i = 0; i < 14; i ++)
             {
                 string xxm = GetUIXml(deviceID);
 
@@ -10736,11 +10901,10 @@ if (order.isReverify)
                 }
 
             }
-            //Thread.Sleep(7000);
-            //KAutoHelper.ADBHelper.TapByPercent(deviceID, 48.6, 34.5); // Lúc khác lưu
-            //Thread.Sleep(1000);
-            //KAutoHelper.ADBHelper.TapByPercent(deviceID, 50.7, 59.6); // đồng ý
 
+            //Thread.Sleep(3000);
+            //Device.Swipe(deviceID, 22, 777, 55, 222);
+            //Device.Swipe(deviceID, 22, 777, 55, 222);
             if (!WaitAndTapXML(deviceID, 4, "tôi đồng ý checkable"))
             {
                 if (!WaitAndTapXML(deviceID, 1, "lưucheckable"))
@@ -10801,20 +10965,64 @@ if (order.isReverify)
             } else
             {
                 // Check change screen
-                for (int i = 0;i < 15;i ++)
+                Thread.Sleep(2000);
+                string xmlll = GetUIXml(deviceID);
+                if (CheckTextExist(deviceID, "chínhsách", 1, xmlll))
                 {
-                    string xmlll = GetUIXml(deviceID);
-                    if (!CheckTextExist(deviceID, "cácđiềukhoản", 1, xmlll))
+                    for (int i = 0; i < 30; i++)
                     {
-                        break;
+                        xmlll = GetUIXml(deviceID);
+                        if (!CheckTextExist(deviceID, "chínhsách", 1, xmlll))
+                        {
+                            break;
+                        }
+                        LogStatus(device, "Chờ đăng ký lần: " + i);
+                        if (WaitAndTapXML(deviceID, 4, "tôi đồng ý checkable", xmlll))
+                        {
+                            break;
+                        }
+                        if (CheckTextExist(deviceID, "sai thông tin ", 1,xmlll))
+                        {
+                            return Constant.FAIL;
+                        }
+                        if (i == 22)
+                        {
+                            Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                            Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                            LogStatus(device, "Cho lau qua, goto fb confirm");
+                            Device.GotoFbConfirm(deviceID);
+                            Thread.Sleep(3000);
+                        }
                     }
+                } else
+                {
+                    LogStatus(device, "Giao diện chờ đăng ký --- mới, nghỉ 30s");
+                    Thread.Sleep(30000);
                 }
 
-                if (WaitAndTapXML(deviceID, 2, "thử lại resource"))
+                string uidLocal111 = FbUtil.GetUid(deviceID);
+
+
+                if (string.IsNullOrEmpty(uidLocal111) || FbUtil.CheckLiveWall(uidLocal111) == Constant.DIE)
+                {
+                    LogStatus(device, "checklivewall - Check live acc -Acc die --- , return--- color:Orange", 2000);
+
+                    fail++;
+                    device.blockCount++;
+                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Orange;
+                    device.isSuccess = false;
+                    Thread.Sleep(1000);
+                    order.isSuccess = false;
+                    LogRegFailStatus(device);
+                    return Constant.FAIL;
+                }
+                
+
+                if (WaitAndTapXML(deviceID, 2, "tiếp tục dùng tiếng anh mỹ"))
                
                 for (int i = 0; i < 3; i ++)
                 {
-                    string xmlll = GetUIXml(deviceID);
+                    xmlll = GetUIXml(deviceID);
                     if (CheckTextExist(deviceID, "nhập mã xác nhận", 1, xmlll))
                     {
                         return "xac_nhan";
@@ -11056,7 +11264,7 @@ if (order.isReverify)
             string firstname = GetFirtName(Constant.LANGUAGE_VN, gender, nameVnUscheckBox.Checked);
             
 
-            NameObject nnn = ServerApi.GetNameLocalCache(serverCacheMailTextbox.Text, gender, Constant.LANGUAGE_VN);
+            NameObject nnn = CacheServer.GetNameLocalCache(serverCacheMailTextbox.Text, gender, Constant.LANGUAGE_VN);
             if (nnn != null && !string.IsNullOrEmpty(nnn.name))
             {
                 firstname = nnn.name;
@@ -12124,7 +12332,7 @@ if (order.isReverify)
                     }
                 }
 
-                NameObject nnn = ServerApi.GetNameLocalCache(serverCacheMailTextbox.Text, gender, order.language);
+                NameObject nnn = CacheServer.GetNameLocalCache(serverCacheMailTextbox.Text, gender, order.language);
                 if (nnn != null && !string.IsNullOrEmpty(nnn.name))
                 {
                     firstname = nnn.name;
@@ -12310,7 +12518,7 @@ if (order.isReverify)
                     }
                 }
 
-                NameObject nnn = ServerApi.GetNameLocalCache(serverCacheMailTextbox.Text, gender, order.language);
+                NameObject nnn = CacheServer.GetNameLocalCache(serverCacheMailTextbox.Text, gender, order.language);
                 if (nnn != null && !string.IsNullOrEmpty(nnn.name))
                 {
                     firstname = nnn.name;
@@ -12478,24 +12686,25 @@ if (order.isReverify)
                         }
                     }
                 }
-                NameObject nnn = ServerApi.GetNameLocalCache(serverCacheMailTextbox.Text, gender, order.language);
+                NameObject nnn = CacheServer.GetNameLocalCache(serverCacheMailTextbox.Text, gender, order.language);
                 if (nnn != null && !string.IsNullOrEmpty(nnn.name))
                 {
                     firstname = nnn.name;
                     lastname = nnn.lastname;
                 }
-
+                firstname = new CultureInfo("en-US").TextInfo.ToTitleCase(firstname);
+                lastname = new CultureInfo("en-US").TextInfo.ToTitleCase(lastname);
                 LogStatus(device, "name:" + lastname + " " + firstname);
                 KAutoHelper.ADBHelper.TapByPercent(deviceID, 45.4, 26.5); // tab họ
                 Device.DeleteAllChars(deviceID);
                 //Thread.Sleep(1000);
                 if (order.language == Constant.LANGUAGE_VN)
                 {
-                    InputVietVNIText(deviceID, lastname);
+                    InputVietVNIText(deviceID, lastname.Trim());
                 }
                 else
                 {
-                    InputText(deviceID, lastname, false);
+                    InputText(deviceID, lastname.Trim(), false);
                 }
 
                 //Thread.Sleep(1300);
@@ -12508,11 +12717,11 @@ if (order.isReverify)
                 //Thread.Sleep(1000);
                 if (order.language == Constant.LANGUAGE_VN)
                 {
-                    InputVietVNIText(deviceID, firstname);
+                    InputVietVNIText(deviceID, firstname.Trim());
                 }
                 else
                 {
-                    InputText(deviceID, firstname, false);
+                    InputText(deviceID, firstname.Trim(), false);
                 }
                 //if (!WaitAndTapXML(deviceID, 1, "tiếp"))
                 //{
@@ -12525,45 +12734,43 @@ if (order.isReverify)
                 }
 
 
-                for (int i = 0; i < 7; i++)
+                for (int i = 0; i < 27; i++)
                 {
-
-                    if (CheckTextExist(deviceID, new string[] { "setdate", "đặtngày" }))
+                    string xml = GetUIXml(deviceID);
+                    if (CheckTextExist(deviceID, new string[] { "setdate", "đặtngày" }, xml))
                     {
                         return firstname + "|" + lastname;
                     }
-                }
-
-
-                //Thread.Sleep(4100);
-                if (CheckTextExist(deviceID, "chọntêncủabạn"))
-                {
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.9, 31.5);
-                    Thread.Sleep(2000);
-                    WaitAndTapXML(deviceID, 2, "tiếpcheckable");
-                    Thread.Sleep(3000);
-                }
-                else
-                {
-                    LogStatus(device, "Tên không thường dùng - đổi tên khác", 500);
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 33.0, 26.6); // tap Họ
-                    Thread.Sleep(500);
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 42.2, 25.5); // xóa
-                    lastname = GetLastName(order.language, gender, name3wordcheckBox.Checked);
-                    firstname = GetFirtName(order.language, gender, name3wordcheckBox.Checked);
-                    Thread.Sleep(1000);
-                    InputVietVNIText(deviceID, lastname);
-                    Thread.Sleep(1000);
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 85.1, 25.7); // tap tên
-                    Thread.Sleep(500);
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 90.4, 25.0); // xóa tên
-                    InputVietVNIText(deviceID, firstname);
-                    if (!WaitAndTapXML(deviceID, 3, "tiếpcheckable"))
+                    if (CheckTextExist(deviceID, "chọntêncủabạn",1, xml))
                     {
-                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 68.8, 36.3);
-
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.9, 31.5);
+                        Thread.Sleep(2000);
+                        WaitAndTapXML(deviceID, 2, "tiếpcheckable");
+                        Thread.Sleep(3000);
                     }
                 }
+
+
+                
+                LogStatus(device, "Tên không thường dùng - đổi tên khác", 500);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 33.0, 26.6); // tap Họ
+                Thread.Sleep(500);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 42.2, 25.5); // xóa
+                lastname = GetLastName(order.language, gender, name3wordcheckBox.Checked);
+                firstname = GetFirtName(order.language, gender, name3wordcheckBox.Checked);
+                Thread.Sleep(1000);
+                InputVietVNIText(deviceID, lastname);
+                Thread.Sleep(1000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 85.1, 25.7); // tap tên
+                Thread.Sleep(500);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 90.4, 25.0); // xóa tên
+                InputVietVNIText(deviceID, firstname);
+                if (!WaitAndTapXML(deviceID, 3, "tiếpcheckable"))
+                {
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 68.8, 36.3);
+
+                }
+                
 
 
                 if (!CheckTextExist(deviceID, "setdate", 5))
@@ -13270,7 +13477,9 @@ if (order.isReverify)
         }
         void ProcessStopproxy(DeviceObject device)
         {
+            
             StopProxySuper(device);
+            
         }
             private void downloadAvatarBtn_Click(object sender, EventArgs e)
         {
@@ -13352,7 +13561,7 @@ if (order.isReverify)
         }
         public void LoadDataInit()
         {
-            string serverIp = ServerApi.GetServerIp(serverCacheMailTextbox.Text);
+            string serverIp = CacheServer.GetServerIp(serverCacheMailTextbox.Text);
             if (!string.IsNullOrEmpty(serverIp) && serverIp != serverPathTextBox.Text)
             {
                 serverPathTextBox.Text = serverIp;
@@ -13497,16 +13706,73 @@ if (order.isReverify)
             Proxy proxy = new Proxy();
             for (int i = 0; i < 10; i++)
             {
-                proxy = ServerApi.GetProxyFromServer(serverCacheMailTextbox.Text, proxyP1checkBox.Checked, proxy3checkBox.Checked);
+                proxy = CacheServer.GetProxyFromServer(serverCacheMailTextbox.Text, proxyP1checkBox.Checked, proxy3checkBox.Checked, proxyKeycheckBox.Checked);
+                if (proxy == null ||
+                    (string.IsNullOrEmpty(proxy.host) && string.IsNullOrEmpty(proxy.key)))
+                {
+                    Thread.Sleep(5000);
+                    continue;
+                }
+                if (!string.IsNullOrEmpty(proxy.key) && string.IsNullOrEmpty(proxy.host))
+                {
+                    proxy = WwProxy.GetProxyWwProxy(proxy.key);
+                    if (proxy == null ||
+                        (string.IsNullOrEmpty(proxy.host) && string.IsNullOrEmpty(proxy.port)))
+                    {
+                        Thread.Sleep(5000);
+                        continue;
+                    }
+                }
+                
+                proxy.hasProxy = true;
 
-                if (proxy == null || string.IsNullOrEmpty(proxy.host))
+                
+                return proxy;
+            }
+
+
+            for (int i = 0; i < 2; i++)
+            {
+                proxy = CacheServer.GetProxyFromServer(serverCacheMailTextbox.Text, proxyP1checkBox.Checked, proxy3checkBox.Checked, false);
+
+                if (!string.IsNullOrEmpty(proxy.key))
+                {
+                    proxy = WwProxy.GetProxyWwProxy(proxy.key);
+                }
+                if (proxy == null ||
+                    (string.IsNullOrEmpty(proxy.host) && string.IsNullOrEmpty(proxy.key)))
                 {
                     Thread.Sleep(5000);
                     continue;
                 }
                 proxy.hasProxy = true;
 
-                
+
+                return proxy;
+            }
+            return null;
+        }
+
+        public Proxy GetProxyFromLocal(DeviceObject device)
+        {
+            Proxy proxy = new Proxy();
+            if (device.proxyDevice == null || string.IsNullOrEmpty(device.proxyDevice.key))
+            {
+                return null;
+            }
+            for (int i = 0; i < 10; i++)
+            {
+                proxy = WwProxy.GetProxyWwProxy(device.proxyDevice.key);
+
+                if (proxy == null ||
+                    (string.IsNullOrEmpty(proxy.host) && string.IsNullOrEmpty(proxy.key)))
+                {
+                    Thread.Sleep(10000);
+                    continue;
+                }
+                proxy.hasProxy = true;
+
+
                 return proxy;
             }
 
@@ -13518,7 +13784,7 @@ if (order.isReverify)
 
             for (int i = 0; i < 10; i++)
             {
-                acc = ServerApi.GetAccMoiLocalCache(serverCacheMailTextbox.Text);
+                acc = CacheServer.GetAccMoiLocalCache(serverCacheMailTextbox.Text);
 
                 if (acc == null || string.IsNullOrEmpty(acc.uid) || string.IsNullOrEmpty(acc.pass))
                 {
@@ -14414,7 +14680,7 @@ if (order.isReverify)
             //{
             //    key = " : " + device.keyProxy.Substring(device.keyProxy.Length - 6, 6);
             //}
-            device.status = text + "-block:" + device.blockCount + key;
+            device.status = text + "-block:" + device.blockCount + " - " + key;
 
             UpdateStatus2(device);
             if (sleep > 0)
@@ -15014,6 +15280,7 @@ if (order.isReverify)
 
         public string CheckOnSim(DeviceObject device)
         {
+            return "";
             string info = "Check ";
             string deviceID = device.deviceId;
             LogStatus(device, "Kiểm tra tình trạng on/off sim");
@@ -15298,7 +15565,8 @@ if (order.isReverify)
         {
             removeProxy2checkBox.Checked = false;
             moiKatanacheckBox.Checked = false;
-            moiFbLitecheckBox.Checked = true;
+            //moiFbLitecheckBox.Checked = true;
+            proxyFromLocalcheckBox.Checked = true;
             for (int i = 0; i < listDeviceObject.Count; i++)
             {
                 if (listDeviceObject[i] != null)
@@ -15347,7 +15615,7 @@ if (order.isReverify)
                     new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
             }
             else if (fastProxyRadioButton.Checked || zuesProxyradioButton.Checked || impulseradioButton.Checked || zuesProxy4G.Checked || s5ProxyradioButton.Checked
-                || tunProxyradioButton.Checked)
+                || tunProxyradioButton.Checked || wwProxyradioButton.Checked)
             {
                 keys = FastProxyTextBox.Text.Split(
                     new string[] { "\r\n", "\r", "\n" }, StringSplitOptions.None);
@@ -15392,7 +15660,7 @@ if (order.isReverify)
                                 //    p.username = kk[2];
                                 //    p.pass = kk[3];
                                 //}
-                                listDeviceObject[i].proxy = p;
+                                listDeviceObject[i].proxyDevice = p;
                             }
                         }
                         else if (zuesProxy4G.Checked || s5ProxyradioButton.Checked
@@ -15423,7 +15691,7 @@ if (order.isReverify)
                                     p.proxyId = kk[4];
                                 }
 
-                                listDeviceObject[i].proxy = p;
+                                listDeviceObject[i].proxyDevice = p;
                             }
                             LogStatus(listDeviceObject[i], "proxy: " + key);
                         } else if (tunProxyradioButton.Checked)
@@ -15436,7 +15704,13 @@ if (order.isReverify)
                             p.port = kk[3];
                             p.username = kk[0];
                             p.pass = kk[1];
-                            listDeviceObject[i].proxy = p;
+                            listDeviceObject[i].proxyDevice = p;
+                        } else if (wwProxyradioButton.Checked)
+                        {
+                            Proxy p = new Proxy();
+                            p.hasProxy = true;
+                            p.key = key;
+                            listDeviceObject[i].proxyDevice = p;
                         }
                     }
                 }
@@ -16055,53 +16329,7 @@ if (order.isReverify)
             }
         }
 
-        private void reImportContactButton_Click(object sender, EventArgs e)
-        {
-            reImportContactButton.Enabled = false;
-            reImportContactButton.BackColor = Color.Red;
-            reImportContactButton.Text = "Đang reimport";
-
-            int numberOfThread = listDeviceObject.Count;
-            List<Thread> list = new List<Thread>();
-            Task t = new Task(() =>
-            {
-                for (int k = 0; k < numberOfThread; k++)
-                {
-                    try
-                    {
-                        string deviceID = listDeviceObject[k].deviceId;
-                        if (deviceID.ToLower().Contains("offline"))
-                        {
-                            continue;
-                        }
-
-                        Thread T3 = new Thread(() => reImportContact(deviceID));
-                        T3.IsBackground = true;
-                        T3.Start();
-                        list.Add(T3);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        continue;
-                    }
-
-                }
-                foreach (Thread thread2 in list)
-                {
-                    thread2.Join();
-                }
-                MessageBox.Show("Reimport contact finish");
-
-                reImportContactButton.Invoke(new MethodInvoker(() =>
-                {
-                    reImportContactButton.Enabled = true;
-                    reImportContactButton.BackColor = Color.Green;
-                    reImportContactButton.Text = "Import Contact";
-                }));
-            });
-            t.Start();
-        }
+ 
         static void reImportContact(string deviceID)
         {
             try
@@ -16163,7 +16391,12 @@ if (order.isReverify)
             {
                 Console.WriteLine("ex:" + ex.Message);
             }
+            
             string _vcf = "socks5://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" +  proxy.port + "\" *";
+            if (!string.IsNullOrEmpty(proxy.proxyType) && proxy.proxyType == "HTTP")
+            {
+                _vcf = "http://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" + proxy.port + "\" *";
+            }
             File.AppendAllText(fileName, "# superproxy:proxylist:v1\n");
             File.AppendAllText(fileName, _vcf);
             return fileName;
@@ -16254,13 +16487,18 @@ if (order.isReverify)
                 CheckTextExist(deviceID, "gầnđây", 4);
                 Device.PortraitRotate(deviceID);
                 Device.TapByPercent(deviceID, 8.7, 8.3, 1000); // click setting
-
+                
                 if (!WaitAndTapXML(deviceID, 2, "còntrốngresource"))
                 {
-                    if (!WaitAndTapXML(deviceID, 1, "smg"))
+                    if (!WaitAndTapXML(deviceID, 1, "freeresource"))
                     {
-                        Device.TapByPercent(deviceID, 28.0, 57.6, 1000); // click to SM-G
+                        if (!WaitAndTapXML(deviceID, 1, "sm-g"))
+                        {
+                            Device.TapByPercent(deviceID, 28.0, 57.6, 1000); // click to SM-G
+                        }
                     }
+                   
+                    
 
                 }
 
@@ -17092,11 +17330,6 @@ if (order.isReverify)
 
         private void button10_Click(object sender, EventArgs e)
         {
-            //Ping myPing = new Ping();
-            //PingReply reply = myPing.Send("192.168.1.32", 30);
-
-            //if (reply.Status.ToString() != "Success")
-            //{
             serverOnlineCheckBox.Checked = true;
             //}
             string value = GoogleSheet.GetValue("report", "B2:B2");
@@ -17110,7 +17343,7 @@ if (order.isReverify)
             {
                 serverPathTextBox.Text = serverHost.Trim();
             }
-            string serverIp = ServerApi.GetServerIp(serverCacheMailTextbox.Text);
+            string serverIp = CacheServer.GetServerIp(serverCacheMailTextbox.Text);
             if (!string.IsNullOrEmpty(serverIp) && serverIp != serverPathTextBox.Text)
             {
                 serverPathTextBox.Text = serverIp;
@@ -17154,50 +17387,50 @@ if (order.isReverify)
 
         private void setFastProxybutton_Click(object sender, EventArgs e)
         {
-            if (MessageBox.Show("Bạn có muốn set FastProxy ?", "Cảnh Báo",
-                MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
-            {
+            //if (MessageBox.Show("Bạn có muốn set FastProxy ?", "Cảnh Báo",
+            //    MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            //{
 
-                int numberOfThread = listDeviceObject.Count;
+            //    int numberOfThread = listDeviceObject.Count;
 
-                installApkFbButton.Enabled = false;
-                installApkFbButton.BackColor = Color.Red;
-                installApkFbButton.Text = "Đang Set Fast Proxy";
-                List<Thread> list = new List<Thread>();
-                //Task t = new Task(() =>
-                //{
-                for (int k = 0; k < numberOfThread; k++)
-                {
-                    try
-                    {
-                        DeviceObject device = listDeviceObject[k];
-                        if (device.deviceId.ToLower().Contains("offline")) continue;
+            //    installApkFbButton.Enabled = false;
+            //    installApkFbButton.BackColor = Color.Red;
+            //    installApkFbButton.Text = "Đang Set Fast Proxy";
+            //    List<Thread> list = new List<Thread>();
+            //    //Task t = new Task(() =>
+            //    //{
+            //    for (int k = 0; k < numberOfThread; k++)
+            //    {
+            //        try
+            //        {
+            //            DeviceObject device = listDeviceObject[k];
+            //            if (device.deviceId.ToLower().Contains("offline")) continue;
 
-                        Thread T3 = new Thread(() => SetProxySuperProxy(device));
-                        T3.IsBackground = true;
-                        T3.Start();
-                        list.Add(T3);
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine(ex.Message);
-                        continue;
-                    }
+            //            Thread T3 = new Thread(() => SetProxySuperProxy(order, device.deviceId));
+            //            T3.IsBackground = true;
+            //            T3.Start();
+            //            list.Add(T3);
+            //        }
+            //        catch (Exception ex)
+            //        {
+            //            Console.WriteLine(ex.Message);
+            //            continue;
+            //        }
 
-                }
-                foreach (Thread thread2 in list) thread2.Join();
+            //    }
+            //    foreach (Thread thread2 in list) thread2.Join();
 
-                MessageBox.Show("Bật changer xong");
+            //    MessageBox.Show("Bật changer xong");
 
-                installApkFbButton.Invoke(new MethodInvoker(() =>
-                {
-                    installApkFbButton.Enabled = true;
-                    installApkFbButton.BackColor = Color.Green;
-                    installApkFbButton.Text = "Bật changer xong";
-                }));
-                //});
-                //t.Start();
-            }
+            //    installApkFbButton.Invoke(new MethodInvoker(() =>
+            //    {
+            //        installApkFbButton.Enabled = true;
+            //        installApkFbButton.BackColor = Color.Green;
+            //        installApkFbButton.Text = "Bật changer xong";
+            //    }));
+            //    //});
+            //    //t.Start();
+            //}
         }
         public void SetFastProxySockDroid(DeviceObject device)
         {
@@ -17210,7 +17443,7 @@ if (order.isReverify)
                 }
                 Device.RebootDevice(deviceID);
                 Thread.Sleep(1000);
-                FbUtil.SetProxySockDroid(deviceID, device.proxy);
+                FbUtil.SetProxySockDroid(deviceID, device.proxyDevice);
             }
             catch (Exception ex)
             {
@@ -17219,23 +17452,22 @@ if (order.isReverify)
 
         }
 
-        public bool SetProxySuperProxy(DeviceObject device)
+        public bool SetProxySuperProxy(OrderObject order, DeviceObject device)
         {
             try
             {
                 string deviceID = device.deviceId;
-                
                 if (deviceID.Contains("line") || deviceID.Contains("rec"))
                 {
                     return false;
                 }
-                if (device.proxy == null || !device.proxy.hasProxy)
+                if (order.proxy == null || !order.proxy.hasProxy)
                 {
                     return false;
                 }
 
                 //Device.RebootDevice(deviceID);
-                randomProxy(device.proxy, deviceID);
+                randomProxy(order.proxy, deviceID);
                 LogStatus(device, "Bắt đầu Chạy set proxy ------------");
                 Device.RemoveProxy(deviceID);
                 Device.ClearCache(deviceID, "com.scheler.superproxy");
@@ -17243,7 +17475,7 @@ if (order.isReverify)
             
                 Device.OpenApp(deviceID, "com.scheler.superproxy");
 
-                for (int i = 0; i < 3; i ++)
+                for (int i = 0; i < 16; i ++)
                 {
                     string xml = GetUIXml(deviceID);
 
@@ -17264,34 +17496,40 @@ if (order.isReverify)
                     WaitAndTapXML(deviceID, 1, "allow resourceid");
                 }
 
-                Thread.Sleep(1000);
+                Thread.Sleep(2000);
                 // Chọn folder 
                 Device.TapByPercent(deviceID, 8.7, 8.3, 1000); // click setting
                 
                 if  (!WaitAndTapXML(deviceID, 2, "còntrốngresource")) {
-                    if (!WaitAndTapXML(deviceID, 1, "smg"))
+                    if (!WaitAndTapXML(deviceID, 1, "freeresource"))
                     {
-                        Device.TapByPercent(deviceID, 34.4, 33.9, 1000); ; // click to SM-G
+                        if (!WaitAndTapXML(deviceID, 1, "sm-g"))
+                        {
+                            Device.TapByPercent(deviceID, 34.4, 33.9, 1000); ; // click to SM-G
+                        }
                     }
                     
                 }
-                
 
-                //Device.TapByPercent(deviceID, 24.1, 29.9, 1000); // click alarm
-                //if (!WaitAndTapXML(deviceID, 1, "musicresource"))
-                //{
-                //    return false;
-                //}
-                if (!WaitAndTapXML(deviceID, 2, device.proxy.port))
+                if (!WaitAndTapXML(deviceID, 2, order.proxy.port))
                 {
                     return false;
                 }
                 Device.DeleteTxtSdcard(deviceID);
-                
-                if (!WaitAndTapXML(deviceID, 2, "socks5checkable"))
+                if (!string.IsNullOrEmpty(order.proxy.proxyType) && order.proxy.proxyType == "HTTP")
                 {
-                    return false;
+                    if (!WaitAndTapXML(deviceID, 2, "httpcheckable"))
+                    {
+                        return false;
+                    }
+                } else
+                {
+                    if (!WaitAndTapXML(deviceID, 2, "socks5checkable"))
+                    {
+                        return false;
+                    }
                 }
+                
                 if (!WaitAndTapXML(deviceID, 2, "startcheckable"))
                 {
                     
@@ -17331,7 +17569,7 @@ if (order.isReverify)
                 {
                     return false;
                 }
-                if (device.proxy == null || !device.proxy.hasProxy)
+                if (device.proxyDevice == null || !device.proxyDevice.hasProxy)
                 {
                     return false;
                 }
@@ -17361,7 +17599,7 @@ if (order.isReverify)
                 Device.DeleteAllChars(deviceID);
                 Device.DeleteAllChars(deviceID);
                 //Thread.Sleep(1000);
-                InputText(deviceID, device.proxy.port, true);
+                InputText(deviceID, device.proxyDevice.port, true);
                 //Thread.Sleep(1000);
 
                 KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.5, 95.3); // tiếp
@@ -17622,13 +17860,18 @@ if (order.isReverify)
             if (proxyFromServercheckBox.Checked)
             {
                 superProxycheckBox.Checked = true;
-                s5ProxyradioButton.Checked = true;
-
+                //s5ProxyradioButton.Checked = true;
+                proxyFromLocalcheckBox.Checked = false;
                 for (int i = 0; i < listDeviceObject.Count; i++)
                 {
                     listDeviceObject[i].loadNewProxy = false;
                 }
                 removeProxy2checkBox.Checked = false;
+
+                for (int i = 0; i < dataGridView.Rows.Count; i ++)
+                {
+                    dataGridView.Rows[i].Cells[6].Value = true;
+                }
             }
             else
             {
@@ -17975,7 +18218,7 @@ if (order.isReverify)
                         device.clearCacheFailCount = 2;
                         device.clearCacheLiveCount = 2;
                         device.currentStatus = Constant.REG;
-                        device.proxy = new Proxy();
+                        device.proxyDevice = new Proxy();
                         listDeviceObject.Add(device);
 
                         device.allEmuStatus = Properties.Settings.Default.allEmuStatus;
@@ -18007,6 +18250,11 @@ if (order.isReverify)
                     dgvc.SortMode = DataGridViewColumnSortMode.NotSortable;
                 }
             }
+            
+        }
+
+        private void proxyFromLocalcheckBox_CheckedChanged(object sender, EventArgs e)
+        {
             
         }
     }
