@@ -181,7 +181,30 @@ namespace fb_reg
 			
 		}
 
-		
+		public static bool WriteStatus(string data, string sheetId)
+		{
+			try
+			{//int lastIndex = GetLastLineIndex(deviceID);
+				var range = $"{sheetId}!B1:B1";
+
+				var valueRange = new ValueRange();
+
+				var oblist = new List<object>() { };
+				oblist.Add(data);
+				valueRange.Values = new List<IList<object>> { oblist };
+
+				var updateRequest = _service.Spreadsheets.Values.Update(valueRange, SpreadsheetId, range);
+				updateRequest.ValueInputOption = SpreadsheetsResource.ValuesResource.UpdateRequest.ValueInputOptionEnum.USERENTERED;
+				updateRequest.Execute();
+				return true;
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message);
+				return false;
+			}
+		}
+
 		public static bool WriteAccount(string data, string sheet)
 		{
 			try

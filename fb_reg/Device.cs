@@ -1,6 +1,7 @@
 ﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using static fb_reg.CacheServer;
 
 namespace fb_reg
 {
@@ -37,7 +39,8 @@ namespace fb_reg
         private static string INPUT_TEXT_DEVICES = CONSOLE_ADB + " shell input text \"{1}\"";
 
         // Token: 0x04000006 RID: 6
-        private static string CAPTURE_SCREEN_TO_DEVICES = CONSOLE_ADB + " shell screencap -p \"{1}\"";
+        //private static string CAPTURE_SCREEN_TO_DEVICES = CONSOLE_ADB + " shell screencap -p \"{1}\"";
+        private static string CAPTURE_SCREEN_TO_DEVICES = CONSOLE_ADB + " exec-out screencap -p > {1}";
 
         // Token: 0x04000007 RID: 7
         private static string PULL_SCREEN_FROM_DEVICES = CONSOLE_ADB + " pull \"{1}\"";
@@ -56,6 +59,31 @@ namespace fb_reg
 
         // Token: 0x0400000C RID: 12
         private static string ADB_PATH = "";
+
+        public static string GetAndroidVersion(string deviceID)
+        {
+            string androidVersion = "";
+            try
+            {
+                string cmd = string.Format(CONSOLE_ADB + "shell getprop ro.build.version.release", deviceID);
+                string ex = ExecuteCMD(cmd);
+                
+                string[] dd = ex.Split('\n');
+                androidVersion = dd[4];
+                androidVersion = androidVersion.Replace("\r", "");
+                
+            }
+            catch { }
+
+            return androidVersion;
+        }
+        public static void SendSMS(string deviceID, string phoneNumber)
+        {
+
+            string cmd = "";
+            cmd = string.Format(CONSOLE_ADB + "shell am start -a android.intent.action.SENDTO -d sms:{1}", deviceID, phoneNumber);
+            string ddd = ExecuteCMD(cmd);
+        }
 
         public static void PushChargerFile(string deviceID)
         {
@@ -304,9 +332,30 @@ namespace fb_reg
                     return Constant.IP6;
                 } else 
                 {
+                    cmd = string.Format(CONSOLE_ADB + "shell \"ifconfig rmnet0 \"", deviceID);
+                    version = ExecuteCMD(cmd);
 
-              
-                    return Constant.NO_INTERNET;
+
+                    try
+                    {
+                        if (version.Contains("inet addr:"))
+                        {
+                            return Constant.IP4;
+
+                        }
+                        else if (version.Contains("inet6") && version.Contains("rmnet0"))
+                        {
+                            return Constant.IP6;
+                        }
+                        else
+                        {
+
+                            return Constant.NO_INTERNET;
+                        }
+                    } catch (Exception ex)
+                    {
+
+                    }
                 }
             }
             catch { }
@@ -373,15 +422,15 @@ namespace fb_reg
             }
             catch { }
 
-            cmd = string.Format(CONSOLE_ADB + "shell getprop gsm.network.type", deviceID);
-            ex = ExecuteCMD(cmd);
+            //cmd = string.Format(CONSOLE_ADB + "shell getprop gsm.network.type", deviceID);
+            //ex = ExecuteCMD(cmd);
             
-            try
-            {
-                string[] dd = ex.Split('\n');
-                sim = sim + "-" + dd[4];
-            }
-            catch { }
+            //try
+            //{
+            //    string[] dd = ex.Split('\n');
+            //    sim = sim + "-" + dd[4];
+            //}
+            //catch { }
 
             return sim;
         }
@@ -408,19 +457,92 @@ namespace fb_reg
             temp = Decode_UTF8(temp);
             return Regex.Match(temp, "org_name\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "region_name\":\"(.*?)\"").Groups[1].ToString();
         }
+
+        public class IpInfo
+        {
+            [JsonProperty("isp")]
+            public ispInfo isp { get; set; }
+
+            [JsonProperty("city")]
+            public CityInfo city { get; set; }
+            [JsonProperty("proxy")]
+            public ProxyInfo proxy { get; set; }
+            [JsonProperty("country")]
+            public CountryInfo country { get; set; }
+        }
+
+        public class ispInfo
+        {
+            [JsonProperty("isp")]
+            public string isp { get; set; }
+            [JsonProperty("asn")]
+            public string asn { get; set; }
+            [JsonProperty("domain")]
+            public string domain { get; set; }
+            [JsonProperty("organization")]
+            public string organization { get; set; }
+
+        }
+
+        public class CityInfo
+        {
+            [JsonProperty("name")]
+            public string name { get; set; }
+
+
+            [JsonProperty("code")]
+            public string code { get; set; }
+
+        }
+
+        public class CountryInfo
+        {
+            [JsonProperty("code")]
+            public string code { get; set; }
+
+
+            [JsonProperty("name")]
+            public string name { get; set; }
+            [JsonProperty("continent")]
+            public string continent { get; set; }
+        }
+        public class ProxyInfo
+        {
+            [JsonProperty("ip")]
+            public string ip { get; set; }
+        }
+
+
+
         public static string GetPublicIpSmartProxy(string deviceID)
         {
             string cmd = string.Format(CONSOLE_ADB + "shell su -c 'curl http://ip.smartproxy.com/json'", deviceID);
             string temp = ExecuteCMD(cmd);
 
             temp = Decode_UTF8(temp);
-            if (!string.IsNullOrEmpty(temp) && temp.Length > 350)
+            //string temp = Regex.Match(temp1, "\\{(.|\\s)*\\}\\n").Groups[1].ToString();
+            //IpInfo data = JsonConvert.DeserializeObject<IpInfo>(temp);
+            if (!string.IsNullOrEmpty(temp) && temp.Length > 250)
             {
-                temp = temp.Substring(250);
+                temp = temp.Substring(150);
+            } else
+            {
+                return "";
             }
-            temp = temp.Replace(" ", "").Replace("\\r", "").Replace("\\n", "");
+            temp = temp.Replace(" ", "").Replace("\\r", "").Replace(System.Environment.NewLine, "").Replace(System.Environment.NewLine, "");
             //return temp;
-            return Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "name\":\"(.*?)\"").Groups[1].ToString();
+            var brownserMatch = Regex.Match(temp, "name\":\"(.*?)\"");
+            var cityNameMatch = brownserMatch.NextMatch();
+            string cityName = cityNameMatch.Groups[1].ToString();
+            var countryNameMatch = cityNameMatch.NextMatch();
+            string countryName = countryNameMatch.Groups[1].ToString();
+            return  Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString()+ "|" + cityName + "|" + Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString();
+
+            //if (data != null)
+            //{
+            //    return data.country.code + "|" + data.country.name + "|" + data.country.continent + "|" + data.isp.isp + "|" + data.isp.asn + "|" + data.isp.domain + "|" + data.city.name + "|" + data.city.code + "|" + data.proxy.ip;
+            //}
+            //return temp;
         }
         public static void DisableWifi(string deviceID)
         {
@@ -549,9 +671,12 @@ namespace fb_reg
 
         public static void SetWifi(string deviceID, string ssid, string pass)
         {
+            EnableWifi(deviceID);
+            Thread.Sleep(1000);
             ClearCache(deviceID, "com.steinwurf.adbjoinwifi");
+            ssid = ssid.Replace(" ", "\\ ");
             string cmd = string.Format(CONSOLE_ADB + " shell am start -n com.steinwurf.adbjoinwifi/.MainActivity " +
-                "-e ssid {1} -e password_type WPA  -e password {2} ", deviceID, ssid, pass);
+                "-e ssid \"{1}\" -e password_type WPA  -e password {2} ", deviceID, ssid, pass);
             string result = ExecuteCMD(cmd);
 
             Thread.Sleep(3000);
@@ -645,46 +770,67 @@ namespace fb_reg
         }
         public static void RebootByCmd(string deviceID)
         {
-            string cmd = string.Format(CONSOLE_ADB + "reboot", deviceID);
-            ExecuteCMD(cmd);
-
-            Thread.Sleep(60 * 1000);
+            RebootDevice(deviceID);
         }
         public static void RebootDevice(string deviceID)
         {
-            DeleteAllScreenshot(deviceID);
-            string cmd = string.Format(CONSOLE_ADB + "shell input keyevent --longpress KEYCODE_POWER", deviceID);
-            ExecuteCMD(cmd);
-            Thread.Sleep(3000);
-            //TapByPercent(deviceID, 86.3, 32.5);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.7, 29.0);
-            Thread.Sleep(500);
-            //KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.7, 24.0);
-            Thread.Sleep(60 * 1000);
-            for (int i = 0;i < 20; i ++)
-            {
-                if (!Device.GetScreenStatus(deviceID).Contains("not found"))
-                {
-                    break;
-                } else
-                {
-                    Thread.Sleep(1000);
-                }
-            }
-            if (deviceID.Contains(":"))
-            {
-                Thread.Sleep(2000);
-                Device.AdbConnect(deviceID);
+            RunAdb(deviceID, "shell su -c reboot");
+            //DeleteAllScreenshot(deviceID);
+            //string cmd = string.Format(CONSOLE_ADB + "shell input keyevent --longpress KEYCODE_POWER", deviceID);
+            //ExecuteCMD(cmd);
+            //Thread.Sleep(3000);
+            ////TapByPercent(deviceID, 86.3, 32.5);
+            //KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.7, 29.0);
+            //Thread.Sleep(500);
+            ////KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.7, 24.0);
+            //Thread.Sleep(60 * 1000);
+            //for (int i = 0;i < 20; i ++)
+            //{
+            //    if (!Device.GetScreenStatus(deviceID).Contains("not found"))
+            //    {
+            //        break;
+            //    } else
+            //    {
+            //        Thread.Sleep(1000);
+            //    }
+            //}
+            //if (deviceID.Contains(":"))
+            //{
+            //    Thread.Sleep(2000);
+            //    Device.AdbConnect(deviceID);
 
-            }
+            //}
+            //if (Utility.isScreenLock(deviceID))
+            //{
+
+            //    Unlockphone(deviceID);
+            //}
+            WaitForBootComplete(deviceID);
             if (Utility.isScreenLock(deviceID))
             {
-
-                Unlockphone(deviceID);
+                
+                Device.Unlockphone(deviceID);
             }
-            
-
         }
+        public static bool WaitForBootComplete(string deviceId = "", int timeoutSeconds = 60)
+        {
+            RunAdb(deviceId, "wait-for-device");
+            var sw = Stopwatch.StartNew();
+            while (sw.Elapsed.TotalSeconds < timeoutSeconds)
+            {
+                string output = RunAdb(deviceId, "shell getprop sys.boot_completed");
+                if (output.Trim() == "1")
+                {
+                    Console.WriteLine("✅ Device boot completed.");
+                    return true;
+                }
+
+                Thread.Sleep(2000);
+            }
+            Console.WriteLine("❌ Timeout waiting for device boot.");
+            return false;
+        }
+
         public static void ResetConnectionDevices()
         {
             ExecuteCMD("adb kill-server");
@@ -930,6 +1076,18 @@ namespace fb_reg
             }
             return false;
         }
+        public static void DeleteAllImages(string deviceId)
+        {
+            string[] folders = { "/sdcard/DCIM/", "/sdcard/Pictures/", "/sdcard/Download/" };
+
+            foreach (var folder in folders)
+            {
+                RunAdb(deviceId, $"shell rm -rf {folder}*");
+                RunAdb(deviceId, $"shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://{folder}");
+            }
+
+            Console.WriteLine("🧹 Đã xoá toàn bộ ảnh và cập nhật thư viện Android.");
+        }
 
         public static void DeleteAllScreenshot(string deviceID)
         {
@@ -943,12 +1101,22 @@ namespace fb_reg
             cmd = string.Format(CONSOLE_ADB + " shell  \" su -c rm -rf  /sdcard/Download/*.png ", deviceID);
             result = ExecuteCMD(cmd);
             Thread.Sleep(1000);
+            //DeleteAllImages(deviceID);
+            //Thread.Sleep(1000);
             ClearCache(deviceID, "com.android.gallery3d");
             Thread.Sleep(1000);
         }
         public static void DeleteTxtSdcard(string deviceID)
         {
             string cmd = string.Format(CONSOLE_ADB + " shell  \" su -c rm -f /sdcard/*.txt ", deviceID);
+            string result = ExecuteCMD(cmd);
+            cmd = string.Format(CONSOLE_ADB + " shell  \" su -c rm -f /sdcard/*.png ", deviceID);
+            result = ExecuteCMD(cmd);
+        }
+
+        public static void DeleteFolderSdcard( string deviceID, string folder)
+        {
+            string cmd = string.Format(CONSOLE_ADB + " shell  \" su -c rm -rf /sdcard/" + folder + "\"", deviceID);
             string result = ExecuteCMD(cmd);
         }
         public static bool PushAvatarRaw(string deviceID, string pcPath)
@@ -1070,57 +1238,105 @@ namespace fb_reg
 
             return true;
         }
+
+        public static bool PushBase64ToDeviceAndDecode(string deviceID, string base64, string outputPathOnDevice = "/sdcard/output.bin")
+        {
+            try
+            {
+                string tempBase64Path = "/sdcard/temp.b64";
+
+                Console.WriteLine("🛠️ Đang gửi base64 lên thiết bị...");
+
+                // Bước 1: Xóa file cũ nếu có
+                RunAdb(deviceID, $"shell su -c \" rm {tempBase64Path}\"");
+
+                // Bước 2: Cắt base64 thành từng dòng nhỏ và gửi qua echo
+                int chunkSize = 3000;
+                for (int i = 0; i < base64.Length; i += chunkSize)
+                {
+                    string chunk = base64.Substring(i, Math.Min(chunkSize, base64.Length - i));
+                    string safeChunk = chunk.Replace("\"", "\\\""); // Escape dấu nháy
+                    RunAdb(deviceID, $"shell echo \"{safeChunk}\" >> {tempBase64Path}");
+                }
+
+                Console.WriteLine("📦 Đã gửi xong base64, đang giải mã...");
+
+                // Bước 3: Decode base64 trên thiết bị → file thực
+                RunAdb(deviceID, $"shell su -c \" base64 -d {tempBase64Path} > {outputPathOnDevice}\"");
+                Thread.Sleep(1000);
+                ///RunAdb(deviceID, "shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/0avatar.jpg");
+                Thread.Sleep(1000);
+                string cmd = string.Format(CONSOLE_ADB + " shell  \" su -c am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/0avatar.png\"", deviceID);
+                ExecuteCMD(cmd);
+                Console.WriteLine($"✅ Đã tạo file: {outputPathOnDevice}");
+            } catch (Exception ex)
+            {
+                return false;
+            }
+            return true;
+        }
+
+
         public static bool PushAvatar(string deviceID, OrderObject order)
         {
 
-            if (order.pushAvatar)
-            {
-                return false;
-            }
+            //if (order.pushAvatar)
+            //{
+            //    return false;
+            //}
             Device.DeleteAllScreenshot(deviceID);
-            string pcPath = Utility.RandomAvatar(deviceID, order.gender, order.language, order.forceAvatarUs);
-            if (string.IsNullOrEmpty(pcPath) || !File.Exists(pcPath))
+
+
+            AvatarObject cacheName = CacheServer.GetAvatarLocalCache( Utility.SERVER_LOCAL, order.gender, deviceID);
+
+            if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
             {
-                order.pushAvatar = false;
                 return false;
             }
-            byte[] imageBytes = File.ReadAllBytes(pcPath);
-            
-            using (var ms = new MemoryStream(imageBytes))
-            {
-                //var image = Image.FromStream(ms);
-                string newPath = pcPath.Insert(pcPath.Length - 5, "temp");
-                //string randomImage = Utility.DownloadRandomCover();
-                //if (File.Exists(randomImage))
-                //{
-                //    Image imageBackground = image;
-                //    Image imageOverlay = Image.FromFile(randomImage);
 
-                //    Image img = new Bitmap(imageBackground.Width, imageBackground.Height);
-                //    using (Graphics gr = Graphics.FromImage(img))
-                //    {
-                //        gr.DrawImage(imageBackground, new Point(0, 0));
-                //        gr.DrawImage(imageOverlay, new Point(0, 0));
-                //    }
-                //    img.Save(newPath, ImageFormat.Png);
-                //}
-                PushAvatarRaw(deviceID, pcPath);
-                
-                if (File.Exists(newPath))
-                {
-                    // If file found, delete it    
-                    File.Delete(newPath);
-                    Console.WriteLine("File deleted.");
-                }
-            }
+            //string pcPath = Utility.RandomAvatar(deviceID, order.gender, order.language, order.forceAvatarUs);
+            //if (string.IsNullOrEmpty(pcPath) || !File.Exists(pcPath))
+            //{
+            //    order.pushAvatar = false;
+            //    return false;
+            //}
+            //byte[] imageBytes = File.ReadAllBytes(pcPath);
 
-            // Delete
-            if (File.Exists(pcPath))
-            {
-                // If file found, delete it    
-                File.Delete(pcPath);
-                Console.WriteLine("File deleted.");
-            }
+            //using (var ms = new MemoryStream(imageBytes))
+            //{
+            //    //var image = Image.FromStream(ms);
+            //    string newPath = pcPath.Insert(pcPath.Length - 5, "temp");
+            //    //string randomImage = Utility.DownloadRandomCover();
+            //    //if (File.Exists(randomImage))
+            //    //{
+            //    //    Image imageBackground = image;
+            //    //    Image imageOverlay = Image.FromFile(randomImage);
+
+            //    //    Image img = new Bitmap(imageBackground.Width, imageBackground.Height);
+            //    //    using (Graphics gr = Graphics.FromImage(img))
+            //    //    {
+            //    //        gr.DrawImage(imageBackground, new Point(0, 0));
+            //    //        gr.DrawImage(imageOverlay, new Point(0, 0));
+            //    //    }
+            //    //    img.Save(newPath, ImageFormat.Png);
+            //    //}
+            //    PushAvatarRaw(deviceID, pcPath);
+
+            //    if (File.Exists(newPath))
+            //    {
+            //        // If file found, delete it    
+            //        File.Delete(newPath);
+            //        Console.WriteLine("File deleted.");
+            //    }
+            //}
+
+            //// Delete
+            //if (File.Exists(pcPath))
+            //{
+            //    // If file found, delete it    
+            //    File.Delete(pcPath);
+            //    Console.WriteLine("File deleted.");
+            //}
             order.pushAvatar = true;
             return true;
         }
@@ -1228,6 +1444,16 @@ namespace fb_reg
                 text = text + " && " + string.Format(CONSOLE_ADB + "shell input tap {1} {2}", deviceID, x, y);
             }
             return ExecuteCMD(text);
+        }
+
+        public static string TapRoot(string deviceID, int x, int y, int count = 1)
+        {
+            string text = string.Format("shell input tap {0} {1}", x, y);
+            //for (int i = 1; i < count; i++)
+            //{
+            //    text = text + " && " + string.Format(CONSOLE_ADB + "shell input tap {1} {2}", deviceID, x, y);
+            //}
+            return RunAdb(deviceID, text);
         }
         public static string TapPoint(string deviceID, Point p)
         {
@@ -1484,8 +1710,117 @@ namespace fb_reg
             string cmd = string.Format(CONSOLE_ADB + " shell svc data disable", deviceID);
             ExecuteCMD(cmd);
         }
+        public static string RunAdbAsRoot(string deviceId, string shellCommand, int timeoutMs = 10000)
+        {
+            try
+            {
+                string fullCommand = $"shell su -c \"{shellCommand}\"";
+                string adbArgs = (string.IsNullOrEmpty(deviceId) ? "" : $"-s {deviceId} ") + fullCommand;
 
-        public static string ExecuteCMD1(string cmdCommand)
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "adb",
+                    Arguments = adbArgs,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true
+                };
+
+                var process = new Process { StartInfo = startInfo };
+                var outputBuilder = new StringBuilder();
+                var errorBuilder = new StringBuilder();
+
+                process.OutputDataReceived += (s, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                if (!process.WaitForExit(timeoutMs))
+                {
+                    process.Kill();
+                    throw new TimeoutException("⏰ ADB (su) command timed out.");
+                }
+
+                string error = errorBuilder.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(error))
+                    Console.WriteLine("⚠️ ADB su stderr: " + error);
+
+                return outputBuilder.ToString().Trim();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("❌ RunAdbAsRoot exception: " + ex.Message);
+                return "";
+            }
+        }
+
+        public static string RunAdb(string deviceId, string args, int timeoutMs = 15000)
+        {
+            try
+            {
+                string modifiedArgs = args;
+
+                if (args.StartsWith("shell") && !args.Contains("su -c"))
+                {
+                    // Chuyển lệnh shell thường thành shell su -c
+                    var shellPart = args.Substring(6).Trim(); // Bỏ "shell"
+                    modifiedArgs = $"shell su -c \"{shellPart}\"";
+                }
+
+                string adbArgs = (string.IsNullOrEmpty(deviceId) ? "" : $"-s {deviceId} ") + modifiedArgs;
+
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "adb",
+                    Arguments = adbArgs,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8,
+                    StandardErrorEncoding = Encoding.UTF8
+                };
+
+                var process = new Process { StartInfo = startInfo };
+
+                var outputBuilder = new StringBuilder();
+                var errorBuilder = new StringBuilder();
+
+                process.OutputDataReceived += (s, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
+                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
+
+                process.Start();
+                process.BeginOutputReadLine();
+                process.BeginErrorReadLine();
+
+                if (!process.WaitForExit(timeoutMs))
+                {
+                    process.Kill();
+                    throw new TimeoutException("⏰ ADB command timed out.");
+                }
+
+                process.WaitForExit(); // đảm bảo stdout/stderr đọc xong
+
+                string error = errorBuilder.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(error))
+                {
+                    Console.WriteLine($"⚠️ ADB stderr: {error}");
+                }
+
+                return outputBuilder.ToString().Trim();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ RunAdb exception: {ex.Message}");
+                return string.Empty;
+            }
+
+        }
+            public static string ExecuteCMD1(string cmdCommand)
         {
             string result;
             try
@@ -1753,7 +2088,28 @@ namespace fb_reg
             }
 
         }
-        public static Bitmap ScreenShoot(string deviceID = null, bool isDeleteImageAfterCapture = true, string fileName = "screenShoot.png")
+        public static Bitmap ScreenShoot(string deviceId = null, bool isDeleteImageAfterCapture = true, string fileName = "screenShoot.png")
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = "adb",
+                Arguments = (deviceId != "" ? $"-s {deviceId} " : "") + "exec-out screencap -p",
+                RedirectStandardOutput = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            var process = Process.Start(startInfo);
+            Thread.Sleep(200);
+            var ms = new MemoryStream();
+            process.StandardOutput.BaseStream.CopyTo(ms);
+            process.WaitForExit();
+
+            ms.Position = 0;
+            return new Bitmap(ms);
+        }
+
+        public static Bitmap ScreenShootOld(string deviceID = null, bool isDeleteImageAfterCapture = true, string fileName = "screenShoot.png")
         {
             Bitmap result;
             if (string.IsNullOrEmpty(deviceID))
@@ -1780,15 +2136,17 @@ namespace fb_reg
                 }
                 break;
             }
-            string str2 = string.Format(CAPTURE_SCREEN_TO_DEVICES, deviceID, "/sdcard/" + text);
-            str2 = str2 + Environment.NewLine + string.Format(PULL_SCREEN_FROM_DEVICES, deviceID, "/sdcard/" + text);
-            str2 = str2 + Environment.NewLine + string.Format(REMOVE_SCREEN_FROM_DEVICES, deviceID, "/sdcard/" + text) + Environment.NewLine;
-            string text2 = ExecuteCMD(str2);
+            //string str2 = string.Format(CAPTURE_SCREEN_TO_DEVICES, deviceID, "/sdcard/" + text);
+            //str2 = str2 + Environment.NewLine + string.Format(PULL_SCREEN_FROM_DEVICES, deviceID, "/sdcard/" + text);
+            //str2 = str2 + Environment.NewLine + string.Format(REMOVE_SCREEN_FROM_DEVICES, deviceID, "/sdcard/" + text) + Environment.NewLine;
+            //string text2 = ExecuteCMD(str2);
+            string text2 = string.Format(CAPTURE_SCREEN_TO_DEVICES, deviceID, text);
+            text2 = ExecuteCMD(text2);
             if ("error".Equals(text2))
             {
                 return null;
             }
-            
+
             using (Bitmap original = new Bitmap(text))
             {
                 result = new Bitmap(original);
@@ -1859,14 +2217,14 @@ namespace fb_reg
 
         public static void RandomAndroidID(string deviceID)
         {
-            string randomAdId = Utility.RandomAndroidID();
+            string randomAdId = Guid.NewGuid().ToString("N").Substring(0, 16);
             SetAndroidID(deviceID, randomAdId);
             // adb shell content query --uri content://settings/secure --where "name=\'android_id\'"
         }
         public static void SetAndroidID(string deviceID, string androidId)
         {
             
-            string cmd = string.Format(CONSOLE_ADB + " shell settings put secure android_id {1}", deviceID, androidId);
+            string cmd = string.Format(CONSOLE_ADB + " shell su -c \"settings put secure android_id {1}\"", deviceID, androidId);
             ExecuteCMD(cmd);
             // adb shell content query --uri content://settings/secure --where "name=\'android_id\'"
         }
@@ -1941,6 +2299,22 @@ namespace fb_reg
         public static void ExecuteFileBat(string batFile)
         {
             Process.Start(batFile).WaitForExit();
+        }
+
+        public static void ForgetAllNetworks(string deviceId)
+        {
+            var output = RunAdb(deviceId, "shell su -c \"cmd wifi list-networks\"");
+            var lines = output.Split('\n');
+
+            foreach (var line in lines)
+            {
+                if (!line.Contains("Network"))
+                {
+                    var parts = line.Split(' ');
+                    string id = parts[0]; // networkId số sau dấu cách
+                    RunAdb(deviceId, $"shell su -c \"cmd wifi forget-network {id}\"");
+                }
+            }
         }
     }
 }

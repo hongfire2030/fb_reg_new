@@ -30,8 +30,8 @@ namespace fb_reg
             this.password = password;
         }
 
-    
 
+        
         public List<string> GetAllMailSubjects()
         {
             var messages = new List<string>();
@@ -98,7 +98,36 @@ namespace fb_reg
 
     public static class Mail
     {
-        
+        public static MailObject GetHotmailUnlimited(int amount, string type)
+        {
+            try
+            {
+                HotmailUnlimitedResponse responseData = GetHotMailUnlimited(amount, type);
+                if (responseData != null && responseData.status && responseData.data != null && responseData.data.Length > 0)
+                {
+
+                    for (int i = 0; i < responseData.data.Length; i++)
+                    {
+                        MailObject mailObj = new MailObject();
+                        mailObj.email = responseData.data[i].email;
+                        mailObj.password = responseData.data[i].password;
+                       
+                        mailObj.accessToken = responseData.data[i].access_token;
+                        mailObj.refreshToken = responseData.data[i].refresh_token;
+                        mailObj.clientId = responseData.data[i].client_id;
+                        mailObj.source = "unlimit";
+                        
+                        return mailObj;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            return null;
+        }
+
         public static string CreateRandomString(int lengText, Random rd = null)
         {
             string outPut = "";
@@ -545,21 +574,28 @@ namespace fb_reg
             return mail;
         }
 
-        public static MailObject GetGmailSuperGmail(string server)
+        public static MailObject GetGmailSuperGmail(bool vip, string server, bool cache = true)
         {
-            MailObject mail = CacheServer.GetSuperGmailLocalCache(server);
+            
+            MailObject mail = new MailObject();
+            if (cache)
+            {
+                mail = CacheServer.GetSuperGmailLocalCache(server);
+            }
+             
             if (Utility.IsMailEmpty(mail))
             {
-                mail = OutsideServer.GetGmailSuperTeam();
+                mail = OutsideServer.GetGmailAllSite(vip);
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
-                    mail.message = "sell gmail from cache";
+                    mail.message = "super gmail trực tiếp từ tool";
                 }
             }
             else
             {
                 Console.WriteLine("Get mail cache thanh cong:" + mail.email);
             }
+            
             return mail;
         }
 
@@ -571,7 +607,7 @@ namespace fb_reg
                 mail = OutsideServer.GetGmailOtp();
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
-                    mail.message = "sell gmail from cache";
+                    mail.message = "gmail otp trực tiếp";
                 }
             }
             else
@@ -587,10 +623,10 @@ namespace fb_reg
             MailObject mail = CacheServer.GetDichvuGmailLocalCache(server);
             if (Utility.IsMailEmpty(mail))
             {
-                mail = OutsideServer.GetGmailDichVuGmail("Facebook", "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ");
+                mail = OutsideServer.GetGmailDichVuGmail(RequestApi.PublicData.AccessTokenDvgmNormal, "Facebook");
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
-                    mail.message = "dichvu gmail from cache";
+                    mail.message = "dichvu gmail trực tiếp";
                 }
             } else
             {
@@ -623,11 +659,11 @@ namespace fb_reg
             return mail;
         }
 
-        public static MailObject GetGmailSuperTeam()
-        {
-            MailObject mail = OutsideServer.GetGmailSuperTeam();
-            return mail;
-        }
+        //public static MailObject GetGmailSuperTeam()
+        //{
+        //    MailObject mail = OutsideServer.GetGmailSuperTeam();
+        //    return mail;
+        //}
 
         public static MailObject CreateTempHotmail(string tenMail = "")
         {
@@ -854,7 +890,7 @@ namespace fb_reg
             return otp;
         }
 
-        public static string GetOtpMailOtp(int orderId)
+        public static string GetOtpMailOtp(string orderId)
         {
             string otp = Constant.FAIL;
 
@@ -909,12 +945,39 @@ namespace fb_reg
             {
                 for (int i = 0; i < time; i++)
                 {
-                    string code = OutsideServer.GetOtpGmailSuperTeam(inMail.email);
-                    if (!string.IsNullOrEmpty(code))
+                    string code = "";
+
+                    if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "shopgmail_gmail")
+                    {
+                        code = OutsideServer.GetOtpGmailShopgmail(inMail);
+                    } else if (!string.IsNullOrEmpty(inMail.source) && 
+                        (inMail.source == "thuesim_gmail") || inMail.source == "thuesim_gmail_vip")
+                    {
+                        code = OutsideServer.GetOtpGmailThuesim(inMail);
+                    }
+                    //else if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "thuesim_gmail_vip")
+                    //{
+                    //    code = OutsideServer.GetOtpGmailThuesim(inMail);
+                    //}
+                    else if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "super_gmail")
+                    {
+                        code = OutsideServer.GetOtpGmailSuperTeam(inMail);
+                    } else if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "dvgm")
+                    {
+                        code = OutsideServer.GetGmailDichVuGmailOtp(inMail);
+                    } else if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "otpcheap_gmail")
+                    {
+                        code = OutsideServer.GetCodeMailOtp(inMail.orderId);
+                    } else if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "hvl")
+                    {
+                        code = GetOtpHvl(inMail);
+                    }
+
+                        if (!string.IsNullOrEmpty(code))
                     {
                         return code;
                     }
-                    Thread.Sleep(5000);
+                    Thread.Sleep(10000);
                 }
             }
             catch
@@ -1080,7 +1143,7 @@ namespace fb_reg
             int count = time + 5;
             for (int i = 0; i < count; i++)
             {
-                string otp = OutsideServer.GetGmailDichVuGmailOtp(mail.token);
+                string otp = OutsideServer.GetGmailDichVuGmailOtp(mail);
                 if (!string.IsNullOrEmpty(otp))
                 {
                     return otp;
@@ -1097,7 +1160,7 @@ namespace fb_reg
         {
             for (int i = 0; i < time; i++)
             {
-                string otp = OutsideServer.GetGmailDichVuGmailOtp(mail.token, "eY33ElMh9EHWJmImm14D50V74ryl56M0");
+                string otp = OutsideServer.GetGmailDichVuGmailOtp(mail);
                 if (!string.IsNullOrEmpty(otp))
                 {
                     return otp;
@@ -1250,17 +1313,18 @@ namespace fb_reg
             }
         }
 
-        public static MailObject GetTempmail(string duoiMail, string tempmailType, string server)
+        public static MailObject GetTempmail(bool vip, string duoiMail, string tempmailType, string server, bool cache = true)
         {
             MailObject dd = new MailObject();
-
+            
             if (tempmailType == Constant.TEMP_GENERATOR_EMAIL)
             {
                 dd = CreateTempMail("", duoiMail);
             }
             else if (tempmailType == Constant.TEMP_GENERATOR_1_SEC_EMAIL)
             {
-                dd = Get1SecMail();
+                // dd = Get1SecMail();
+                dd = CreateTempMail("", duoiMail);
             }
             else if (tempmailType == Constant.TEMP_FAKE_EMAIL)
             {
@@ -1304,7 +1368,7 @@ namespace fb_reg
             }
             else if (tempmailType == Constant.GMAIL_SUPERTEAM)
             {
-                dd = GetGmailSuperGmail(server);
+                dd = GetGmailSuperGmail(vip, server, cache);
             }
             else if (tempmailType == Constant.GMAIL_48h)
             {

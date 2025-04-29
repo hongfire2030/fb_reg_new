@@ -8,6 +8,11 @@ namespace fb_reg
 {
     public class OrderObject
     {
+        public string proxyType = "3";
+        public bool RootRom = false;
+        public bool mailEdu = false;
+        public bool deleteKeyProxy = false;
+        public bool NAM_SERVER = false;
         public string source; // binh duong/ q7
         public string versionFb;
         public string phoneReg;

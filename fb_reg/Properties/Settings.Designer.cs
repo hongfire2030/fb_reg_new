@@ -274,5 +274,17 @@ namespace fb_reg.Properties {
                 this["selectedFbVersionIndex"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string wifilist {
+            get {
+                return ((string)(this["wifilist"]));
+            }
+            set {
+                this["wifilist"] = value;
+            }
+        }
     }
 }

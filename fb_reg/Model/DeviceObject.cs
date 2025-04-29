@@ -4,6 +4,12 @@ namespace fb_reg
 {
     public class DeviceObject
     {
+        public string currentRom = "";
+        public bool needRebootAfterClear = false;
+        public int currentProxyCount = 0;
+        public Proxy currentProxy;
+        public int countSuccess;
+        public bool VeriOk = false;
         public OrderObject order;
         public bool change2UsLanguage = false;
         public bool change2VnLanguage = true;
@@ -16,8 +22,12 @@ namespace fb_reg
         public bool randomVersion = false;
         public bool randomVersionSauDie = false;
         public bool chuyenQuaMoiKatana = false;
+        public bool chuyenQuaVeriHotmail = false;
+        public bool chuyenQuaRegNvr = false;
         public bool chuyenQuaVeriGmail = false;
-        
+        public bool chuyenProxy2P1 = false;
+        public bool chuyenVeri4g = false;
+
         public bool installFb = false;
         public bool updateFb = false;
         public bool installFb449 = false;
@@ -50,6 +60,7 @@ namespace fb_reg
         public int globalSuccess;
         public double percentInHour;
         public int blockCount;
+        public int blockCountOtp;
         public int runningStatus;
         public bool clearCache = true;
         public bool clearCacheLite = false;

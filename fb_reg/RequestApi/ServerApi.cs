@@ -702,7 +702,7 @@ namespace fb_reg
             try
             {
                 var client = new RestClient(SERVER_HOST);
-                // client.Authenticator = new HttpBasicAuthenticator(username, password);
+                
                 var request = new RestRequest("accounts/resource/" + uid);
 
                 request.AddFile("file", path);
@@ -728,13 +728,13 @@ namespace fb_reg
             try
             {
                 var client = new RestClient(SERVER_HOST);
-                // client.Authenticator = new HttpBasicAuthenticator(username, password);
+                
                 var request = new RestRequest("accounts/resource/" + uid);
 
                 byte [] response = client.DownloadData(request);
                 if (response != null && response.Length > 0)
                 {
-                    File.WriteAllBytes("Authentication/" + uid + ".zip", response);
+                    File.WriteAllBytes("Authentication/" + uid + ".tar.gz", response);
                     return true;
                 }
                 else

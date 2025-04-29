@@ -8,6 +8,7 @@ namespace fb_reg
 {
     public class MailObject
     {
+        public int mailCount;
         public string mailWeb;
         public string email;
         public string password;
@@ -18,10 +19,12 @@ namespace fb_reg
         public string status;
         public string type;
         public string token;
-        public int orderId;
+        public string orderId;
         public string message;
         public string source;
         public bool otpVandong;
+        public int balanceAfter;
+        public string key;
         public MailRepository mailRepository;
         public string toString()
         {

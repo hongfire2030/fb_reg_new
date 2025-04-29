@@ -83,6 +83,7 @@ namespace fb_reg
         public static string NO_INTERNET = "Khong co mang";
         public static string ACTION_CHANGE2IP4 = "ChangeApn2Ip4";
         public static string ACTION_CHANGE2IP6 = "ChangeApn2Ip6";
+        public static string ACTION_REINSTALL_ROM = "ReinstallRom";
         public static string ACTION_CHANGE2IP4_6 = "ChangeApn2Ip4-6";
 
         public static string ACTION_CHANGE2IP4G = "ChangeApn2Ip4G";

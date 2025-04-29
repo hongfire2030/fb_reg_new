@@ -178,7 +178,7 @@ namespace fb_reg
             Thread.Sleep(1000);
             //if (isVerified != Constant.TRUE)
             //{
-            FbUtil.PullBackupFb(uid, deviceID);
+            FbUtil.PullBackupFbNew(uid, deviceID);
             Thread.Sleep(2000);
             ZipFile.CreateFromDirectory("Authentication/" + uid, "Authentication/" + uid + ".zip");
             Thread.Sleep(2000);

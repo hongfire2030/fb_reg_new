@@ -34,22 +34,29 @@ namespace fb_reg
         }
         public static PhoneTextNow GetPhoneOtpmmo()
         {
-            PhoneTextNow phoneT = new PhoneTextNow();
-            string apiGetHotMail = string.Format("https://otpmmo.online/textnow/api.php?apikey={0}&&type=getphone&qty=1", OTPMMO_KEY);
-            var request = (HttpWebRequest)WebRequest.Create(apiGetHotMail);
-            request.Method = "GET";
-            request.Accept = "application/json";
-            request.ContentType = "application/json; charset=utf-8";
+            try
+            {
+                PhoneTextNow phoneT = new PhoneTextNow();
+                string apiGetHotMail = string.Format("https://otpmmo.online/textnow/api.php?apikey={0}&&type=getphone&qty=1", OTPMMO_KEY);
+                var request = (HttpWebRequest)WebRequest.Create(apiGetHotMail);
+                request.Method = "GET";
+                request.Accept = "application/json";
+                request.ContentType = "application/json; charset=utf-8";
 
-            var response = (HttpWebResponse)request.GetResponse();
-            string responseString = new StreamReader(response.GetResponseStream()).ReadToEnd().ToString();
+                var response = (HttpWebResponse)request.GetResponse();
+                string responseString = new StreamReader(response.GetResponseStream()).ReadToEnd().ToString();
 
-            phoneT.message = Utility.Decode_UTF8( responseString);
-            phoneT.phone = responseString;
-            phoneT.requestId = "";
-            phoneT.source = Constant.OTP_MMO_TEXTNOW;
+                phoneT.message = Utility.Decode_UTF8(responseString);
+                phoneT.phone = responseString;
+                phoneT.requestId = "";
+                phoneT.source = Constant.OTP_MMO_TEXTNOW;
 
-            return phoneT;
+                return phoneT;
+            } catch (Exception)
+            {
+                return null;
+            }
+            
         }
         public static PhoneTextNow TryToGetPhone(OrderObject order, int time)
         {

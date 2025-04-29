@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Cache;
 using System.Text;
 using System.Threading.Tasks;
@@ -12,17 +13,118 @@ namespace fb_reg
 {
     public class CacheServer
     {
+
+
+        public static string SetCacheMail(string server, int dvgm, int sellgmail, int superGmail, int gmailOtp, int hotmail, int id, int ratecachehotmail, int runveri)
+        {
+            try
+            {
+                string apiGetHotMail = string.Format("api/setting?dvgm={0}&sellgmail={1}&supergmail={2}&gmailotp={3}&hotmail={4}&hotmailtype={5}&ratecachehotmail={6}&runveri={7}", dvgm, sellgmail, superGmail, gmailOtp, hotmail, id, ratecachehotmail, runveri);
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetHotMail);
+
+
+                var response = client.Get(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get Setting:" + content);
+                return content;
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            return "";
+        }
+
+        public static string SetCacheMail2(string server, int dvgm, int sellgmail, int superGmail, int sptVip, int gmailOtp, int hotmail, int id, int ratecachehotmail)
+        {
+            try
+            {
+                string apiGetHotMail = string.Format("api/setting?dvgm={0}&sellgmail={1}&supergmail={2}&sptvip={3}&gmailotp={4}&hotmail={5}&hotmailtype={6}&ratecachehotmail={7}&runveri=-1", dvgm, sellgmail, superGmail, sptVip, gmailOtp, hotmail, id, ratecachehotmail, -1);
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetHotMail);
+
+
+                var response = client.Get(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get mail:" + content);
+                return content;
+            }
+            catch (Exception ex)
+            {
+                return "Server lỗi rồi --------------";
+            }
+
+            return "";
+        }
+        public static string SetRunVeri(string server, int runVeri)
+        {
+            return SetCacheMail(server, -1, -1, -1, -1, -1, -1, -1, runVeri);
+        }
+        public static int GetRunVeri(string server)
+        {
+            string temp = SetCacheMail(server, -1, -1, -1, -1, -1, -1, -1, -1);
+            temp = temp.Replace("\"", "");
+            temp = temp.Replace("/", "");
+            temp = temp.Replace("\\", "");
+            string[] tempArray = temp.Split('|');
+            int runveri = 0;
+            try
+            {
+                runveri = Convert.ToInt32(tempArray[14]);
+            } catch(Exception ex)
+            {
+
+            }
+            return runveri;
+        }
+
         public class ServerInfoResponse
         {
             [JsonProperty("ip")]
             public string ip { get; set; }
 
         }
-
-        public static string GetServerIp(string server)
+        public static string UpdateInvalidName(string server, string invalidName)
         {
             try
             {
+                if (string.IsNullOrEmpty(invalidName))
+                {
+                    return "";
+                }
+                string apiGetHotMail = string.Format("api/invalidname?invalidName={0}", invalidName);
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetHotMail);
+
+
+                var response = client.Put(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get mail:" + content);
+                return "";
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            return "";
+        }
+        public static string GetServerIp(string server, bool namServer)
+        {
+            try
+            {
+                if (namServer)
+                {
+                    return "";
+                }
                 string apiGetHotMail = "api/ipserver";
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
@@ -115,8 +217,8 @@ namespace fb_reg
 
                 if (data != null && !string.IsNullOrEmpty(data.avatarName))
                 {
-                    Byte[] bytes = Convert.FromBase64String(data.base64);
-                    File.WriteAllBytes("img/avatar/" + deviceID + ".png", bytes);
+                    //Byte[] bytes = Convert.FromBase64String(data.base64);
+                    //File.WriteAllBytes("img/avatar/" + deviceID + ".png", bytes);
                     data.localPath = "img/avatar/" + deviceID + ".png";
                     return data;
                 }
@@ -204,6 +306,68 @@ namespace fb_reg
 
             return mail;
         }
+        
+        public static MailObject AddMailServerCache(MailObject mail, string server)
+        {
+            try
+            {
+                string apiGetSellGmail = "api/supergmail";
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetSellGmail);
+                request.AddHeader("Content-Type", "application/json");
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(mail);
+
+                var response = client.Post(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get mail:" + content);
+                string decode = Utility.Decode_UTF8(content);
+                MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
+
+                if (data != null )
+                {
+                    return data;
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return null;
+        }
+
+        public static Proxy AddProxyShareServerCache(Proxy proxy, string server)
+        {
+            try
+            {
+                string apiGetSellGmail = "api/proxy";
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetSellGmail);
+                request.AddHeader("Content-Type", "application/json");
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(proxy);
+
+                var response = client.Post(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get proxy:" + content);
+                string decode = Utility.Decode_UTF8(content);
+                Proxy data = JsonConvert.DeserializeObject<Proxy>(decode);
+
+                if (data != null && !string.IsNullOrEmpty(data.proxyDomain))
+                {
+                    return data;
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return proxy;
+        }
         public static MailObject GetSuperGmailLocalCache(string server)
         {
             MailObject mail = new MailObject();
@@ -224,6 +388,14 @@ namespace fb_reg
 
                 if (data != null && !string.IsNullOrEmpty(data.email))
                 {
+                    if (data.source == "otpcheap_gmail")
+                    {
+                        if (string.IsNullOrEmpty(data.orderId))
+                        {
+                            mail.message = "otp cheap mất orderid";
+                            return mail;
+                        }
+                    }
                     return data;
                 }
             }
@@ -279,7 +451,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetAccMoi);
-
+                request.AddParameter("type", "");
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -300,33 +472,20 @@ namespace fb_reg
             return accMoi;
         }
 
-        public static Proxy GetProxyFromServer(string server, bool p1, bool p3, bool key)
+        public static Proxy GetProxyFromServer(string server, OrderObject order)
         {
             Proxy proxy = new Proxy();
             try
             {
-                string type = "";
-                if (p1)
-                {
-                    type = "1";
-                }
-                else
-                {
-                    type = "2";
-                }
-                if (p3)
-                {
-                    type = "3";
-                }
-                if (key)
-                {
-                    type = "key";
-                }
+                string type = order.proxyType;
+               
+                
+                ServicePointManager.ServerCertificateValidationCallback = (sender, cert, chain, sslPolicyErrors) => true;
                 string apiGetProxy = string.Format("api/proxy?type={0}", type);
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetProxy);
-
+               
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -356,13 +515,18 @@ namespace fb_reg
             return proxy;
         }
 
-        public static void deleteKeyProxy(string server, string key)
+        public static void deleteKeyProxy(string server, OrderObject order)
         {
+            if (order.deleteKeyProxy || string.IsNullOrEmpty(order.proxy.key))
+            {
+                return;
+            }
+            order.deleteKeyProxy = true;
             Proxy proxy = new Proxy();
             try
             {
                 
-                string apiGetProxy = string.Format("api/proxy?key={0}", key);
+                string apiGetProxy = string.Format("api/proxy?key={0}&&version={1}", order.proxy.key, order.proxy.proxyVersion);
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetProxy);

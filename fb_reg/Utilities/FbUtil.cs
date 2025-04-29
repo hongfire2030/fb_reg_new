@@ -62,7 +62,7 @@ namespace fb_reg
             string[] fileNames = Directory.GetFiles("data\\fb", "*.apk");
             if (fileNames != null && fileNames.Length > 0)
             {
-                string fileName = fileNames[0];
+                string fileName = fileNames[fileNames.Length -1];
                 Thread.Sleep(1000);
                 Device.InstallApp(deviceID, fileName);
 
@@ -468,44 +468,48 @@ namespace fb_reg
             Utility.WaitAndTapXML(deviceID, 2, "1textfacebookresourceid");
             //Utility.WaitAndTapXML(deviceID, 2, "RemoveAccount");
             Utility.WaitAndTapXML(deviceID, 2, "xóa tài khoảnresourceid");
-            Utility.WaitAndTapXML(deviceID, 2, "xóa tài khoảnresourceid");
-            Thread.Sleep(1000);
-            if (clearAll)
+            if (Utility.WaitAndTapXML(deviceID, 2, "xóa tài khoảnresourceid"))
             {
-                while (Utility.CheckTextExist(deviceID, "Facebook"))
-                {
-                    RemoveAccountFb(deviceID);
-                    Thread.Sleep(1000);
-                }
-            } else
-            {
+                Thread.Sleep(5000);
+            }
+            
+            //if (clearAll)
+            //{
+            //    while (Utility.CheckTextExist(deviceID, "Facebook"))
+            //    {
+            //        RemoveAccountFb(deviceID);
+            //        Thread.Sleep(1000);
+            //    }
+            //} else
+            //{
                 string input = GetUIXml(deviceID);
-                //var result = Regex.Match(responseString, "text100(.*?)resource");
-                Regex expression = new Regex(@"text100(.*?)resource");
-                var results = expression.Matches(input);
+            //var result = Regex.Match(responseString, "text100(.*?)resource");
+            Regex expression = new Regex(@"text615(.*?)resource");
+            //Regex expression = new Regex(@"text615(.*?)resource");
+            var results = expression.Matches(input);
                 if (results != null)
                 {
                     foreach (Match match in results)
                     {
                         Console.WriteLine(match.Groups[1].Value);
-                        string uid = "100" + match.Groups[1].Value;
-                        if (CheckLiveWall(uid) == Constant.DIE)
-                        {
+                        string uid = "615" + match.Groups[1].Value;
+                        //if (CheckLiveWall(uid) == Constant.DIE)
+                        //{
                             Utility.WaitAndTapXML(deviceID, 2, uid);
                             //Utility.WaitAndTapXML(deviceID, 2, "RemoveAccount");
                             Utility.WaitAndTapXML(deviceID, 2, "xóa tài khoảnresourceid");
                             Utility.WaitAndTapXML(deviceID, 2, "xóa tài khoảnresourceid");
                             Thread.Sleep(1000);
-                        }
+                        //}
                     }
                 }
                 
-            }
+            //}
             
-            while (Utility.CheckTextExist(deviceID, "Messenger"))
-            {
-                RemoveAccountMessenger(deviceID);
-            }
+            //while (Utility.CheckTextExist(deviceID, "Messenger"))
+            //{
+            //    RemoveAccountMessenger(deviceID);
+            //}
             Thread.Sleep(500);
             Device.Back(deviceID);
             Thread.Sleep(500);
@@ -564,6 +568,44 @@ namespace fb_reg
             Thread.Sleep(500);
             Device.Home(deviceID);
         }
+        public static void PrepareForClone(string deviceId, bool needReboot)
+        {
+            Console.WriteLine($"🧼 Đang reset thiết bị {deviceId} trước khi reg clone...");
+
+            // 1. Clear Facebook & Messenger
+            RunAdb(deviceId, "shell pm clear com.facebook.katana");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            RunAdb(deviceId, "shell pm clear com.facebook.orca");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+
+            // 2. Clear GMS (Google Services) để reset Google Ad ID
+            RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            // 3. Xóa Android ID (Android sẽ tự tạo lại sau reboot)
+            RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            // 4. Xóa cache hệ thống
+            RunAdb(deviceId, "shell su -c \"rm -rf /data/cache/* /data/local/tmp/* /data/system/dropbox/*\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            // 5. Xóa ảnh, video, avatar cũ
+            RunAdb(deviceId, "shell su -c \"rm -rf /sdcard/DCIM/* /sdcard/Pictures/*\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            // 6. Reset Wi-Fi, proxy, DNS
+            RunAdb(deviceId, "shell su -c \"svc wifi disable\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            RunAdb(deviceId, "shell su -c \"rm -rf /data/misc/wifi\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            RunAdb(deviceId, "shell su -c \"settings put global http_proxy :0\"");
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            // 7. Gợi ý reboot sau chuẩn bị
+            if (needReboot)
+            {
+                //Console.WriteLine("🔁 Đang khởi động lại thiết bị...");
+                Device.RebootByCmd(deviceId);
+                
+            }
+            
+        }
         public static void ClearCacheFb(DeviceObject device)
         {
             string deviceID = device.deviceId;
@@ -571,7 +613,8 @@ namespace fb_reg
             Device.ForceStop(deviceID, Constant.FACEBOOK_PACKAGE);
             Thread.Sleep(500);
             Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
-
+            PrepareForClone(deviceID, device.needRebootAfterClear);
+            device.needRebootAfterClear = false;
             //Device.ForceStop(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
             //Thread.Sleep(300);
             //Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
@@ -586,16 +629,20 @@ namespace fb_reg
             //Thread.Sleep(300);
 
             //Device.ClearCache(deviceID, "com.instagram.android");
-            
+
             //Device.ClearCache(deviceID, "com.android.vending");
 
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell pm grant com.facebook.katana android.permission.READ_CONTACTS");
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell pm grant com.facebook.katana android.permission.CALL_PHONE");
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell pm grant com.facebook.katana android.permission.READ_PHONE_STATE");
-            
-            KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.katana");
-            KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.lite");
-            KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/media/0/Android/data/com.facebook.orca");
+
+            // 2. Clear Google Play Services (optional)
+            //RunAdb(deviceID, "shell pm clear com.google.android.gms");
+
+            // 3. Reset Android ID (random 16-char hex)
+            //string newAndroidId = Guid.NewGuid().ToString("N").Substring(0, 16);
+            //RunAdb(deviceID, $"shell settings put secure android_id {newAndroidId}");
+
 
 
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /data/system/graphicsstats/1658361600000/com.facebook.katana");
@@ -617,7 +664,7 @@ namespace fb_reg
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -r /mnt/user/0/primary/Android/media/com.facebook.orca");
 
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -rf /data/system_ce/0/launch_params/com.facebook.katana_.activity.FbMainTabActivity.xm");
-            
+
 
 
         }
@@ -825,6 +872,7 @@ namespace fb_reg
                 for (int i = 0; i < 10; i++)
                 {
                     uixml = GetUIXml(deviceID);
+                    WaitAndTapXML(deviceID, new string[] { "thửlạiresourceid", "thử lại" }, uixml);
                     if (WaitAndTapXML(deviceID, 1, "facebookresourceid", uixml))
                     {
                         if (WaitAndTapXML(deviceID, 1, "luônchọnresourceid"))
@@ -840,7 +888,11 @@ namespace fb_reg
                     {
                         break;
                     }
-                    if (CheckTextExist(deviceID, new string[] { "tạotin", "chưaxem", "làmbạn", "lúc khác" }))
+                    if (CheckTextExist(deviceID, "tạo tài khoản", 1, uixml))
+                    {
+                        break;
+                    }
+                    if (CheckTextExist(deviceID, new string[] {  "Đăng nhập bằng tài khoản khác", "tạotin", "chưaxem", "làmbạn", "lúc khác" , "thêm ảnh", "bỏ qua"}))
                     {
                         Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
                         Thread.Sleep(2000);
@@ -858,12 +910,12 @@ namespace fb_reg
             {
                 Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
             }
-                
-            
 
-            
-            
-             if (fast)
+
+            Device.Swipe(deviceID, 33, 1500, 55, 500);
+            Device.Swipe(deviceID, 44, 1300, 66, 400);
+
+            if (fast)
             {
                 for (int i = 0; i < 20; i++)
                 {
@@ -875,11 +927,9 @@ namespace fb_reg
                             break;
                         }
                     }
-                    if (WaitAndTapXML(deviceID, 1, "tạotàikhoảnmớicheckable", uixml))
-                    {
-                        break;
-                    }
-                    if (WaitAndTapXML(deviceID, 1, "createnewAccountCheckable", uixml))
+
+                    if (WaitAndTapXML(deviceID,  new string[] { "đăngkýcheckable", "createnewAccountCheckable", "tạotàikhoản", "bắt đầu", 
+                        "tạotàikhoảnmớicheckable", "tạotàikhoảnmớicheckable"  }, uixml))
                     {
                         break;
                     }
@@ -904,7 +954,7 @@ namespace fb_reg
                 for (int k = 0; k < 20; k++)
                 {
                     uixml = GetUIXml(deviceID);
-                    if (WaitAndTapXML(deviceID, new string[] { "get started", "tiếp", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable", "getstarted" }, uixml))
+                    if (WaitAndTapXML(deviceID, new string[] { "cho phép re", "cho phép", "tạotàikhoảncheckablefalsecheckedfalseclickablefal", "tạotàikhoảnmớicheckable", "tạotàikhoảncheckable", "tạo tài khoản", "get started", "tiếp", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable", "getstarted" }, uixml))
                     {
                         return true;
                     }
@@ -945,7 +995,7 @@ namespace fb_reg
                     break;
                 }
 
-                else if (WaitAndTapXML(deviceID, new string[] {"get started", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable" }))
+                else if (WaitAndTapXML(deviceID, new string[] { "cho phép re", "cho phép", "tạotàikhoảnmớicheckable", "tạotàikhoảncheckable", "tạo tài khoản", "get started", "next", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable" }))
                 {
                     return true;
                 }
@@ -1862,361 +1912,361 @@ namespace fb_reg
         public static string ChangeEmu(DeviceObject device, string sim, string country = "")
         {
 
-            string deviceID = device.deviceId;
-            Device.Unlockphone(deviceID);
-            Device.KillApp(deviceID, "com.device.emulator.pro");
-            Device.OpenApp(deviceID, "com.device.emulator.pro");
-            Thread.Sleep(2000);
-            string result = "";
-            if (sim == Constant.TURN_OFF_EMU)
-            {
-                string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac", 
-                    "wmac", "wssid", "mobno", "subsid", "simcs", "emailid" };
+        //    string deviceID = device.deviceId;
+        //    Device.Unlockphone(deviceID);
+        //    Device.KillApp(deviceID, "com.device.emulator.pro");
+        //    Device.OpenApp(deviceID, "com.device.emulator.pro");
+        //    Thread.Sleep(2000);
+        //    string result = "";
+        //    if (sim == Constant.TURN_OFF_EMU)
+        //    {
+        //        string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac", 
+        //            "wmac", "wssid", "mobno", "subsid", "simcs", "emailid" };
 
-                for (int i = 0; i < emus.Length; i ++)
-                {
-                    string key = emus[i];
+        //        for (int i = 0; i < emus.Length; i ++)
+        //        {
+        //            string key = emus[i];
                     
-                    Utility.WaitAndTapXML(deviceID, 2, Language.TurnOnEMU(key));
+        //            Utility.WaitAndTapXML(deviceID, 2, Language.TurnOnEMU(key));
                     
-                    Thread.Sleep(200);
-                    Device.Swipe(deviceID, 500, 1500, 500, 1350);
-                }
+        //            Thread.Sleep(200);
+        //            Device.Swipe(deviceID, 500, 1500, 500, 1350);
+        //        }
                 
-                goto FLASH_SIM;
-            }
-            if (sim == Constant.TURN_OFF_ALL)
-            {
-                string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac",
-                    "wmac", "wssid", "mobno", "subsid", "simcs","operator", "emailid" };
+        //        goto FLASH_SIM;
+        //    }
+        //    if (sim == Constant.TURN_OFF_ALL)
+        //    {
+        //        string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac",
+        //            "wmac", "wssid", "mobno", "subsid", "simcs","operator", "emailid" };
 
-                for (int i = 0; i < emus.Length; i++)
-                {
-                    string key = emus[i];
+        //        for (int i = 0; i < emus.Length; i++)
+        //        {
+        //            string key = emus[i];
 
-                    Utility.WaitAndTapXML(deviceID, 2, Language.TurnOnEMU(key));
+        //            Utility.WaitAndTapXML(deviceID, 2, Language.TurnOnEMU(key));
 
-                    Thread.Sleep(200);
-                    Device.Swipe(deviceID, 500, 1500, 500, 1350);
-                }
+        //            Thread.Sleep(200);
+        //            Device.Swipe(deviceID, 500, 1500, 500, 1350);
+        //        }
 
-                goto FLASH_SIM;
-            }
-            if (sim == Constant.TURN_ON_EMU)
-            {
-                string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac",
-                    "wmac", "wssid", "mobno", "subsid", "simcs", "emailid" };
+        //        goto FLASH_SIM;
+        //    }
+        //    if (sim == Constant.TURN_ON_EMU)
+        //    {
+        //        string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac",
+        //            "wmac", "wssid", "mobno", "subsid", "simcs", "emailid" };
 
-                for (int i = 0; i < emus.Length; i++)
-                {
-                    string key = emus[i];
+        //        for (int i = 0; i < emus.Length; i++)
+        //        {
+        //            string key = emus[i];
 
-                    Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffEMU(key));
+        //            Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffEMU(key));
 
-                    Thread.Sleep(200);
-                    Device.Swipe(deviceID, 500, 1500, 500, 1350);
-                }
+        //            Thread.Sleep(200);
+        //            Device.Swipe(deviceID, 500, 1500, 500, 1350);
+        //        }
 
-                goto FLASH_SIM;
-            }
+        //        goto FLASH_SIM;
+        //    }
 
-            if (sim == Constant.TURN_ON_ALL)
-            {
-                string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac",
-                    "wmac", "wssid", "mobno", "subsid", "simcs","operator", "emailid" };
+        //    if (sim == Constant.TURN_ON_ALL)
+        //    {
+        //        string[] emus = { "imei", "deviceid", "adsid", "gsfid", "serial", "bmac",
+        //            "wmac", "wssid", "mobno", "subsid", "simcs","operator", "emailid" };
 
-                for (int i = 0; i < emus.Length; i++)
-                {
-                    string key = emus[i];
+        //        for (int i = 0; i < emus.Length; i++)
+        //        {
+        //            string key = emus[i];
 
-                    Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffEMU(key));
+        //            Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffEMU(key));
 
-                    Thread.Sleep(200);
-                    Device.Swipe(deviceID, 500, 1500, 500, 1350);
-                }
+        //            Thread.Sleep(200);
+        //            Device.Swipe(deviceID, 500, 1500, 500, 1350);
+        //        }
 
-                goto FLASH_SIM;
-            }
+        //        goto FLASH_SIM;
+        //    }
 
 
 
-            Device.Swipe(deviceID, 500, 1500, 500, 500);
-            Thread.Sleep(3000);
+        //    Device.Swipe(deviceID, 500, 1500, 500, 500);
+        //    Thread.Sleep(3000);
 
-            //Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffOperatorSim());
-            if (sim == Constant.TURN_ON_SIM_SUBCRIBE)
-            {
-                if (Utility.CheckTextExist(deviceID, Language.TurnOnEMU("subsid")))
-                {
-                    return result;
-                }
-                Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffEMU("subsid"));
-                goto FLASH_SIM;
-            }
-            if (sim == Constant.TURN_OFF_SIM)
-            {
-                if (Utility.CheckTextExist(deviceID, Language.TurnOffOperatorSim()))
-                {
-                    return result;
-                }
-                Utility.WaitAndTapXML(deviceID, 2, Language.TurnOnOperatorSim());
-                goto FLASH_SIM;
-            }
+        //    //Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffOperatorSim());
+        //    if (sim == Constant.TURN_ON_SIM_SUBCRIBE)
+        //    {
+        //        if (Utility.CheckTextExist(deviceID, Language.TurnOnEMU("subsid")))
+        //        {
+        //            return result;
+        //        }
+        //        Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffEMU("subsid"));
+        //        goto FLASH_SIM;
+        //    }
+        //    if (sim == Constant.TURN_OFF_SIM)
+        //    {
+        //        if (Utility.CheckTextExist(deviceID, Language.TurnOffOperatorSim()))
+        //        {
+        //            return result;
+        //        }
+        //        Utility.WaitAndTapXML(deviceID, 2, Language.TurnOnOperatorSim());
+        //        goto FLASH_SIM;
+        //    }
 
-            if (sim == Constant.TURN_ON_SIM)
-            {
-                string uixml = GetUIXml(deviceID);
-                // Find Vietnam sim
-                if (!CheckTextExist(deviceID, "việtnam", 1, uixml))
-                {
-                    Device.Swipe(deviceID, 396, 2000, 381, 1000);
-                    Thread.Sleep(2000);
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 64.5, 69.9); // click edit
-                    Thread.Sleep(1500);
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 33.2, 48.1); // dropdown box
-                    Thread.Sleep(1000);
-                    bool found = false;
-                    for (int i = 0; i < 44; i++)
-                    {
-                        uixml = GetUIXml(deviceID);
+        //    if (sim == Constant.TURN_ON_SIM)
+        //    {
+        //        string uixml = GetUIXml(deviceID);
+        //        // Find Vietnam sim
+        //        if (!CheckTextExist(deviceID, "việtnam", 1, uixml))
+        //        {
+        //            Device.Swipe(deviceID, 396, 2000, 381, 1000);
+        //            Thread.Sleep(2000);
+        //            KAutoHelper.ADBHelper.TapByPercent(deviceID, 64.5, 69.9); // click edit
+        //            Thread.Sleep(1500);
+        //            KAutoHelper.ADBHelper.TapByPercent(deviceID, 33.2, 48.1); // dropdown box
+        //            Thread.Sleep(1000);
+        //            bool found = false;
+        //            for (int i = 0; i < 44; i++)
+        //            {
+        //                uixml = GetUIXml(deviceID);
 
-                        if (WaitAndTapXML(deviceID, 1, "việtnam", uixml))
-                        {
-                            Thread.Sleep(1000);
-                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 82.4, 54.4);
-                            Thread.Sleep(1000);
-                            Utility.WaitAndTapXML(deviceID, 2, "textviettelResource");
-                            Thread.Sleep(1000);
-                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 81.0, 68.2);
-                            found = true;
-                            break;
-                        }
+        //                if (WaitAndTapXML(deviceID, 1, "việtnam", uixml))
+        //                {
+        //                    Thread.Sleep(1000);
+        //                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 82.4, 54.4);
+        //                    Thread.Sleep(1000);
+        //                    Utility.WaitAndTapXML(deviceID, 2, "textviettelResource");
+        //                    Thread.Sleep(1000);
+        //                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 81.0, 68.2);
+        //                    found = true;
+        //                    break;
+        //                }
 
-                        Device.Swipe(deviceID, 531, 2324, 544, 2000);
-                    } 
+        //                Device.Swipe(deviceID, 531, 2324, 544, 2000);
+        //            } 
 
-                    if (!found)
-                    {
-                        for (int i = 0; i < 44; i++)
-                        {
-                            uixml = GetUIXml(deviceID);
+        //            if (!found)
+        //            {
+        //                for (int i = 0; i < 44; i++)
+        //                {
+        //                    uixml = GetUIXml(deviceID);
 
-                            if (WaitAndTapXML(deviceID, 1, "việtnam", uixml))
-                            {
-                                Thread.Sleep(1000);
-                                KAutoHelper.ADBHelper.TapByPercent(deviceID, 82.4, 54.4);
-                                Thread.Sleep(1000);
-                                Utility.WaitAndTapXML(deviceID, 2, "textviettelResource");
-                                Thread.Sleep(1000);
-                                KAutoHelper.ADBHelper.TapByPercent(deviceID, 81.0, 68.2);
-                                found = true;
-                                break;
-                            }
+        //                    if (WaitAndTapXML(deviceID, 1, "việtnam", uixml))
+        //                    {
+        //                        Thread.Sleep(1000);
+        //                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 82.4, 54.4);
+        //                        Thread.Sleep(1000);
+        //                        Utility.WaitAndTapXML(deviceID, 2, "textviettelResource");
+        //                        Thread.Sleep(1000);
+        //                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 81.0, 68.2);
+        //                        found = true;
+        //                        break;
+        //                    }
 
-                            Device.Swipe(deviceID, 531, 2000, 544, 2300);
-                        }
-                    }
-                }
-                uixml = GetUIXml(deviceID);
-                if (!CheckTextExist(deviceID, "việtnam", 1, uixml))
-                {
-                    return result;
-                }
-                Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffOperatorSim());
-                goto FLASH_SIM;
-            }
+        //                    Device.Swipe(deviceID, 531, 2000, 544, 2300);
+        //                }
+        //            }
+        //        }
+        //        uixml = GetUIXml(deviceID);
+        //        if (!CheckTextExist(deviceID, "việtnam", 1, uixml))
+        //        {
+        //            return result;
+        //        }
+        //        Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffOperatorSim());
+        //        goto FLASH_SIM;
+        //    }
 
-            if (sim == Constant.RANDOM_COUNTRY)
-            {
-                string uixml = GetUIXml(deviceID);
+        //    if (sim == Constant.RANDOM_COUNTRY)
+        //    {
+        //        string uixml = GetUIXml(deviceID);
 
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 64.5, 69.9); // click edit
-                Thread.Sleep(1500);
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 82.4, 47.7); // dropdown box
-                Thread.Sleep(1000);
-                if (string.IsNullOrEmpty(country))
-                {
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 27.1, 95.7); // random contry
-                } else
-                {
-                    bool found = false;
-                    for (int i = 0; i < 44; i++)
-                    {
-                        uixml = GetUIXml(deviceID);
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 64.5, 69.9); // click edit
+        //        Thread.Sleep(1500);
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 82.4, 47.7); // dropdown box
+        //        Thread.Sleep(1000);
+        //        if (string.IsNullOrEmpty(country))
+        //        {
+        //            KAutoHelper.ADBHelper.TapByPercent(deviceID, 27.1, 95.7); // random contry
+        //        } else
+        //        {
+        //            bool found = false;
+        //            for (int i = 0; i < 44; i++)
+        //            {
+        //                uixml = GetUIXml(deviceID);
 
-                        if (WaitAndTapXML(deviceID, 1, country, uixml))
-                        {
-                            Thread.Sleep(1000);
+        //                if (WaitAndTapXML(deviceID, 1, country, uixml))
+        //                {
+        //                    Thread.Sleep(1000);
                             
-                            found = true;
-                            break;
-                        }
+        //                    found = true;
+        //                    break;
+        //                }
 
-                        Device.Swipe(deviceID, 531, 2324, 544, 2000);
-                    }
+        //                Device.Swipe(deviceID, 531, 2324, 544, 2000);
+        //            }
 
-                    if (!found)
-                    {
-                        for (int i = 0; i < 44; i++)
-                        {
-                            uixml = GetUIXml(deviceID);
+        //            if (!found)
+        //            {
+        //                for (int i = 0; i < 44; i++)
+        //                {
+        //                    uixml = GetUIXml(deviceID);
 
-                            if (WaitAndTapXML(deviceID, 1, country, uixml))
-                            {
-                                Thread.Sleep(1000);
+        //                    if (WaitAndTapXML(deviceID, 1, country, uixml))
+        //                    {
+        //                        Thread.Sleep(1000);
                                 
-                                break;
-                            }
+        //                        break;
+        //                    }
 
-                            Device.Swipe(deviceID, 531, 2000, 544, 2300);
-                        }
-                    }
-                }
+        //                    Device.Swipe(deviceID, 531, 2000, 544, 2300);
+        //                }
+        //            }
+        //        }
                 
 
-                Thread.Sleep(1000);
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 78.5, 68.6);// save
-                Thread.Sleep(1000);
-                Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffOperatorSim());
-                goto FLASH_SIM;
-            }
+        //        Thread.Sleep(1000);
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 78.5, 68.6);// save
+        //        Thread.Sleep(1000);
+        //        Utility.WaitAndTapXML(deviceID, 2, Language.TurnOffOperatorSim());
+        //        goto FLASH_SIM;
+        //    }
             
-            if (Utility.CheckTextExist(deviceID, Language.TurnOffOperatorSim()))
-            {
-                Device.RebootDevice(deviceID);
-                return result;
-            }
-            // Edit sim
-            Device.TapByPercent(deviceID, 64.9, 69.9); // Tap to edit sim
-            if (sim == Constant.US_PHONE)
-            {
-                Thread.Sleep(500);
-                if (Utility.WaitAndTapXML(deviceID, 2, "vietnamresourceid"))
-                {
-                    Device.Swipe(deviceID, 396, 1487, 381, 2011);
-                    //Thread.Sleep(1000);
-                    //Device.Swipe(deviceID, 396, 1487, 381, 2011);
-                    Utility.WaitAndTapXML(deviceID, 2, "unitedstatesresourceid");
-                    // Save
-                    Utility.WaitAndTapXML(deviceID, 5, "saveResource");
-                    Thread.Sleep(2000);
-                    goto FLASH_SIM;
-                } else
-                {
-                    return result;
-                }
-            }
-            if (sim == Constant.VIET_PHONE)
-            {
-                Thread.Sleep(500);
-                if (Utility.WaitAndTapXML(deviceID, 2, "vietnamresourceid"))
-                {
-                    return result;
-                }
-                else if (Utility.WaitAndTapXML(deviceID, 2, "unitedstatesresourceid"))
-                {
-                    Utility.WaitAndTapXML(deviceID, 2, "vietnamresourceid");
-                    // Save
-                    Utility.WaitAndTapXML(deviceID, 5, "saveResource");
-                    Thread.Sleep(2000);
-                    goto FLASH_SIM;
-                }
-            }
+        //    if (Utility.CheckTextExist(deviceID, Language.TurnOffOperatorSim()))
+        //    {
+        //        Device.RebootDevice(deviceID);
+        //        return result;
+        //    }
+        //    // Edit sim
+        //    Device.TapByPercent(deviceID, 64.9, 69.9); // Tap to edit sim
+        //    if (sim == Constant.US_PHONE)
+        //    {
+        //        Thread.Sleep(500);
+        //        if (Utility.WaitAndTapXML(deviceID, 2, "vietnamresourceid"))
+        //        {
+        //            Device.Swipe(deviceID, 396, 1487, 381, 2011);
+        //            //Thread.Sleep(1000);
+        //            //Device.Swipe(deviceID, 396, 1487, 381, 2011);
+        //            Utility.WaitAndTapXML(deviceID, 2, "unitedstatesresourceid");
+        //            // Save
+        //            Utility.WaitAndTapXML(deviceID, 5, "saveResource");
+        //            Thread.Sleep(2000);
+        //            goto FLASH_SIM;
+        //        } else
+        //        {
+        //            return result;
+        //        }
+        //    }
+        //    if (sim == Constant.VIET_PHONE)
+        //    {
+        //        Thread.Sleep(500);
+        //        if (Utility.WaitAndTapXML(deviceID, 2, "vietnamresourceid"))
+        //        {
+        //            return result;
+        //        }
+        //        else if (Utility.WaitAndTapXML(deviceID, 2, "unitedstatesresourceid"))
+        //        {
+        //            Utility.WaitAndTapXML(deviceID, 2, "vietnamresourceid");
+        //            // Save
+        //            Utility.WaitAndTapXML(deviceID, 5, "saveResource");
+        //            Thread.Sleep(2000);
+        //            goto FLASH_SIM;
+        //        }
+        //    }
 
 
             
 
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 69.9, 72.8);
-            Thread.Sleep(2000);
-            // Select  network
-            Device.TapByPercent(deviceID, 30.9, 52.3);
+        //    KAutoHelper.ADBHelper.TapByPercent(deviceID, 69.9, 72.8);
+        //    Thread.Sleep(2000);
+        //    // Select  network
+        //    Device.TapByPercent(deviceID, 30.9, 52.3);
             
-            Thread.Sleep(2000);
-            // Swipe to end list
-            Device.Swipe(deviceID, 500, 2200, 500, 1500);
-            Thread.Sleep(1500);
+        //    Thread.Sleep(2000);
+        //    // Swipe to end list
+        //    Device.Swipe(deviceID, 500, 2200, 500, 1500);
+        //    Thread.Sleep(1500);
             
-            if (sim == Constant.VIETTEL)
-            {
-                // Select Viettel
+        //    if (sim == Constant.VIETTEL)
+        //    {
+        //        // Select Viettel
                
-                Utility.WaitAndTapXML(deviceID, 2, "textviettelResource");
-                //Device.TapByPercent(deviceID, 26.9, 55.1);
+        //        Utility.WaitAndTapXML(deviceID, 2, "textviettelResource");
+        //        //Device.TapByPercent(deviceID, 26.9, 55.1);
 
-            } else if (sim == Constant.VINAPHONE)
-            {
-                Utility.WaitAndTapXML(deviceID, 2, "textvinaphone");
+        //    } else if (sim == Constant.VINAPHONE)
+        //    {
+        //        Utility.WaitAndTapXML(deviceID, 2, "textvinaphone");
                 
-                //Device.TapByPercent(deviceID, 30.2, 70.7);
-            }
-            else if (sim == Constant.VIETNAM_MOBILE)
-            {
-                Device.TapByPercent(deviceID, 33.9, 86.3);
-            }
-            else if (sim == Constant.VIETTEL_MOBILE)
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 25.5, 60.5);
-            }
-            else if (sim == Constant.VN_MOBIPHONE)
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 27.3, 75.5);
-            }
-            else if (sim == Constant.VN_VINAPHONE)
-            {
-                Utility.WaitAndTapXML(deviceID, 2, "textvnvinaphone");
-                //KAutoHelper.ADBHelper.TapByPercent(deviceID, 27.8, 92.2);
-            }
-            else if (sim == Constant.MOBI)
-            {
-                Device.TapByPercent(deviceID, 34.8, 81.4);
-            } else if (sim == Constant.BEELINE)
-            {
-                Device.Swipe(deviceID, 500, 1500, 500, 2200);
-                Thread.Sleep(1500);
-                Device.TapByPercent(deviceID, 26.9, 55.1);
-            } else if (sim == Constant.VIETTEL_TELECOM)
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 32.0, 65.3);
-            }
-            Thread.Sleep(2000);
+        //        //Device.TapByPercent(deviceID, 30.2, 70.7);
+        //    }
+        //    else if (sim == Constant.VIETNAM_MOBILE)
+        //    {
+        //        Device.TapByPercent(deviceID, 33.9, 86.3);
+        //    }
+        //    else if (sim == Constant.VIETTEL_MOBILE)
+        //    {
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 25.5, 60.5);
+        //    }
+        //    else if (sim == Constant.VN_MOBIPHONE)
+        //    {
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 27.3, 75.5);
+        //    }
+        //    else if (sim == Constant.VN_VINAPHONE)
+        //    {
+        //        Utility.WaitAndTapXML(deviceID, 2, "textvnvinaphone");
+        //        //KAutoHelper.ADBHelper.TapByPercent(deviceID, 27.8, 92.2);
+        //    }
+        //    else if (sim == Constant.MOBI)
+        //    {
+        //        Device.TapByPercent(deviceID, 34.8, 81.4);
+        //    } else if (sim == Constant.BEELINE)
+        //    {
+        //        Device.Swipe(deviceID, 500, 1500, 500, 2200);
+        //        Thread.Sleep(1500);
+        //        Device.TapByPercent(deviceID, 26.9, 55.1);
+        //    } else if (sim == Constant.VIETTEL_TELECOM)
+        //    {
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 32.0, 65.3);
+        //    }
+        //    Thread.Sleep(2000);
 
-            // Save
-            Utility.WaitAndTapXML(deviceID, 5, "saveResource");
-            Thread.Sleep(2000);
+        //    // Save
+        //    Utility.WaitAndTapXML(deviceID, 5, "saveResource");
+        //    Thread.Sleep(2000);
 
-            if (!string.IsNullOrEmpty(device.devicePhone))
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 61.7, 21.9); // edit phone
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 74.1, 50.0); // cuối
-                Device.DeleteChars(deviceID, 12);
-                InputText(deviceID, device.devicePhone, true);
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 81.9, 35.4); // save
-            }
+        //    if (!string.IsNullOrEmpty(device.devicePhone))
+        //    {
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 61.7, 21.9); // edit phone
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 74.1, 50.0); // cuối
+        //        Device.DeleteChars(deviceID, 12);
+        //        InputText(deviceID, device.devicePhone, true);
+        //        KAutoHelper.ADBHelper.TapByPercent(deviceID, 81.9, 35.4); // save
+        //    }
            
 
 
-        FLASH_SIM:
+        //FLASH_SIM:
             
-            if (Utility.CheckTextExist(deviceID, Language.TurnOffOperatorSim()))
-            {
-                result = Constant.TURN_OFF_SIM;
-            }
+        //    if (Utility.CheckTextExist(deviceID, Language.TurnOffOperatorSim()))
+        //    {
+        //        result = Constant.TURN_OFF_SIM;
+        //    }
                
-             if (Utility.CheckTextExist(deviceID, Language.TurnOnOperatorSim()))
-            {
-                result = Constant.TURN_ON_SIM;
-            }
+        //     if (Utility.CheckTextExist(deviceID, Language.TurnOnOperatorSim()))
+        //    {
+        //        result = Constant.TURN_ON_SIM;
+        //    }
                
 
-            // Flash seting
-            Device.TapByPercent(deviceID, 84.7, 7.2);
-            Thread.Sleep(7000);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 77.9, 89.8);
-            Device.TapByPercent(deviceID, 82.4, 93.6); // press ok
+        //    // Flash seting
+        //    Device.TapByPercent(deviceID, 84.7, 7.2);
+        //    Thread.Sleep(7000);
+        //    KAutoHelper.ADBHelper.TapByPercent(deviceID, 77.9, 89.8);
+        //    Device.TapByPercent(deviceID, 82.4, 93.6); // press ok
 
-            Device.RebootDevice(deviceID);
+            Device.RebootDevice(device.deviceId);
 
-            return result;
+            return "";
         }
         static void threadChange2Ip4(string deviceID)
         {
@@ -2327,8 +2377,9 @@ namespace fb_reg
                     return Constant.DIE;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                return Constant.UNKNOWN;
             }
             return Constant.UNKNOWN;
         }
@@ -2806,68 +2857,74 @@ namespace fb_reg
             return true;
         }
 
+
         
-        public static bool PullBackupFb(string uid, string deviceID)
-        {
-            try
-            {
-                string temp = deviceID.Replace(":", ".");
-                if (!Directory.Exists("Authentication"))
-                {
-                    Directory.CreateDirectory("Authentication");
-                }
-                string authenPath = Application.StartupPath + "\\" + string.Format("Authentication\\{0}\\", uid);
-                if (!Directory.Exists(authenPath))
-                {
-                    Directory.CreateDirectory(authenPath);
-                }
-                string cmd = Device.ExecuteCMD(string.Format(
-                    Device.CONSOLE_ADB + " shell \"su -c ' rm /data/data/com.facebook.katana/app_light_prefs/com.facebook.katana/App*'\"", deviceID));
-                cmd = Device.ExecuteCMD(string.Format(
-                    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_light_prefs/com.facebook.katana/ \"{2}/Authentication/{1}/com.facebook.katana\"", deviceID, uid, Application.StartupPath));
-                cmd = Device.ExecuteCMD(string.Format(
-                    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/databases/ \"{2}/Authentication/{1}/databases", deviceID,  uid, Application.StartupPath));
-                cmd = Device.ExecuteCMD(string.Format(
-                    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_sessionless_gatekeepers/ \"{2}/Authentication/{1}/app_sessionless_gatekeepers\"", deviceID, uid, Application.StartupPath));
-
-                cmd = Device.ExecuteCMD(string.Format(
-                    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/shared_prefs/ \"{2}/Authentication/{1}/shared_prefs\"", deviceID, uid, Application.StartupPath));
-
-                //cmd = Device.ExecuteCMD(string.Format(
-                //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/cache/ \"{2}/Authentication/{1}/cache\"", deviceID, uid, Application.StartupPath));
-
-                //cmd = Device.ExecuteCMD(string.Format(
-                //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/files/ \"{2}/Authentication/{1}/files\"", deviceID, uid, Application.StartupPath));
-
-                //cmd = Device.ExecuteCMD(string.Format(
-                //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_graph_service_cache/ \"{2}/Authentication/{1}/app_graph_service_cache\"", deviceID, uid, Application.StartupPath));
+        
+        //public static bool PullBackupFb(string uid, string deviceID)
+        //{
+        //    try
+        //    {
+        //        string temp = deviceID.Replace(":", ".");
+        //        if (!Directory.Exists("Authentication"))
+        //        {
+        //            Directory.CreateDirectory("Authentication");
+        //        }
+        //        string authenPath = Application.StartupPath + "\\" + string.Format("Authentication\\{0}\\", uid);
+        //        if (!Directory.Exists(authenPath))
+        //        {
+        //            Directory.CreateDirectory(authenPath);
+        //        }
+        //        string cmd = Device.ExecuteCMD(string.Format(
+        //            Device.CONSOLE_ADB + " shell \"su -c ' rm /data/data/com.facebook.katana/app_light_prefs/com.facebook.katana/App*'\"", deviceID));
 
 
-                //cmd = Device.ExecuteCMD(string.Format(
-                //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_gatekeepers/ \"{2}/Authentication/{1}/app_gatekeepers\"", deviceID, uid, Application.StartupPath));
 
 
-                //cmd = Device.ExecuteCMD(string.Format(
-                //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_composer_sprouts_cache_storage/ \"{2}/Authentication/{1}/app_composer_sprouts_cache_storage\"", deviceID, uid, Application.StartupPath));
+        //        cmd = Device.ExecuteCMD(string.Format(
+        //            Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_light_prefs/com.facebook.katana/ \"{2}/Authentication/{1}/com.facebook.katana\"", deviceID, uid, Application.StartupPath));
+        //        cmd = Device.ExecuteCMD(string.Format(
+        //            Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/databases/ \"{2}/Authentication/{1}/databases", deviceID,  uid, Application.StartupPath));
+        //        cmd = Device.ExecuteCMD(string.Format(
+        //            Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_sessionless_gatekeepers/ \"{2}/Authentication/{1}/app_sessionless_gatekeepers\"", deviceID, uid, Application.StartupPath));
 
-                //cmd = Device.ExecuteCMD(string.Format(
-                //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_analytics/ \"{2}/Authentication/{1}/app_analytics\"", deviceID, uid, Application.StartupPath));
+        //        cmd = Device.ExecuteCMD(string.Format(
+        //            Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/shared_prefs/ \"{2}/Authentication/{1}/shared_prefs\"", deviceID, uid, Application.StartupPath));
 
-                //cmd = Device.ExecuteCMD(string.Format(
-                //   Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_mib_msys/ \"{2}/Authentication/{1}/app_mib_msys\"", deviceID, uid, Application.StartupPath));
-                //cmd = Device.ExecuteCMD(string.Format(
-                //   Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_models_data/ \"{2}/Authentication/{1}/app_models_data\"", deviceID, uid, Application.StartupPath));
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/cache/ \"{2}/Authentication/{1}/cache\"", deviceID, uid, Application.StartupPath));
 
-                //cmd = Device.ExecuteCMD(string.Format(
-                //   Device.CONSOLE_ADB + "pull /data/data/com.facebook.lite/ \"{2}/Authentication/{1}/lite\"", deviceID, uid, Application.StartupPath));
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/files/ \"{2}/Authentication/{1}/files\"", deviceID, uid, Application.StartupPath));
 
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_graph_service_cache/ \"{2}/Authentication/{1}/app_graph_service_cache\"", deviceID, uid, Application.StartupPath));
+
+
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_gatekeepers/ \"{2}/Authentication/{1}/app_gatekeepers\"", deviceID, uid, Application.StartupPath));
+
+
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_composer_sprouts_cache_storage/ \"{2}/Authentication/{1}/app_composer_sprouts_cache_storage\"", deviceID, uid, Application.StartupPath));
+
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //    Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_analytics/ \"{2}/Authentication/{1}/app_analytics\"", deviceID, uid, Application.StartupPath));
+
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //   Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_mib_msys/ \"{2}/Authentication/{1}/app_mib_msys\"", deviceID, uid, Application.StartupPath));
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //   Device.CONSOLE_ADB + "pull /data/data/com.facebook.katana/app_models_data/ \"{2}/Authentication/{1}/app_models_data\"", deviceID, uid, Application.StartupPath));
+
+        //        //cmd = Device.ExecuteCMD(string.Format(
+        //        //   Device.CONSOLE_ADB + "pull /data/data/com.facebook.lite/ \"{2}/Authentication/{1}/lite\"", deviceID, uid, Application.StartupPath));
+
+        //        return true;
+        //    }
+        //    catch
+        //    {
+        //        return false;
+        //    }
+        //}
 
         public static bool PullAllData(string uid, string deviceID)
         {
@@ -2928,67 +2985,207 @@ namespace fb_reg
                 return false;
             }
         }
+
+        public static bool PullBackupFbNew(string uid, string deviceID)
+        {
+
+
+
+            string cmd = "";
+
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
+            string result = Device.ExecuteCMD(cmd); // delete folder uid
+
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // create folder uid
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r  /data/data/com.facebook.katana/app_gatekeepers /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy app_gatekeepers
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/app_light_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy app_light_prefs
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/databases /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy databases
+            Thread.Sleep(1000);
+
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/shared_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy shared_prefs
+
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c 'cd /sdcard/Alarms/ && tar  -cvz -f {1}.tar.gz data'  \"", deviceID, uid, uid);
+            result = Device.ExecuteCMD(cmd); // Tar file
+
+            Thread.Sleep(1000);
+            string temp = deviceID.Replace(":", ".");
+            if (!Directory.Exists("Authentication"))
+            {
+                Directory.CreateDirectory("Authentication");
+            }
+            Thread.Sleep(1000);
+
+            cmd = Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + "pull /sdcard/Alarms/{1}.tar.gz \"{2}/Authentication/", deviceID, uid, Application.StartupPath));
+            result = Device.ExecuteCMD(cmd); //
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // delete folder uid
+
+            return true;
+        }
+        public static bool CheckFacebookFolderPermission(string deviceId, string folderPath = "/data/data/com.facebook.katana")
+        {
+            Console.WriteLine($"🔍 Đang kiểm tra quyền thư mục: {folderPath}");
+
+            // 1. Lấy userId từ dumpsys
+            string uidOutput = RunAdb(deviceId, "shell dumpsys package com.facebook.katana | grep userId");
+            var match = System.Text.RegularExpressions.Regex.Match(uidOutput, @"userId=(\d+)");
+            if (!match.Success)
+            {
+                Console.WriteLine("❌ Không tìm được userId của Facebook.");
+                return false;
+            }
+
+            string uid = match.Groups[1].Value;
+            string user = $"u0_a{uid.Substring(uid.Length - 3)}";
+
+            // 2. Dùng ls -lR để liệt kê toàn bộ file + quyền
+            string listOutput = RunAdb(deviceId, $"shell su -c \"ls -lR {folderPath}\"");
+
+            var lines = listOutput.Split('\n');
+            int wrongCount = 0;
+
+            foreach (var line in lines)
+            {
+                if (line.StartsWith("-") || line.StartsWith("d")) // file hoặc folder
+                {
+                    var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 4)
+                    {
+                        string owner = parts[2];
+                        string group = parts[3];
+
+                        if (owner != user || group != user)
+                        {
+                            wrongCount++;
+                            Console.WriteLine($"❌ Sai quyền: {line.Trim()}");
+                            return false;
+                        }
+                    }
+                }
+            }
+
+            if (wrongCount == 0)
+                Console.WriteLine("✅ Tất cả file/folder trong Facebook đã đúng quyền.");
+            else
+                Console.WriteLine($"⚠️ Có {wrongCount} file/folder sai quyền. Nên chạy FixFacebookFolderPermission().");
+            return true;
+        }
+        public static string FixFacebookFolderPermission(string deviceId, string folderPath)
+        {
+            string result = "";
+            try
+            {
+                Console.WriteLine("🔍 Đang lấy userId của com.facebook.katana...");
+                string output = RunAdb(deviceId, "shell dumpsys package com.facebook.katana | grep userId");
+
+                // Parse userId=10124
+                var match = System.Text.RegularExpressions.Regex.Match(output, @"userId=(\d+)");
+                if (!match.Success)
+                {
+                    Console.WriteLine("❌ Không tìm được userId của Facebook.");
+                    return result;
+                }
+
+                string uid = match.Groups[1].Value;
+                string user = $"u0_a{uid.Substring(uid.Length - 3)}"; // Convert 10124 → u0_a124
+
+                Console.WriteLine($"✅ UID = {uid}, mapped to user: {user}");
+                user = uid;
+                string chownCmd = $"shell su -c \"chown -R {user}:{user} {folderPath}\"";
+                RunAdb(deviceId, chownCmd);
+
+                Console.WriteLine($"✅ Đã set quyền {user} cho thư mục: {folderPath}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Lỗi khi set quyền thư mục: {ex.Message}");
+            }
+            return result;
+        }
+
         public static bool PushBackupFb(string uid, string deviceID )
         {
             try
             {
-                if (!Directory.Exists("Authentication"))
+                string logs = RunAdb(deviceID, "logcat -d -t 50");
+                if (logs.Contains("FATAL EXCEPTION") || logs.Contains("Zygote") || logs.Contains("SystemServer"))
                 {
-                    Directory.CreateDirectory("Authentication");
+                    Console.WriteLine("❌ Phát hiện lỗi nghiêm trọng trong logcat.");
+                    Device.RebootDevice(deviceID);
                 }
-                string path = string.Format("Authentication\\{0}", uid);
-                if (Directory.Exists(path))
+                for ( int i = 0; i < 5; i ++)
                 {
-                    //string cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "shell \"su -c ' rm /data/data/com.facebook.katana/app_light_prefs/com.facebook.katana/App*'\"", deviceID));
-                    string cmd = Device.ExecuteCMD(string.Format(
-                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/com.facebook.katana\" /data/data/com.facebook.katana/app_light_prefs/com.facebook.katana", deviceID, uid, Application.StartupPath));
-                    
+                    string cmd;
+                    string packageFacebook = "com.facebook.katana";
+                    cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
+                    string result = Device.ExecuteCMD(cmd); // delete folder uid
+                    Thread.Sleep(1000);
                     cmd = Device.ExecuteCMD(string.Format(
-                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/databases\" /data/data/com.facebook.katana/databases", deviceID, uid, Application.StartupPath));
-                    cmd = Device.ExecuteCMD(string.Format(
-                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_sessionless_gatekeepers\" /data/data/com.facebook.katana/app_sessionless_gatekeepers", deviceID, uid, Application.StartupPath));
+                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}.tar.gz\" /sdcard/Alarms/", deviceID, uid, Application.StartupPath));
+                    cmd = " shell su -c \"ls -l /data/data | grep com.facebook.katana | awk '{print $3\\\":\\\"$4}'\"";
+                    cmd = string.Format(Device.CONSOLE_ADB, deviceID) + cmd;
+                    Thread.Sleep(1000);
+                    string owner = Device.ExecuteCMD(cmd);
+                    string[] temp = owner.Split('\n');
 
+                    if (temp.Length > 1)
+                    {
+                        owner = temp[4].Trim().Replace("\r", "");
+                    }
+                    Thread.Sleep(1000);
+                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c cp /sdcard/Alarms/" + uid + ".tar.gz /data/data/com.facebook.katana/" + uid + ".tar.gz");
+                    Thread.Sleep(1000);
+                    cmd = Device.ExecuteCMD(cmd);
+                    Thread.Sleep(1000);
+                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c tar -xpf /data/data/" + packageFacebook + "/" + uid + ".tar.gz");
 
-                    cmd = Device.ExecuteCMD(string.Format(
-                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/shared_prefs\" /data/data/com.facebook.katana/shared_prefs", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/cache\" /data/data/com.facebook.katana/cache", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/files\" /data/data/com.facebook.katana/files", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_graph_service_cache\" /data/data/com.facebook.katana/app_graph_service_cache", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_gatekeepers\" /data/data/com.facebook.katana/app_gatekeepers", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_composer_sprouts_cache_storage\" /data/data/com.facebook.katana/app_composer_sprouts_cache_storage", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_analytics\" /data/data/com.facebook.katana/app_analytics", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_mib_msys\" /data/data/com.facebook.katana/app_mib_msys", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/app_models_data\" /data/data/com.facebook.katana/app_models_data", deviceID, uid, Application.StartupPath));
-
-                    //cmd = Device.ExecuteCMD(string.Format(
-                    //    Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}/lite\" /data/data/com.facebook.lite", deviceID, uid, Application.StartupPath));
+                    FixFacebookFolderPermission(deviceID, "/data/data/com.facebook.katana");
 
                     Thread.Sleep(1000);
-                    //if (text.Contains("bytes in"))
-                    //{
-                        Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + "shell am start -n com.facebook.katana/.LoginActivity", deviceID));
-                    //}
+                    //cmd = Device.ExecuteCMD(cmd);
+
+                    RunAdb(deviceID, $"shell su -c \"rm - rf /data/data/com.facebook.katana/cache\"");
+                    RunAdb(deviceID, $"shell su -c \"rm - rf /data/dalvik-cache\"");
+                    Thread.Sleep(1000);
+                    bool check = CheckFacebookFolderPermission(deviceID);
+                    if (check)
+                    {
+                        break;
+                    } else
+                    {
+                        //Console.WriteLine("retry");
+                        //// Bước 3: Check logcat lỗi nặng
+                        string logss = RunAdb(deviceID, "logcat -d -t 50");
+                        //if (logss.Contains("FATAL EXCEPTION") || logss.Contains("Zygote") || logss.Contains("SystemServer"))
+                        //{
+                        Console.WriteLine("❌ Phát hiện lỗi nghiêm trọng trong logcat.");
+                            Device.RebootDevice(deviceID);
+                        //}
+
+                    }
                 }
-                return true;
+                
+
+                Thread.Sleep(1000);
+                //if (text.Contains("bytes in"))
+                //{
+                //Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + "shell am start -n com.facebook.katana/.LoginActivity", deviceID));
+                //}
+                //}
+                return CheckFacebookFolderPermission(deviceID);
             }
-            catch
+            catch (Exception ex)
             {
                 return false;
             }

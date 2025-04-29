@@ -1,11 +1,14 @@
-﻿using Newtonsoft.Json;
+﻿using fb_reg.RequestApi;
+using Newtonsoft.Json;
 using RestSharp;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Cache;
+using System.Net.Http;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,6 +19,753 @@ namespace fb_reg
 {
     public class OutsideServer
     {
+
+
+        public static bool TestProxy(string host, int port, string username, string password)
+        {
+            try
+            {
+                var proxy = new WebProxy($"{host}:{port}")
+                {
+                    Credentials = new NetworkCredential(username, password)
+                };
+
+                var handler = new HttpClientHandler
+                {
+                    Proxy = proxy,
+                    UseProxy = true
+                };
+
+                using (var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(9) })
+                {
+                    var stopwatch = Stopwatch.StartNew();
+                    var response = client.GetAsync("https://m.facebook.com").GetAwaiter().GetResult();
+                    stopwatch.Stop();
+
+                    if (response.IsSuccessStatusCode)
+                    {
+                        Console.WriteLine($"✅ Proxy OK - {host}:{port} - Time: {stopwatch.ElapsedMilliseconds}ms");
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"⚠️ Proxy responded with status: {response.StatusCode}");
+                        return false;
+                    }
+                }
+
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Proxy failed: {ex.Message}");
+                return false;
+            }
+        }
+
+
+
+        public class HvlReq
+        {
+            [JsonProperty("service")]
+            public string service { get; set; }
+
+
+            [JsonProperty("gmail")]
+            public string gmail { get; set; }
+        }
+
+        public class HvlResp
+        {
+            [JsonProperty("code")]
+            public int code { get; set; }
+
+
+            [JsonProperty("message")]
+            public string message { get; set; }
+
+            [JsonProperty("data")]
+            public HvlRespData data { get; set; }
+
+        }
+        public class HvlRespData
+        {
+            [JsonProperty("orderId")]
+            public string orderId { get; set; }
+
+
+            [JsonProperty("email")]
+            public string email { get; set; }
+
+            [JsonProperty("service")]
+            public string service { get; set; }
+
+            [JsonProperty("price")]
+            public int price { get; set; }
+
+            [JsonProperty("balanceAfter")]
+            public int balanceAfter { get; set; }
+        }
+
+        public class HvlOtpResp
+        {
+            [JsonProperty("code")]
+            public int code { get; set; }
+
+
+            [JsonProperty("message")]
+            public string message { get; set; }
+
+            [JsonProperty("data")]
+            public HvlOtpRespData data { get; set; }
+
+        }
+        public class HvlOtpRespData
+        {
+            [JsonProperty("orderId")]
+            public string orderId { get; set; }
+
+
+            [JsonProperty("email")]
+            public string email { get; set; }
+
+            [JsonProperty("status")]
+            public string status { get; set; }
+
+            [JsonProperty("otpReceivedTime")]
+            public int otpReceivedTime { get; set; }
+
+            [JsonProperty("otpSender")]
+            public string otpSender { get; set; }
+            [JsonProperty("otpContent")]
+            public string otpContent { get; set; }
+            [JsonProperty("otpCode")]
+            public string otpCode { get; set; }
+        }
+
+
+        public static MailObject GetMailHvl()
+        {
+            try
+            {
+                if (!PublicData.GetHvlMaillocal)
+                {
+                    return null;
+                }
+                string key = PublicData.AccessTokengmailHvl;
+                HvlReq mail = new HvlReq();
+                mail.gmail = "";
+                mail.service = "FACEBOOK";
+                string server = "https://gm.haivl.wtf/";
+                string apiGetSellGmail = "api/mail/otp-rent";
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetSellGmail);
+                request.AddHeader("Content-Type", "application/json");
+                request.AddHeader("ZGM-API-TOKEN", key);
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(mail);
+
+                var response = client.Post(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get mail:" + content);
+                string decode = Utility.Decode_UTF8(content);
+                HvlResp data = JsonConvert.DeserializeObject<HvlResp>(decode);
+
+                if (data != null && data.data != null && !string.IsNullOrEmpty(data.data.email))
+                {
+                    MailObject respmail = new MailObject();
+                    respmail.email = data.data.email;
+                    respmail.orderId = data.data.orderId;
+                    respmail.password = Constant.GMAIL_SELL_GMAIL;
+                    respmail.key = key;
+                    respmail.source = "hvl";
+                    respmail.balanceAfter = data.data.balanceAfter;
+                    return respmail;
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return null;
+        }
+
+        public static string GetOtpHvl(MailObject mail)
+        {
+            string otp = "";
+            try
+            {
+                string key = mail.key;
+                var client = new RestClient("https://gm.haivl.wtf/");
+                var request = new RestRequest("api/mail/otp-get", Method.GET);
+
+
+                request.AddHeader("ZGM-API-TOKEN", key);
+                request.AddParameter("orderId", mail.orderId);
+                request.Timeout = 20000;
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    HvlOtpResp data = JsonConvert.DeserializeObject<HvlOtpResp>(content);
+
+                    if (data != null && data.data != null && !string.IsNullOrEmpty(data.data.otpCode))
+                    {
+                        return data.data.otpCode;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("GetGmailSuperTeam:" + eee.Message);
+                return null;
+            }
+
+
+            return otp;
+        }
+
+
+        public class DichVuGmailEmail
+        {
+            [JsonProperty("status")]
+            public int status { get; set; }
+
+
+            [JsonProperty("orders")]
+            public DichVuGmailEmailOrder orders { get; set; }
+        }
+        public class DichVuGmailEmailOrder
+        {
+            [JsonProperty("gmail")]
+            public string gmail { get; set; }
+            [JsonProperty("order_id")]
+            public string order_id { get; set; }
+
+            [JsonProperty("otp")]
+            public string otp { get; set; }
+            [JsonProperty("status")]
+            public string status { get; set; }
+        }
+
+        public static MailObject GetGmailDichVuGmail(string key, string serviceId = "Facebook")
+        {
+            
+            if (!PublicData.GetMailDvgm && ! PublicData.GetMailDvgmNormal)
+            {
+                return null;
+            }
+            MailObject mail = new MailObject();
+            try
+            {
+                string apiGetHotMail = string.Format("{0}/{1}",
+                key,
+                serviceId);
+                var client = new RestClient("https://boxreceive.com/DataMail/Mail/");
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetHotMail);
+
+                request.Timeout = 20000;
+                var response = client.Get(request);
+                var content = response.Content; // Raw content as string
+                //if (content.Contains("500"))
+                //{
+                //    Console.WriteLine("Loi het mail:" + content);
+                //    return mail;
+                //}
+                Console.WriteLine("get mail:" + content);
+                string decode = Decode_UTF8(content);
+                DichVuGmailEmail data = JsonConvert.DeserializeObject<DichVuGmailEmail>(decode);
+
+                if (data != null && data.status == 200 && !string.IsNullOrEmpty(data.orders.gmail) && data.orders.status == "Wait")
+                {
+                    mail.email = data.orders.gmail;
+                    mail.password = Constant.GMAIL_SELL_GMAIL;
+                    mail.orderId = data.orders.order_id;
+                    mail.source = "dvgm";
+                    mail.key = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ";
+                    mail.accessToken = key;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("GetGmailDichVuGmail:" + ex.Message);
+            }
+
+
+
+            return mail;
+        }
+        public class GmailSuperTeamDatarequest
+        {
+            [JsonProperty("gmail")]
+            public string gmail { get; set; }
+            [JsonProperty("success")]
+            public bool success { get; set; }
+        }
+
+        public static MailObject GetGmailSuperTeam(string key)
+        {
+            try
+            {
+             
+                if (!PublicData.GetMailSptLocal)
+                {
+                    return null;
+                }
+                var client = new RestClient("https://api.sptmail.com/api/otp-services/mail-otp-rental/");
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+
+
+                request.AddParameter("apiKey", key);
+                request.AddParameter("otpServiceCode", "facebook");
+                request.Timeout = 20000;
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    GmailSuperTeamDatarequest data = JsonConvert.DeserializeObject<GmailSuperTeamDatarequest>(content);
+
+                    if (data != null && data.success && !string.IsNullOrEmpty(data.gmail))
+                    {
+                        MailObject mail = new MailObject();
+                        mail.email = data.gmail;
+                        mail.password = Constant.GMAIL_SELL_GMAIL;
+                        mail.source = "super_gmail";
+                        mail.accessToken = key;
+                        return mail;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("GetGmailSuperTeam:" + eee.Message);
+                return null;
+            }
+        }
+
+        public class GmailThueSimDatarequest
+        {
+            [JsonProperty("id")]
+            public string id { get; set; }
+            
+            [JsonProperty("mail")]
+            public string mail { get; set; }
+
+            [JsonProperty("serviceName")]
+            public string serviceName;
+            [JsonProperty("status")]
+            public string status { get; set; }
+            [JsonProperty("createdAt")]
+            public string createdAt { get; set; }
+
+        }
+        public static MailObject GetGmailThueSimTeam()
+        {
+            try
+            {
+                if (! PublicData.GetMailThuesim)
+                {
+                    return null;
+                }
+                var client = new RestClient("https://api.thuesim.app/rent/email/facebook/" + PublicData.AccessTokenThueSimGmail);
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+                request.Timeout = 2000;
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    Console.WriteLine("thuesimgmail:" + content);
+                    if (content == null || content.Contains("Error"))
+                    {
+                        return null;
+                    }
+
+                    GmailThueSimDatarequest data = JsonConvert.DeserializeObject<GmailThueSimDatarequest>(content);
+
+                    if (data != null && !string.IsNullOrEmpty(data.mail))
+                    {
+                        MailObject mail = new MailObject();
+                        mail.email = data.mail;
+                        mail.password = Constant.GMAIL_SELL_GMAIL;
+                        mail.clientId = data.id;
+                        mail.source = "thuesim_gmail";
+                        mail.token = PublicData.AccessTokenThueSimGmail;
+                        mail.accessToken = PublicData.AccessTokenThueSimGmail;
+                        return mail;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("thuesim:" + eee.Message);
+                return null;
+            }
+        }
+
+        public static MailObject GetGmailThueSimVipTeam()
+        {
+            try
+            {
+                if (!PublicData.GetMailThuesimVip)
+                {
+                    return null;
+                }
+                var client = new RestClient("https://api.thuesim.app/rent/email/facebookvip/" + PublicData.AccessTokenThueSimGmail);
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+                request.Timeout = 2000;
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    Console.WriteLine("thuesimgmail:" + content);
+                    if (content == null || content.Contains("Error"))
+                    {
+                        return null;
+                    }
+
+                    GmailThueSimDatarequest data = JsonConvert.DeserializeObject<GmailThueSimDatarequest>(content);
+
+                    if (data != null && !string.IsNullOrEmpty(data.mail))
+                    {
+                        MailObject mail = new MailObject();
+                        mail.email = data.mail;
+                        mail.password = Constant.GMAIL_SELL_GMAIL;
+                        mail.clientId = data.id;
+                        mail.source = "thuesim_gmail_vip";
+                        mail.token = PublicData.AccessTokenThueSimGmail;
+                        mail.accessToken = PublicData.AccessTokenThueSimGmail;
+                        return mail;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("thuesim:" + eee.Message);
+                return null;
+            }
+        }
+        public class GmailOtpCheapDatarequest
+        {
+            [JsonProperty("success")]
+            public bool success { get; set; }
+
+            [JsonProperty("quid")]
+            public string quid { get; set; }
+
+           
+
+        }
+        public class GmailOtpCheapDetailDatarequest
+        {
+            [JsonProperty("quid")]
+            public string quid { get; set; }
+
+            [JsonProperty("email")]
+            public string email { get; set; }
+
+
+            [JsonProperty("code")]
+            public string code { get; set; }
+
+            [JsonProperty("status")]
+            public string status { get; set; }
+        }
+        public static MailObject GetGmailOtpCheap()
+        {
+            try
+            {
+                var client = new RestClient("https://api.otp.cheap/stubs/action/neworder");
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+                request.AddQueryParameter("api_key", PublicData.AccessTokenOtpCheap);
+                request.AddQueryParameter("service_id", "facebook");
+                request.AddQueryParameter("priority", "cheap");
+                request.AddQueryParameter("amount", "1");
+                
+
+                request.Timeout = 2000;
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    Console.WriteLine("Otpcheap:" + content);
+                    if (content == null || content.Contains("Error"))
+                    {
+                        return null;
+                    }
+                    for (int i = 0; i < 3; i ++)
+                    {
+                        GmailOtpCheapDatarequest data = JsonConvert.DeserializeObject<GmailOtpCheapDatarequest>(content);
+
+                        if (data != null && !string.IsNullOrEmpty(data.quid))
+                        {
+
+                            client = new RestClient("https://api.otp.cheap/stubs/action/getorder");
+                            //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                            request = new RestRequest("", Method.GET);
+                            request.AddQueryParameter("api_key", PublicData.AccessTokenOtpCheap);
+                            request.AddQueryParameter("quid", data.quid);
+
+
+
+                            request.Timeout = 2000;
+                            response = client.Execute(request);
+                            content = response.Content; // Raw content as string
+
+                            try
+                            {
+                                Console.WriteLine("otpcheal detail:" + content);
+                                if (content == null || content.Contains("Error"))
+                                {
+                                    return null;
+                                }
+
+                                GmailOtpCheapDetailDatarequest dataDetail = JsonConvert.DeserializeObject<GmailOtpCheapDetailDatarequest>(content);
+
+                                if (dataDetail != null && !string.IsNullOrEmpty(dataDetail.email))
+                                {
+                                    MailObject mail = new MailObject();
+                                    mail.email = dataDetail.email;
+                                    mail.password = Constant.GMAIL_SELL_GMAIL;
+                                    mail.orderId = data.quid;
+                                    mail.source = "otpcheap_gmail";
+                                    mail.token = PublicData.AccessTokenOtpCheap;
+                                    mail.accessToken = PublicData.AccessTokenOtpCheap;
+                                    return mail;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+
+                            }
+                        }
+                        
+                        
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("thuesim:" + eee.Message);
+                return null;
+            }
+            return null;
+        }
+
+
+        public class GmailShopgmailDatarequest
+        {
+            [JsonProperty("status")]
+            public string status { get; set; }
+
+            [JsonProperty("username")]
+            public string username { get; set; }
+
+            [JsonProperty("availableEmail")]
+            public string availableEmail;
+
+            [JsonProperty("orderNumber")]
+            public string orderNumber { get; set; }
+
+
+        }
+        public static MailObject GetGmailShopGmailTeam(string key)
+        {
+            try
+            {
+                if (!PublicData.GetShopgmailLocal)
+                {
+                    return null;
+                }
+                string user = "farmer20";
+                if (PublicData.AccessTokenShopMail9999Current == PublicData.AccessTokenShopMail9999Vip)
+                {
+                    user = "bkukuniver";
+                }
+                var client = new RestClient(string.Format("https://api.shopgmail9999.com/api/ApiUsers/createorder?username={0}&apikey={1}&service={2}", user, key, "facebook"));
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+                request.Timeout = 2000;
+
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+
+                    if (content == null || content.ToLower().Contains("error"))
+                    {
+                        Console.WriteLine("shopgmail:" + content);
+                        return null;
+                    }
+
+                    GmailShopgmailDatarequest data = JsonConvert.DeserializeObject<GmailShopgmailDatarequest>(content);
+
+                    if (data != null && !string.IsNullOrEmpty(data.availableEmail))
+                    {
+                        MailObject mail = new MailObject();
+                        mail.email = data.availableEmail;
+                        mail.password = Constant.GMAIL_SELL_GMAIL;
+                        mail.clientId = data.orderNumber;
+                        mail.source = "shopgmail_gmail";
+                        mail.accessToken = key;
+                        return mail;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("shopgmail:" + eee.Message);
+                return null;
+            }
+        }
+        public static MailObject GetGmailAllSite(bool vip)
+        {
+            MailObject gmail = new MailObject();
+
+            
+            gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailNormal);
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+
+                return gmail;
+            }
+            
+            gmail = GetGmailThueSimTeam();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+            gmail = GetGmailThueSimVipTeam();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+            gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailVip);
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+
+                return gmail;
+            }
+            gmail = GetGmailDichVuGmail(PublicData.AccessTokenDvgmNormal);
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+            gmail = GetMailHvl();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+
+                return gmail;
+            }
+
+            if (vip)
+            {
+                gmail = GetGmailShopGmailTeam(PublicData.AccessTokenShopMail9999Current);
+                if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+                {
+                    return gmail;
+                }
+
+
+
+                gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailCurrent);
+                if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+                {
+
+                    return gmail;
+                }
+
+                gmail = GetGmailDichVuGmail(PublicData.AccessTokenDvgmCurrent);
+                if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+                {
+                    return gmail;
+                }
+            }
+
+           
+            return gmail;
+        }
+
+        public static bool ResetIpMproxy (string key)
+        {
+
+            try
+            {
+                string url = string.Format("https://mproxy.vn/capi/Ztb4_kX5c06eUnxZfO1AOTc1XS39_2kNp6uqP5_Hc8M/key/{0}/resetIp", key);
+                var client = new RestClient(url);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("");
+
+                var response = client.Get(request);
+                var content = response.Content; // Raw content as string
+                Console.WriteLine("content mproxy:" + content);
+              
+                if (content.Contains("Thành công"))
+                {
+                    return true;
+                }
+            }
+            catch (Exception eee)
+            {
+                return false;
+            }
+            return false;
+        }
         public class Gmail30MinRes
         {
             [JsonProperty("success")]
@@ -98,7 +848,8 @@ namespace fb_reg
                         MailObject mail = new MailObject();
                         mail.email = data.orders[0].email;
                         mail.password = Constant.GMAIL_SELL_GMAIL;
-                        mail.orderId = data.orders[0].id;
+                        mail.orderId = data.orders[0].id + "";
+                        
                         return mail;
                     }
                     else
@@ -169,7 +920,7 @@ namespace fb_reg
                         MailObject mail = new MailObject();
                         mail.email = data.data.email;
                         mail.password = Constant.GMAIL_SELL_GMAIL;
-                        mail.orderId = data.data.getCodeID;
+                        mail.orderId = data.data.getCodeID + "";
                         return mail;
                     }
                     else
@@ -228,15 +979,65 @@ namespace fb_reg
         {
             [JsonProperty("subject")]
             public string subject { get; set; }
+            [JsonProperty("message")]
+            public string message { get; set; }
 
-
+            [JsonProperty("text_body")]
+            public string text_body { get; set; }
+            
         }
 
 
         public static string GetOtpByOAuth2(MailObject inMmail)
         {
+            
 
-            string otp = GetHotmailOtpByOAuth2Unlimit(inMmail);
+            string otp = "";
+            string accessToken = HotmailOtpFetcher.GetAccessTokenFromRefreshToken(inMmail.clientId, inMmail.refreshToken).GetAwaiter().GetResult();
+            otp = HotmailOtpFetcher.GetFacebookOtp(accessToken).GetAwaiter().GetResult();
+
+            if (!string.IsNullOrEmpty(otp))
+            {
+                return otp;
+            }
+            otp = GetHotmailOtpByOAuth2Vandong(inMmail);
+            if (!string.IsNullOrEmpty(otp))
+            {
+                return otp;
+            }
+            //if (inMmail.otpVandong)
+            //{
+                otp = GetHotmailOtpByOAuth2Unlimit(inMmail);
+            //}
+            if (!string.IsNullOrEmpty(otp))
+            {
+                return otp;
+            }
+            //string code = "";
+            //string accessToken = inMmail.accessToken;
+            //if (string.IsNullOrEmpty(accessToken))
+            //{
+            //    accessToken = GetAccessToken(inMmail.clientId, inMmail.refreshToken);
+            //}
+            //List<string> subjects = ReceiveMailByOauth(inMmail.email, accessToken);
+
+            //////truy xuất nội dung từng mail
+            //foreach (string mail in subjects)
+            //{
+            //    Console.WriteLine("subject:" + mail);
+            //    code = FindCodeInSubject(mail);
+            //    if (!string.IsNullOrEmpty(code) && code != Constant.FAIL)
+            //    {
+            //        return code;
+            //    }
+            //}
+            return otp;
+        }
+
+        public static string GetOtp2faByOAuth2(MailObject inMmail)
+        {
+
+            string otp = GetHotmailOtp2faByOAuth2Unlimit(inMmail);
             if (!string.IsNullOrEmpty(otp))
             {
                 return otp;
@@ -257,7 +1058,7 @@ namespace fb_reg
             foreach (string mail in subjects)
             {
                 Console.WriteLine("subject:" + mail);
-                code = FindCodeInSubject(mail);
+                code = FindCode2fa(mail);
                 if (!string.IsNullOrEmpty(code) && code != Constant.FAIL)
                 {
                     return code;
@@ -265,7 +1066,6 @@ namespace fb_reg
             }
             return code;
         }
-
         public static MailObject CheckHotmailByVandong(MailObject mail)
         {
             try
@@ -354,6 +1154,11 @@ namespace fb_reg
                         mail.status = "";
                         return mail;
                     }
+                    else if (data != null && !string.IsNullOrEmpty(data.errorMessage) && data.errorMessage.Contains("Get access token"))
+                    {
+                        mail.status = Constant.FAIL;
+                        return mail;
+                    }
                     else
                     {
                         mail.status = Constant.FAIL;
@@ -436,7 +1241,7 @@ namespace fb_reg
                 dataRequest.refresh_token = mail.refreshToken;
                 dataRequest.client_id = mail.clientId;
                 //dataRequest.type = "facebook";
-                var client = new RestClient("https://tools.dongvanfb.net/api/");
+                var client = new RestClient("https://tool.unlimitmail.com/api/");
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("get_messages_oauth2", Method.POST);
                 //request.AddHeader("X-API-TOKEN", "WVkyQkhBR0lQVzRJMElYOE5QUVM=");
@@ -479,7 +1284,139 @@ namespace fb_reg
             }
             return null;
         }
+        public static string GetHotmailOtp2faByOAuth2Unlimit(MailObject mail)
+        {
+            try
+            {
+                HotmailDataRequest dataRequest = new HotmailDataRequest();
+                dataRequest.email = mail.email;
+                dataRequest.refresh_token = mail.refreshToken;
+                dataRequest.client_id = mail.clientId;
+                //dataRequest.type = "facebook";
+                var client = new RestClient("https://tool.unlimitmail.com/api/");
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("get_messages_oauth2", Method.POST);
+                //request.AddHeader("X-API-TOKEN", "WVkyQkhBR0lQVzRJMElYOE5QUVM=");
 
+                request.AddJsonBody(dataRequest);
+
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+                Console.WriteLine("all mail:" + content);
+                try
+                {
+                    HotmailDataResponse data = JsonConvert.DeserializeObject<HotmailDataResponse>(content);
+
+
+                    if (data != null && data.status && data.messages != null && data.messages.Length > 0)
+                    {
+                        //for (int i = 0; i < data.messages.Length; i++)
+                        //{
+                        //    Console.WriteLine("subject:" + data.messages[i].);
+                            string code = FindCode2fa(content);
+                            if (!string.IsNullOrEmpty(code) && code != Constant.FAIL)
+                            {
+                                return code;
+                            }
+                        //}
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                return null;
+            }
+            return null;
+        }
+
+        public class HotmailUnlimitedItem
+        {
+
+            [JsonProperty("email")]
+            public string email { get; set; }
+            [JsonProperty("password")]
+            public string password { get; set; }
+            [JsonProperty("access_token")]
+            public string access_token { get; set; }
+            [JsonProperty("refresh_token")]
+            public string refresh_token { get; set; }
+            [JsonProperty("client_id")]
+            public string client_id { get; set; }
+        }
+
+        public class HotmailUnlimitedResponse
+        {
+            [JsonProperty("status")]
+            public bool status { get; set; }
+            [JsonProperty("messsage")]
+            public string message { get; set; }
+            [JsonProperty("data")]
+            public HotmailUnlimitedItem[] data { get; set; }
+        }
+        public class HotmailUnlimitedBodyRequest
+        {
+            [JsonProperty("quantity")]
+            public int quantity { get; set; }
+            [JsonProperty("token")]
+            public string token { get; set; }
+            [JsonProperty("product_id")]
+            public string product_id { get; set; }
+        }
+        public static HotmailUnlimitedResponse GetHotMailUnlimited(int amount, string type)
+        {
+            try
+            {
+                try
+                {
+                    HotmailUnlimitedBodyRequest requestBody = new HotmailUnlimitedBodyRequest();
+                    requestBody.quantity = amount;
+                    requestBody.token = PublicData.TokenUnlimit;
+                    requestBody.product_id = type;
+                    var client = new RestClient("https://web.unlimitmail.com/");
+                    //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                    var request = new RestRequest("api/buy-product", Method.POST);
+                    request.AddHeader("Content-Type", "application/json");
+                    request.RequestFormat = DataFormat.Json;
+                    request.AddJsonBody(requestBody);
+                    var response = client.Execute(request);
+                    var content = response.Content; // Raw content as string    
+                    try
+                    {
+                        if (content != null)
+                        {
+                            HotmailUnlimitedResponse data = JsonConvert.DeserializeObject<HotmailUnlimitedResponse>(content);
+                            return data;
+                        }
+                        else
+                        {
+                            return null;
+                        }
+
+                    }
+                    catch
+                    {
+                        return null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
         public class Gmail48hDataresponse
         {
             [JsonProperty("status")]
@@ -519,7 +1456,7 @@ namespace fb_reg
                         MailObject mail = new MailObject();
                         mail.email = data.email;
                         mail.password = Constant.GMAIL_SELL_GMAIL;
-                        mail.orderId = data.id;
+                        mail.orderId = data.id + "";
                         return mail;
                     }
                     else
@@ -539,7 +1476,7 @@ namespace fb_reg
             return null;
         }
 
-        public static string GetOtpGmail48h(int orderId)
+        public static string GetOtpGmail48h(string orderId)
         {
             try
             {
@@ -574,13 +1511,7 @@ namespace fb_reg
             }
             return null;
         }
-        public class GmailSuperTeamDatarequest
-        {
-            [JsonProperty("gmail")]
-            public string gmail { get; set; }
-            [JsonProperty("success")]
-            public bool success { get; set; }
-        }
+       
         public class OtpGmailSuperTeamDatarequest
         {
             [JsonProperty("gmail")]
@@ -595,32 +1526,34 @@ namespace fb_reg
             public int price { get; set; }
         }
 
-        public static MailObject GetGmailSuperTeam()
+       
+
+        public static string GetOtpGmailSuperTeam(MailObject gmail)
         {
             try
             {
 
-                var client = new RestClient("https://api.sptmail.com/api/otp-services/mail-otp-rental/");
+                var client = new RestClient("https://api.sptmail.com/api/otp-services/mail-otp-lookup/");
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
 
 
-                request.AddParameter("apiKey", "Y10UF406JFC27BEV");
+                request.AddParameter("apiKey", gmail.accessToken);
                 request.AddParameter("otpServiceCode", "facebook");
+                request.AddParameter("gmail", gmail.email);
+
+
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
                 try
                 {
-                    GmailSuperTeamDatarequest data = JsonConvert.DeserializeObject<GmailSuperTeamDatarequest>(content);
+                    OtpGmailSuperTeamDatarequest data = JsonConvert.DeserializeObject<OtpGmailSuperTeamDatarequest>(content);
 
-                    if (data != null && data.success && !string.IsNullOrEmpty(data.gmail))
+                    if (data != null && !string.IsNullOrEmpty(data.status) && data.status == "SUCCESS" && !string.IsNullOrEmpty(data.otp))
                     {
-                        MailObject mail = new MailObject();
-                        mail.email = data.gmail;
-                        mail.password = Constant.GMAIL_SELL_GMAIL;
 
-                        return mail;
+                        return data.otp;
                     }
                     else
                     {
@@ -637,30 +1570,119 @@ namespace fb_reg
                 return null;
             }
         }
+        //public static string GetOtpOtpCheap(MailObject gmail)
+        //{
+        //    try
+        //    {
 
-        public static string GetOtpGmailSuperTeam(string gmail)
+        //        var client = new RestClient("https://api.otp.cheap/stubs/action/getorder");
+        //        client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+        //        var request = new RestRequest("", Method.GET);
+
+
+        //        request.AddParameter("apiKey", gmail.accessToken);
+        //        request.AddParameter("otpServiceCode", "facebook");
+        //        request.AddParameter("gmail", gmail.email);
+
+
+        //        var response = client.Execute(request);
+        //        var content = response.Content; // Raw content as string
+
+        //        try
+        //        {
+        //            OtpGmailSuperTeamDatarequest data = JsonConvert.DeserializeObject<OtpGmailSuperTeamDatarequest>(content);
+
+        //            if (data != null && !string.IsNullOrEmpty(data.status) && data.status == "SUCCESS" && !string.IsNullOrEmpty(data.otp))
+        //            {
+
+        //                return data.otp;
+        //            }
+        //            else
+        //            {
+        //                return null;
+        //            }
+        //        }
+        //        catch
+        //        {
+        //            return null;
+        //        }
+        //    }
+        //    catch (Exception eee)
+        //    {
+        //        return null;
+        //    }
+        //}
+
+        public class OtpGmailThueSimTeamDatarequest
+        {
+            [JsonProperty("code")]
+            public string code { get; set; }
+            [JsonProperty("status")]
+            public string status { get; set; }
+
+        }
+        public static string GetOtpGmailThuesim(MailObject gmail)
         {
             try
             {
 
-                var client = new RestClient("https://api.sptmail.com/api/otp-services/mail-otp-lookup/");
+                var client = new RestClient(string.Format("https://api.thuesim.app/order/email/{0}/{1}", gmail.clientId, gmail.accessToken));
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-
-
-                request.AddParameter("apiKey", "Y10UF406JFC27BEV");
-                request.AddParameter("otpServiceCode", "facebook");
-                request.AddParameter("gmail", gmail);
-
 
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
                 try
                 {
-                    OtpGmailSuperTeamDatarequest data = JsonConvert.DeserializeObject<OtpGmailSuperTeamDatarequest>(content);
+                    OtpGmailThueSimTeamDatarequest data = JsonConvert.DeserializeObject<OtpGmailThueSimTeamDatarequest>(content);
 
-                    if (data != null && !string.IsNullOrEmpty(data.status) && data.status == "SUCCESS" && !string.IsNullOrEmpty(data.otp))
+                    if (data != null && !string.IsNullOrEmpty(data.status) && data.status == "Successed" && !string.IsNullOrEmpty(data.code))
+                    {
+
+                        return data.code;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                return null;
+            }
+        }
+        public class OtpGmailShopgmailTeamDatarequest
+        {
+            [JsonProperty("otp")]
+            public string otp { get; set; }
+            [JsonProperty("status")]
+            public string status { get; set; }
+
+        }
+        public static string GetOtpGmailShopgmail(MailObject gmail)
+        {
+            try
+            {
+
+                
+                var client = new RestClient(string.Format("https://api.shopgmail9999.com/api/ApiUsers/checkotp?ordernumber={0}", gmail.clientId));
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    OtpGmailShopgmailTeamDatarequest data = JsonConvert.DeserializeObject<OtpGmailShopgmailTeamDatarequest>(content);
+
+                    if (data != null && !string.IsNullOrEmpty(data.status) && data.status == "Success" && !string.IsNullOrEmpty(data.otp))
                     {
 
                         return data.otp;
@@ -699,7 +1721,7 @@ namespace fb_reg
 
         }
 
-        public static string GetOtpGmailOtp(int codeID)
+        public static string GetOtpGmailOtp(string codeID)
         {
             try
             {
@@ -785,37 +1807,42 @@ namespace fb_reg
             }
             return null;
         }
-        public static string GetCodeMailOtp(int orderId)
+        public static string GetCodeMailOtp(string orderId)
         {
             try
             {
-                var client = new RestClient("https://mailotp.com/api/");
-                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
-                var request = new RestRequest("v1/get-order-detail");
+                
+                var client = new RestClient("https://api.otp.cheap/stubs/action/getorder");
+                //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("", Method.GET);
+                request.AddQueryParameter("api_key", PublicData.AccessTokenOtpCheap);
+                request.AddQueryParameter("quid", orderId);
 
-                request.AddParameter("apikey", "714a44e4-dd1e-46f8-a392-580eab8af4bf");
-                request.AddParameter("order_id", orderId);
 
 
-                var response = client.Get(request);
-                var content = response.Content; // Raw content as string
+                request.Timeout = 2000;
+                var response = client.Execute(request);
+                string content = response.Content; // Raw content as string
 
                 try
                 {
-                    MailOtpCode data = JsonConvert.DeserializeObject<MailOtpCode>(content);
-
-                    if (data != null && data.code == 200 && data.order != null && !string.IsNullOrEmpty(data.order.email))
-                    {
-                        return data.order.otp;
-                    }
-                    else
+                    Console.WriteLine("otpcheal detail:" + content);
+                    if (content == null || content.Contains("Error"))
                     {
                         return null;
                     }
+
+                    GmailOtpCheapDetailDatarequest dataDetail = JsonConvert.DeserializeObject<GmailOtpCheapDetailDatarequest>(content);
+
+                    if (dataDetail != null && !string.IsNullOrEmpty(dataDetail.code))
+                    {
+                       
+                        return dataDetail.code;
+                    }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    return null;
+
                 }
             }
             catch (Exception eee)
@@ -825,75 +1852,19 @@ namespace fb_reg
             return null;
         }
 
-        public class DichVuGmailEmail
-        {
-            [JsonProperty("status")]
-            public int status { get; set; }
+        
 
-
-            [JsonProperty("orders")]
-            public DichVuGmailEmailOrder orders { get; set; }
-        }
-        public class DichVuGmailEmailOrder
-        {
-            [JsonProperty("gmail")]
-            public string gmail { get; set; }
-            [JsonProperty("order_id")]
-            public string order_id { get; set; }
-
-            [JsonProperty("otp")]
-            public string otp { get; set; }
-            [JsonProperty("status")]
-            public string status { get; set; }
-        }
-
-        public static MailObject GetGmailDichVuGmail(string serviceId = "Facebook", string key = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ")
-        {
-            MailObject mail = new MailObject();
-            try
-            {
-                string apiGetHotMail = string.Format("{0}/{1}",
-                key,
-                serviceId);
-                var client = new RestClient("https://dichvugmail.com/DataMail/Mail/");
-                //var client = new RestClient("https://dichvugmail.com/DataMail/Mail/");
-                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
-                var request = new RestRequest(apiGetHotMail);
-
-
-                var response = client.Get(request);
-                var content = response.Content; // Raw content as string
-
-                Console.WriteLine("get mail:" + content);
-                string decode = Utility.Decode_UTF8(content);
-                DichVuGmailEmail data = JsonConvert.DeserializeObject<DichVuGmailEmail>(decode);
-
-                if (data != null && data.status == 200 && !string.IsNullOrEmpty(data.orders.gmail) && data.orders.status == "Wait")
-                {
-                    mail.email = data.orders.gmail;
-                    mail.password = Constant.GMAIL_SELL_GMAIL;
-                    mail.token = data.orders.order_id;
-                }
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-
-
-            return mail;
-        }
-        public static string GetGmailDichVuGmailOtp(string orderId, string key = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ")
+        
+        public static string GetGmailDichVuGmailOtp(MailObject mail)
         {
             string otp = "";
-
+            
             try
             {
                 string apiGetDvgmOtp = string.Format("{0}/{1}",
-                key,
-                orderId);
-                var client = new RestClient("https://dichvugmail.com/DataMail/Mail/");
+                mail.accessToken,
+                mail.orderId);
+                var client = new RestClient("https://boxreceive.com/DataMail/Mail/");
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetDvgmOtp);
 
@@ -911,6 +1882,7 @@ namespace fb_reg
                 }
                 if (data == null || data.orders == null || data.orders.status == "Cancel" || data.orders.status == "cancel")
                 {
+                    
                     return "";
                 }
             }

@@ -20,6 +20,7 @@ namespace fb_reg
         public bool isWait;
         public string message;
         public string key;
+        public string proxyVersion;
         public string toString()
         {
             return host 
