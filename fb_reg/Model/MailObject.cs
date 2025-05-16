@@ -24,6 +24,7 @@ namespace fb_reg
         public string source;
         public bool otpVandong;
         public int balanceAfter;
+        public string unlimitType;
         public string key;
         public MailRepository mailRepository;
         public string toString()

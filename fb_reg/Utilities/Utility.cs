@@ -5,13 +5,11 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Configuration;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Net;
 
@@ -22,14 +20,17 @@ using System.Windows.Forms;
 using OpenPop.Mime;
 using OpenPop.Pop3;
 
-using static fb_reg.ServerApi;
 using Pop3Client = OpenPop.Pop3.Pop3Client;
 using Message = OpenPop.Mime.Message;
-using System.Net.NetworkInformation;
+
 using EAGetMail;
 using static fb_reg.CacheServer;
 using System.Globalization;
 using System.IO.MemoryMappedFiles;
+
+using fb_reg.RequestApi;
+using Exception = System.Exception;
+
 
 namespace fb_reg
 {
@@ -86,7 +87,7 @@ class Utility
     {
 
 
-        public static List<string> listRoms = new List<string> { "android9","android10", "android11", "android13"};
+        public static List<string> listRoms = new List<string> { "android10", "android11", "android13"};
         public static List<string> Ten_Nam;
         public static List<string> Ten_Nu;
         public static List<string> FemaleName;
@@ -108,7 +109,8 @@ class Utility
 
         //public static Bitmap PROXY_CHECK = (Bitmap)Image.FromFile("img/proxy_check.png");
 
-
+        public static Bitmap NHAP_MAIL_XONG_MAN_HINH_TRANG = (Bitmap)Image.FromFile("img/nhap_mail_xong_man_hinh_trang.png");
+        public static Bitmap NHAP_MA_XAC_NHAN_MAU_XAM = (Bitmap)Image.FromFile("img/nhap_ma_xac_nhan_mau_xam.png");
         public static Bitmap TAO_TAI_KHOAN_MOI = (Bitmap)Image.FromFile("img/tao_tai_khoan_moi.png");
         public static Bitmap TAO_TAI_KHOAN_MOI_2 = (Bitmap)Image.FromFile("img/tao_tai_khoan_moi_2.png");
         public static Bitmap FBLITE_DANG_NHAP_IMG = (Bitmap)Image.FromFile("img/fblite_dangnhap.png");
@@ -132,7 +134,10 @@ class Utility
         public static Bitmap FA_OK = (Bitmap)Image.FromFile("img/2fa_ok.png");
         public static Bitmap LUC_KHAC = (Bitmap)Image.FromFile("img/luc_khac.png");
         public static Bitmap DANG_CHO_SDT = (Bitmap)Image.FromFile("img/dang_cho_sdt.png");
-        
+
+        public static Bitmap START_WELCOME11 = (Bitmap)Image.FromFile("img/start_welcome11.png");
+        public static Bitmap START_WELCOME13 = (Bitmap)Image.FromFile("img/start_welcome13.png");
+        //public static Bitmap START_WELCOME10 = (Bitmap)Image.FromFile("img/start_welcome10.png");
 
         public static Bitmap THEM_5BB = (Bitmap)Image.FromFile("img/them_5_bb.png");
         //public static Bitmap MAIL_GO = (Bitmap)Image.FromFile("img/mail_go.png");
@@ -146,9 +151,219 @@ class Utility
         public static Dictionary<String, String> dictAvatarMalePath = new Dictionary<string, string>();
         public static Dictionary<String, String> dictAvatarFemalePath = new Dictionary<string, string>();
 
-        public static string SERVER_LOCAL = "";
+        
+        static Random random = new Random();
 
 
+        
+
+        public static void KiemTraDienThoai(string deviceID, List<DeviceObject> listDeviceObject, DataGridView dataGridView)
+        {
+            try
+            {
+                //string deviceID = device.deviceId;
+                if (deviceID.Contains("line") || deviceID.Contains("rec"))
+                {
+                    return;
+                }
+                if (Utility.isScreenLock(deviceID))
+                {
+                    Device.Unlockphone(deviceID);
+                }
+
+                Device.AirplaneOff(deviceID);
+                Thread.Sleep(5000);
+                Device.MakePhoneCall(deviceID, "\"*101%23\"");
+
+                Thread.Sleep(20000);
+                string xml = GetUIXml(deviceID);
+                string rawPhone = "";
+                MatchCollection matchList = Regex.Matches(xml, pattern: "([\\+84|84|0]+(3|5|7|8|9|1[2|6|8|9]))+([0-9]{8})");
+                if (matchList != null && matchList.Count > 0)
+                {
+                    rawPhone = matchList[0].ToString();
+                    var regex = new Regex(Regex.Escape("84"));
+                    rawPhone = regex.Replace(rawPhone, "0", 1);
+                    rawPhone.Replace("+", "");
+                    string createText = rawPhone;
+                    File.WriteAllText("data/device_info/" + deviceID + ".txt", createText);
+                    for (int i = 0; i < listDeviceObject.Count; i++)
+                    {
+                        if (deviceID == listDeviceObject[i].deviceId)
+                        {
+                            dataGridView.Rows[listDeviceObject[i].index].Cells[15].Value = rawPhone;
+                            break;
+                        }
+                    }
+                    Device.ScreenShootRaw(deviceID, false, deviceID + "_phone.png");
+                }
+
+                if (!WaitAndTapXML(deviceID, 1, "hủyresourceid"))
+                {
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 67.4, 61.4);
+                }
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 94.1, 20.2);
+                Thread.Sleep(1000);
+                Device.ClearCache(deviceID, "com.android.messaging");
+                Thread.Sleep(1000);
+                Device.OpenApp(deviceID, "com.android.messaging");
+                Thread.Sleep(2000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.5, 94.5); // thêm message
+                Thread.Sleep(1000);
+                string realSim = Device.GetRealSim(deviceID);
+                if (realSim.Contains("Viettel"))
+                {
+                    Device.InputText(deviceID, "191");
+                }
+                else if (realSim.Contains("VINAPHONE"))
+                {
+                    Device.InputText(deviceID, "888");
+                }
+                else if (realSim.Contains("Mobifone"))
+                {
+                    Device.InputText(deviceID, "999");
+                }
+                else
+                {
+                    Device.InputText(deviceID, "789");
+                }
+
+                Thread.Sleep(1000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 92.7, 95.2); // xong
+                Thread.Sleep(1000);
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 92.7, 95.2); // xong
+                Thread.Sleep(5000);
+                string fileName = deviceID + "_" + rawPhone + ".png";
+
+                try
+                {
+                    Device.ScreenShootRaw(deviceID, false, deviceID + "_sms.png");
+
+                    join2Image1_1(deviceID + "_phone.png", deviceID + "_sms.png", deviceID + "_join.png");
+
+                    File.Move(deviceID + "_join.png", "data/device_info/sms/" + fileName);
+
+                    File.Delete(deviceID + "_phone.png");
+                    File.Delete(deviceID + "_sms.png");
+                    File.Delete(deviceID + "_join.png");
+                }
+                catch
+                {
+                }
+                Device.disableMobileData(deviceID);
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+        }
+
+        public static void LogStatus(DeviceObject device, string text, int sleep = 0)
+        {
+            string key = device.keyProxy;
+            //if (!string.IsNullOrEmpty(device.keyProxy) && device.keyProxy.Length > 6)
+            //{
+            //    key = " : " + device.keyProxy.Substring(device.keyProxy.Length - 6, 6);
+            //}
+            device.status = text + "-block:" + device.blockCount + " - " + key;
+
+            UpdateStatus2(device);
+            if (sleep > 0)
+            {
+                Thread.Sleep(sleep);
+            }
+        }
+        public static Account GetAccMoi()
+        {
+            Account acc = new Account();
+
+            for (int i = 0; i < 10; i++)
+            {
+                acc = CacheServer.GetAccMoiLocalCache(PublicData.CacheServerUri);
+
+                if (acc == null || string.IsNullOrEmpty(acc.uid) || string.IsNullOrEmpty(acc.pass))
+                {
+                    continue;
+                }
+
+                // Checklive
+                if (FbUtil.CheckLiveWall(acc.uid) == Constant.DIE)
+                {
+                    continue;
+                }
+
+                return acc;
+            }
+
+            return null;
+        }
+        public static string UpdateStatus2(DeviceObject device)
+        {
+            try
+            {
+                string result = "";
+                double globalPercent = 0;
+                if (device.totalInHour > 0)
+                {
+                    device.percentInHour = (Convert.ToDouble(device.successInHour) / device.totalInHour) * 100;
+                }
+                if (device.globalTotal > 0)
+                {
+                    globalPercent = Convert.ToDouble(device.globalSuccess) / device.globalTotal * 100;
+                }
+                string rate = "In a half Hour:" + device.successInHour
+                    + "/" + device.totalInHour + "_"
+                    + "- total success:" + device.globalSuccess + "/" + device.globalTotal;
+                rate = String.Format("{0,-45}", rate);
+                result = result + String.Format("{0,-26}", device.deviceId) + " - " + rate + " - "
+                    + String.Format("{0,20}", device.status) + "\n";
+                int i = device.index;
+                PublicData.dataGridView.Rows[i].Cells[0].Value = Convert.ToString((i + 1));
+                PublicData.dataGridView.Rows[i].Cells[1].Value = Convert.ToString(device.deviceId);
+                string temp = device.successInHour + "/" + device.totalInHour + " = " + Math.Round(device.percentInHour, 1) + " %";
+                PublicData.dataGridView.Rows[i].Cells[2].Value = temp;
+                string temp2 = device.globalSuccess + "/" + device.globalTotal + " = " + Math.Round(globalPercent, 1) + "%";
+                PublicData.dataGridView.Rows[i].Cells[3].Value = temp2;
+                PublicData.dataGridView.Rows[i].Cells[4].Value = Convert.ToString(device.duration);
+                PublicData.dataGridView.Rows[i].Cells[5].Value = Convert.ToString(device.status);
+                PublicData.dataGridView.Rows[i].Cells[7].Value = Convert.ToString(device.network + " " + device.currentMobileReg);
+
+                if (device.status.Contains(Constant.DEEMED))
+                {
+                    PublicData.dataGridView.Rows[i].DefaultCellStyle.BackColor = Color.Coral;
+
+                }
+                if (device.status.Contains(Constant.ACCOUNT_BLOCK))
+                {
+                    PublicData.dataGridView.Rows[i].DefaultCellStyle.BackColor = Color.Orange;
+
+                }
+                if (device.status == Constant.DEVICE_HOLDING)
+                {
+                    PublicData.dataGridView.Rows[i].DefaultCellStyle.BackColor = Color.Yellow;
+                }
+                return "";
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("ex:" + ex.Message);
+                return "";
+            }
+        }
+
+        public static string GetRandomItemExcluding(List<string> list, string exclude)
+        {
+            if (list == null || list.Count == 0) return null;
+
+            // Lọc ra danh sách mới không chứa chuỗi cần loại bỏ
+            var filteredList = list.Where(item => item != exclude).ToList();
+
+            if (filteredList.Count == 0) return null; // Không còn gì để chọn
+
+            // Random trong danh sách đã lọc
+            return filteredList[random.Next(filteredList.Count)];
+        }
 
         public static bool IsLogcatCrashDetected(string deviceId, string package)
         {
@@ -218,99 +433,83 @@ class Utility
             }
         }
 
+        public static void ForceEnableCpu67(string deviceId)
+        {
+            string[] cmds =
+            {
+        "echo 1 > /sys/devices/system/cpu/cpu6/online",
+        "echo 1 > /sys/devices/system/cpu/cpu7/online"
+    };
+
+            foreach (var cmd in cmds)
+            {
+                 RunAdb(deviceId, $"shell su -c \"{cmd}\"");
+                //Console.WriteLine(ok ? $"[OK] {cmd}" : $"[FAIL] {cmd}");
+            }
+        }
+
+        public static void EnableGGservice(DeviceObject device)
+        {
+            
+
+            string deviceId = device.deviceId;
+            ForceEnableCpu67(deviceId);
+            string[] packages = {
+            "com.google.android.gms",
+            "com.google.android.gsf",
+            "com.android.vending"
+                };
+            foreach (var pkg in packages)
+            {
+                LogStatus(device, $"[+] Checking: {pkg}");
+
+                string rawInfo = RunAdb(deviceId, $"shell dumpsys package {pkg}");
+
+                bool isEnabled = rawInfo.Contains("enabled=true") || rawInfo.Contains("enabled=1");
+
+                if (!isEnabled)
+                {
+                    LogStatus(device, $"[-] {pkg} is DISABLED → Enabling...");
+
+                    RunAdb(deviceId, $"shell pm enable {pkg}");
+                    RunAdb(deviceId, $"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1");
+
+                    string confirm = RunAdb(deviceId, $"shell dumpsys package {pkg}");
+                    if (confirm.Contains("enabled=true") || confirm.Contains("enabled=1"))
+                    {
+                        LogStatus(device, $"[✔] {pkg} ENABLED successfully.",1000);
+                    }
+                    else
+                    {
+                        LogStatus(device, $"[✘] Failed to enable {pkg}.",1000);
+                    }
+                }
+                else
+                {
+                    LogStatus(device, $"[✔] {pkg} is already enabled.", 1000);
+                }
+
+                Console.WriteLine();
+            }
+
+            Console.WriteLine("Done.");
+        }
+
+        public static bool IsMailEmpty(MailObject mail)
+        {
+            if (mail == null || string.IsNullOrEmpty(mail.email))
+            {
+                return true;
+            }
+            return false;
+        }
         public static bool IsDeviceResponsive(string deviceID)
         {
             string result = RunAdb(deviceID, "shell echo ok");
             return result.Trim() == "ok";
         }
-        public static void PrepareDeviceForClone1(string deviceId, string brandCode = "25", string modelCode = "3")
-        {
-            Console.WriteLine($"[*] Preparing device {deviceId} for Facebook clone...");
-
-            // 1. Xoá dữ liệu Facebook
-            //RunAdb(deviceId, "shell su -c 'pm clear com.facebook.katana'");
-
-            // 2. Fake device fingerprint (MagiskHide Props)
-     //       string propsScript =
-     //$"shell su -c \"echo -e '1\\nf\\n{brandCode}\\n{modelCode}\\ny\\ny' | props\"";
-
-     //       propsScript = propsScript.Replace("\n", "; ").Replace("\r", "");
-     //       string cmd = string.Format(Device.CONSOLE_ADB , deviceId) + propsScript;
-     //       Device.ExecuteCMD(cmd);
-
-            // 3. Android ID random
-            string androidId = Guid.NewGuid().ToString("N").Substring(0, 16);
-            RunAdb(deviceId, $"shell su -c \"settings put secure android_id {androidId}\"");
-
-            // 4. Tạo file proxychains.conf tạm thời
-            //var parts = proxy.Split(':');
-            //if (parts.Length < 2)
-            //{
-            //    Console.WriteLine("[!] Proxy format invalid. Use ip:port");
-            //    return;
-            //}
-
-            //string proxyConf = $"strict_chain\nproxy_dns\n[ProxyList]\nsocks5 {parts[0]} {parts[1]}";
-            //File.WriteAllText("proxychains.conf", proxyConf);
-            //RunAdb(deviceId, "push proxychains.conf /data/local/tmp/proxychains.conf");
-
-            // 5. Tăng animation scale
-            //RunAdb(deviceId, "shell settings put global window_animation_scale 10");
-            //RunAdb(deviceId, "shell settings put global transition_animation_scale 10");
-            //RunAdb(deviceId, "shell settings put global animator_duration_scale 10");
-
-            //// 6. Hiển thị toast (yêu cầu Termux + termux-api)
-            ////RunAdb(deviceId, $"shell su -c \"termux-toast '✅ Device ready for FB clone ({androidId})'\"");
-
-            //Console.WriteLine($"[✓] Device {deviceId} is ready. Android ID: {androidId}");
-        }
-        public static void PrepareDeviceForClone2(string deviceId, string brandCode = "25", string modelCode = "3")
-        {
-            //Console.WriteLine($"[*] Preparing device {deviceId} for Facebook clone...");
-
-            //// 1. Xoá dữ liệu Facebook
-            ////RunAdb(deviceId, "shell su -c 'pm clear com.facebook.katana'");
-
-            //// 2. Fake device fingerprint (MagiskHide Props)
-            //string propsScript = $@"
-            //    su -c 'props <<EOF
-            //    1
-            //    f
-            //    {brandCode}
-            //    {modelCode}
-            //    y
-            //    y
-            //    EOF'";
-            //RunAdb(deviceId, $"shell \"{propsScript.Replace("\n", "; ").Replace("\r", "")}\"");
-
-            //// 3. Android ID random
-            //string androidId = Guid.NewGuid().ToString("N").Substring(0, 16);
-            //RunAdb(deviceId, $"shell su -c \"settings put secure android_id {androidId}\"");
-
-            // 4. Tạo file proxychains.conf tạm thời
-            //var parts = proxy.Split(':');
-            //if (parts.Length < 2)
-            //{
-            //    Console.WriteLine("[!] Proxy format invalid. Use ip:port");
-            //    return;
-            //}
-
-            //string proxyConf = $"strict_chain\nproxy_dns\n[ProxyList]\nsocks5 {parts[0]} {parts[1]}";
-            //File.WriteAllText("proxychains.conf", proxyConf);
-            //RunAdb(deviceId, "push proxychains.conf /data/local/tmp/proxychains.conf");
-
-            // 5. Tăng animation scale
-            //RunAdb(deviceId, "shell settings put global window_animation_scale 5");
-            //RunAdb(deviceId, "shell settings put global transition_animation_scale 5");
-            //RunAdb(deviceId, "shell settings put global animator_duration_scale 5");
-
-            // 6. Hiển thị toast (yêu cầu Termux + termux-api)
-            //RunAdb(deviceId, $"shell su -c \"termux-toast '✅ Device ready for FB clone ({androidId})'\"");
-
-            //Console.WriteLine($"[✓] Device {deviceId} is ready. Android ID: {androidId}");
-        }
-
-
+        
+        
         public static void SendSMSCheckData(string deviceID)
         {
             string realSim = Device.GetRealSim(deviceID);
@@ -355,17 +554,6 @@ class Utility
             Thread.Sleep(1000);
             WaitAndTapXML(deviceID, 2, "luôn cho phép");
             KAutoHelper.ADBHelper.TapByPercent(deviceID, 83.3, 62.8); // gửi
-        }
-
-
-
-        public static bool IsMailEmpty(MailObject mail)
-        {
-            if (mail == null || string.IsNullOrEmpty(mail.email))
-            {
-                return true;
-            }
-            return false;
         }
         public static string GetDuoiMailFromServer()
         {
@@ -433,18 +621,19 @@ class Utility
                 return false;
             }
 
-            char[] textChar = code.ToCharArray();
-            Random ran = new Random();
+            GboardTyper.TypeText(deviceID, code);
+            //char[] textChar = code.ToCharArray();
+            //Random ran = new Random();
 
-            foreach (char c in textChar)
-            {
-                if (!"0123456789".Contains(c))
-                {
-                    return false;
-                }
-                InputNumberByTouch(deviceID, c);
-                Thread.Sleep(ran.Next(100, 200));
-            }
+            //foreach (char c in textChar)
+            //{
+            //    if (!"0123456789".Contains(c))
+            //    {
+            //        return false;
+            //    }
+            //    InputNumberByTouch(deviceID, c);
+            //    Thread.Sleep(ran.Next(100, 200));
+            //}
             return true;
         }
         public static void InputNumberByTouch(string deviceID, char number)
@@ -898,15 +1087,15 @@ class Utility
             }
             //Device.SelectAdbKeyboard(deviceID);
 
-            if (inputString)
-            {
+            //if (inputString)
+            //{
                
-                    Device.InputText(deviceID, text);
+            //        Device.InputText(deviceID, text);
                 
 
-            }
-            else
-            {
+            //}
+            //else
+            //{
                 char[] textChar = text.ToCharArray();
                 Random ran = new Random();
 
@@ -917,7 +1106,7 @@ class Utility
                    
                     Thread.Sleep(ran.Next(150, 300));
                 }
-            }
+            //}
             //Device.StopAdbKeyboard(deviceID);
             Thread.Sleep(700);
         }
@@ -929,29 +1118,29 @@ class Utility
             {
                 return;
             }
-            Device.SelectAdbKeyboard(deviceID);
+            //Device.SelectAdbKeyboard(deviceID);
 
-            if (inputString)
-            {
+            //if (inputString)
+            //{
                 //Device.InputText(deviceID, text);
 
                 GboardTyper.TypeText(deviceID, text);
-            }
-            else
-            {
-                char[] textChar = text.ToCharArray();
-                Random ran = new Random();
+            //}
+            //else
+            //{
+            //    char[] textChar = text.ToCharArray();
+            //    Random ran = new Random();
 
-                foreach (char c in textChar)
-                {
+            //    foreach (char c in textChar)
+            //    {
 
-                    Device.InputText(deviceID, Convert.ToString(c));
+            //        Device.InputText(deviceID, Convert.ToString(c));
 
-                    Thread.Sleep(ran.Next(200, 400));
-                }
-            }
-            Device.StopAdbKeyboard(deviceID);
-            Device.SelectLabanKeyboard(deviceID);
+            //        Thread.Sleep(ran.Next(200, 400));
+            //    }
+            //}
+            //Device.StopAdbKeyboard(deviceID);
+            //Device.SelectLabanKeyboard(deviceID);
             Thread.Sleep(700);
         }
 
@@ -1002,23 +1191,23 @@ class Utility
             }
             //Device.SelectAdbKeyboard(deviceID);
 
-            if (inputString)
-            {
+            //if (inputString)
+            //{
                 //Device.InputStringAdbKeyboard(deviceID, text);
                 Device.InputText(deviceID, text);
-            }
-            else
-            {
-                char[] textChar = text.ToCharArray();
-                Random ran = new Random();
+            //}
+            //else
+            //{
+            //    char[] textChar = text.ToCharArray();
+            //    Random ran = new Random();
 
-                foreach (char c in textChar)
-                {
-                    //Device.InputStringAdbKeyboard(deviceID, Convert.ToString(c));
-                    Device.InputText(deviceID, Convert.ToString(c));
-                    Thread.Sleep(ran.Next(100, 200));
-                }
-            }
+            //    foreach (char c in textChar)
+            //    {
+            //        //Device.InputStringAdbKeyboard(deviceID, Convert.ToString(c));
+            //        Device.InputText(deviceID, Convert.ToString(c));
+            //        Thread.Sleep(ran.Next(100, 200));
+            //    }
+            //}
             //Device.StopAdbKeyboard(deviceID);
             Thread.Sleep(700);
         }
@@ -1876,7 +2065,7 @@ class Utility
             else
             {
                 Random random = new Random();
-                AvatarObject cacheName = CacheServer.GetAvatarLocalCache(SERVER_LOCAL, gender, deviceID);
+                AvatarObject cacheName = CacheServer.GetAvatarLocalCache(PublicData.CacheServerUri, gender, deviceID);
                 string filePath = "";
                 if (!string.IsNullOrEmpty(cacheName.localPath))
                 {
@@ -2486,6 +2675,18 @@ class Utility
             {
                 needBackup = false;
             }
+            if (verified)
+            {
+                try
+                {
+                    CacheServer.LogCheckpoint(device, order, Constant.VERI_SUCCESS);
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+            
             needBackup = true;
             if (needBackup)
             {
@@ -2514,7 +2715,7 @@ class Utility
                 }
                 else
                 {
-                    ServerApi.UploadAuthAcc(Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
+                    ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
                 }
 
                 Thread.Sleep(3000);
@@ -3367,10 +3568,10 @@ class Utility
 
             return code;
         }
-        public static string GetOtp(string deviceID, string tempmailType, MailObject inMail, int time)
+        public static string GetOtp(OrderObject order, string deviceID, string tempmailType, MailObject inMail, int time)
         {
             string code = Constant.FAIL;
-
+            
 
             if (inMail.password == Constant.TEMP_MAIL || inMail.password == Constant.GMAIL_SELL_GMAIL)
             {
@@ -3430,7 +3631,18 @@ class Utility
                 {
                     if (!string.IsNullOrEmpty(inMail.refreshToken))
                     {
-                        code = OutsideServer.GetOtpByOAuth2(inMail);
+                        List<string> otps = OutsideServer.GetOtpByOAuth2(inMail);
+                        if (otps != null)
+                        {
+                            if (otps.Count == 1 )
+                            {
+                                return otps[0];
+                            } else if (otps.Count == 2)
+                            {
+                                order.otp2 = otps[1];
+                                return otps[0];
+                            }
+                        }
                     } else
                     {
 
@@ -3645,7 +3857,7 @@ class Utility
         public static void WriteLog(string form, string mess)
         {
             
-            using (FileStream fileStream = new FileStream(Application.StartupPath + "\\data\\log.txt", FileMode.Append, FileAccess.Write))
+            using (FileStream fileStream = new FileStream(System.Windows.Forms.Application.StartupPath + "\\data\\log.txt", FileMode.Append, FileAccess.Write))
             {
                 using (StreamWriter streamWriter = new StreamWriter(fileStream))
                 {
@@ -3914,12 +4126,12 @@ class Utility
             double width = Int32.Parse(ll[2]) - Int32.Parse(ll[0]);
             double heigh = Int32.Parse(ll[3]) - Int32.Parse(ll[1]);
             Random ran = new Random();
-            int ranX = ran.Next(5, 95);
-            int ranY = ran.Next(5, 95);
+            int ranX = ran.Next(45, 65);
+            int ranY = ran.Next(45, 65);
             int x = Int32.Parse(ll[0]) + (int)(width * ranX/100) ;
             int y = Int32.Parse(ll[1]) + (int)(heigh * ranY/100);
   
-            Device.TapRoot(deviceId, x, y);
+            Device.Tap(deviceId, x, y);
             return check;
         }
         public static bool CheckAndTapNew(string deviceId, string buttonText, string xml = "")
@@ -4212,24 +4424,33 @@ class Utility
         }
         public static bool FindImageAndTap(string deviceID, Bitmap image, int time)
         {
-            for (int i = 0; i < time; i++)
+            try
             {
-                var screen = Device.ScreenShoot(deviceID); // chup man hinh
-                var next = Device.FindOutPoint(screen, image);// so sanh hinh anh
-                if (next != null)// kiem tra
+                for (int i = 0; i < time; i++)
                 {
-                    try
+                    var screen = Device.ScreenShoot(deviceID); // chup man hinh
+                    var next = Device.FindOutPoint(screen, image);// so sanh hinh anh
+                    if (next != null)// kiem tra
                     {
-                        Device.Tap(deviceID, next.Value.X + image.Width / 2, next.Value.Y + image.Height / 2);// click vào hinh anh
-                        return true;
-                    }
-                    catch (Exception)
-                    {
-                        Thread.Sleep(250);
+                        try
+                        {
+                            Device.Tap(deviceID, next.Value.X + image.Width / 2, next.Value.Y + image.Height / 2);// click vào hinh anh
+                            return true;
+                        }
+                        catch (Exception)
+                        {
+                            Thread.Sleep(250);
+                        }
                     }
                 }
+                return false;
             }
-            return false;
+            catch(Exception ex)
+            {
+                Console.WriteLine("Find Image:" + ex.Message);
+                return false;
+            }
+            
         }
 
         public static bool WaitXML(string deviceID, int time, string text)
@@ -4417,7 +4638,15 @@ class Utility
             }
             return false;
         }
-
+        public static void SetRowColor(DeviceObject device, Color color)
+        {
+            PublicData.dataGridView.Rows[device.index].DefaultCellStyle.BackColor = color;
+        }
+        public static void LogRegStatus(DeviceObject device, string status)
+        {
+            device.regStatus = device.regStatus + "-" + status;
+            PublicData.dataGridView.Rows[device.index].Cells[13].Value = device.regStatus;
+        }
         public static bool TurnOffAirPlane(string deviceID, bool needOpenSetting = true)
         {
            

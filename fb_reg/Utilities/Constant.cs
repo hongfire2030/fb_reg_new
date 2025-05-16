@@ -5,6 +5,20 @@ namespace fb_reg
 {
     class Constant
     {
+        public static string ADB_DEVICE_OFFLINE = "\toffline";
+        public static string ADB_DEVICE_RECOVERY = "\trecovery";
+        public static string ADB_DEVICE_DISCONNECT = "disconnect";
+        public static string ADB_DEVICE_RESTART = "restart";
+        public static string ADB_DEVICE_NORMAL = "normal";
+
+        public static string WRONG_OTP = "wrong_otp";
+        public static string CHECKPOINT = "checkpoint";
+        public static string VERI_SUCCESS = "veri_success";
+        public static string ANDROID10 = "android10";
+        public static string ANDROID11 = "android11";
+        public static string ANDROID13 = "android13";
+        public static string ANDROID9 = "android9";
+
         public static string ACC_TYPE_2FA_SECURITY_SETTING = "2fa_security_settings";
         public static string ACC_TYPE_2FA_SETTING = "2fa_settings";
         public static string ACC_TYPE_REG_BY_MAIL = "reg_by_mail";

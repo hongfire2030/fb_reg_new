@@ -1,10 +1,17 @@
-﻿using System;
+﻿using ActiveUp.Net.Security.OpenPGP.Packets;
+using System;
 
 namespace fb_reg
 {
     public class DeviceObject
     {
+        public string otp1;
+        public string currentIp;
+        public string owner = "";
         public string currentRom = "";
+        public bool UpdateRom = false;
+        public bool ForceUpdateRom = false;
+        public string changeRom = "";
         public bool needRebootAfterClear = false;
         public int currentProxyCount = 0;
         public Proxy currentProxy;
@@ -49,6 +56,7 @@ namespace fb_reg
         public string deviceId;
         public string deviceIP;
         public string status;
+        public string adbStatus;
         public int duration;
         public int totalInHour;
         public int successInHour;

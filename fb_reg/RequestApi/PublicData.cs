@@ -1,13 +1,20 @@
-﻿using System;
+﻿using ActiveUp.Net.Security.OpenPGP.Packets;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Forms;
 
 namespace fb_reg.RequestApi
 {
     public static class PublicData
     {
+        public static bool ForceHotmail = false;
+        public static bool ForceGmail = false;
+        public static DataGridView dataGridView;
+        public static List<DeviceObject> listDeviceObject = new List<DeviceObject>();
+        public static string CacheServerUri = "http://hes09ez92az.sn.mynetname.net:8081";
         public static string AccessTokenSuperGmailVip = "Y10UF406JFC27BEV";
 
         public static string AccessTokenSuperGmailNormal = "GYTR1AOXBYVCGZBX";
@@ -32,7 +39,7 @@ namespace fb_reg.RequestApi
         public static bool GetMailThuesim = false;
         public static bool GetMailThuesimVip = false;
         public static bool GetMailDvgm = false;
-        public static bool GetMailDvgmNormal = true;
+        public static bool GetMailDvgmNormal = false;
         public static bool GetMailSptLocal = true;
         public static bool GetMailSptNormal = true;
         public static bool GetShopgmailLocal = false;

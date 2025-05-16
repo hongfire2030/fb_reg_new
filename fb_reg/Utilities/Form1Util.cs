@@ -1,4 +1,5 @@
-﻿using HttpRequest;
+﻿using fb_reg.RequestApi;
+using HttpRequest;
 using OtpNet;
 using System;
 using System.Collections.Generic;
@@ -89,11 +90,7 @@ namespace fb_reg
             return true;
         }
 
-        public static void LogRegStatus(DataGridView dataGridView, DeviceObject device, string status)
-        {
-            device.regStatus = device.regStatus + "-" + status;
-            dataGridView.Rows[device.index].Cells[13].Value = device.regStatus;
-        }
+        
 
         
 

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,20 +53,32 @@ namespace fb_reg
             ['8'] = "KEYCODE_8",
             ['9'] = "KEYCODE_9"
         };
-        public static void TypeText(string deviceID, string text, int delayMs = 100)
+        public static void TypeText(string deviceID, string text, int delayMs = 200)
         {
             Random ran = new Random();
-            foreach (char c in text.ToLower())
+            foreach (char c in text)
             {
-                if (KeyMap.TryGetValue(c, out string key))
+                bool isUpper = char.IsUpper(c);
+                char lower = char.ToLower(c);
+
+                if (KeyMap.TryGetValue(lower, out string key))
                 {
                     ///RunAdbCommand($"shell input keyevent {key}");
+                    if (isUpper)
+                    {
+                        // Gửi SHIFT trước rồi gửi ký tự
+                        //Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + " shell input keyevent 59", deviceID)); // SHIFT_LEFT
+                        Device.InputText(deviceID, c + "");
+                        Thread.Sleep(delayMs / 2);
+                    } else
+                    {
+                        string cmd = string.Format(Device.CONSOLE_ADB + "shell input keyevent {1}", deviceID, key);
 
-                    string cmd = string.Format(Device.CONSOLE_ADB + "shell input keyevent {1}", deviceID, key);
-
-                    Device.ExecuteCMD(cmd);
+                        Device.ExecuteCMD(cmd);
+                    }
+                        
                     
-                    Thread.Sleep(ran.Next(100, 200)); // delay mô phỏng người gõ
+                    Thread.Sleep(ran.Next(200, 400)); // delay mô phỏng người gõ
                 }
             }
         }

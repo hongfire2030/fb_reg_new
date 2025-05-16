@@ -1,5 +1,7 @@
-﻿using fb_reg.RequestApi;
+﻿using ActiveUp.Net.Security.OpenPGP.Packets;
+using fb_reg.RequestApi;
 using Newtonsoft.Json;
+using OpenQA.Selenium;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -9,8 +11,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Cache;
 using System.Net.Http;
+using System.Net.NetworkInformation;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
 using static fb_reg.Utility;
@@ -20,44 +24,103 @@ namespace fb_reg
     public class OutsideServer
     {
 
+        public static bool CheckInternet()
+        {
+            try
+            {
+                using (var ping = new Ping())
+                {
+                    var reply = ping.Send("8.8.8.8", 1000);
+                    return reply.Status == IPStatus.Success;
+                }
+            }
+            catch { return false; }
+        }
 
+        public static bool CheckDNS()
+        {
+            try
+            {
+                var entry = Dns.GetHostEntry("facebook.com");
+                return entry.AddressList.Length > 0;
+            }
+            catch { return false; }
+        }
+
+        public static bool CheckFacebookAccessible()
+        {
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    client.Timeout = TimeSpan.FromSeconds(3);
+                    var response = client.GetAsync("https://m.facebook.com").Result;
+                    return response.IsSuccessStatusCode;
+                }
+            }
+            catch { return false; }
+        }
+
+        public static void WaitUntilNetworkStable(int maxRetries = 60, int delayMs = 2000)
+        {
+            return;
+            Console.WriteLine("[i] Kiểm tra mạng...");
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                if (CheckInternet() && CheckDNS() && CheckFacebookAccessible())
+                {
+                    Console.WriteLine("[✓] Mạng ổn định. Bắt đầu reg clone.");
+                    return;
+                }
+
+                Console.WriteLine($"[!] Mạng chưa ổn định (thử {i + 1}/{maxRetries})...");
+                Thread.Sleep(delayMs);
+            }
+
+            throw new Exception("❌ Mạng không ổn định sau nhiều lần thử.");
+        }
+        public static void WaitUntilProxyStable(Proxy proxy, int maxRetries = 60, int delayMs = 2000)
+        {
+            //return;
+            Console.WriteLine("[i] Kiểm tra mạng...");
+
+            for (int i = 0; i < maxRetries; i++)
+            {
+                if (TestProxy(proxy.host, Int32.Parse( proxy.port), proxy.username, proxy.pass))
+                {
+                    Console.WriteLine("[✓] Proxy ổn định. Bắt đầu reg clone.");
+                    return;
+                }
+
+                Console.WriteLine($"[!] Proxy chưa ổn định (thử {i + 1}/{maxRetries})...");
+                Thread.Sleep(delayMs);
+            }
+
+            throw new Exception("❌ Proxy không ổn định sau nhiều lần thử.");
+        }
         public static bool TestProxy(string host, int port, string username, string password)
         {
             try
             {
-                var proxy = new WebProxy($"{host}:{port}")
+                var proxy = new WebProxy(host, port)
                 {
                     Credentials = new NetworkCredential(username, password)
                 };
 
-                var handler = new HttpClientHandler
-                {
-                    Proxy = proxy,
-                    UseProxy = true
-                };
+                var request = (HttpWebRequest)WebRequest.Create("https://m.facebook.com/");
+                request.Proxy = proxy;
+                request.Timeout = 5000;
+                request.Method = "GET";
 
-                using (var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(9) })
+                using (var response = (HttpWebResponse)request.GetResponse())
                 {
-                    var stopwatch = Stopwatch.StartNew();
-                    var response = client.GetAsync("https://m.facebook.com").GetAwaiter().GetResult();
-                    stopwatch.Stop();
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        Console.WriteLine($"✅ Proxy OK - {host}:{port} - Time: {stopwatch.ElapsedMilliseconds}ms");
-                        return true;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"⚠️ Proxy responded with status: {response.StatusCode}");
-                        return false;
-                    }
+                    return response.StatusCode == HttpStatusCode.OK;
                 }
-
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Proxy failed: {ex.Message}");
+                Console.WriteLine("❌ Proxy lỗi: " + ex.Message);
                 return false;
             }
         }
@@ -314,6 +377,7 @@ namespace fb_reg
             public bool success { get; set; }
         }
 
+        
         public static MailObject GetGmailSuperTeam(string key)
         {
             try
@@ -677,11 +741,15 @@ namespace fb_reg
         {
             MailObject gmail = new MailObject();
 
-            
+            gmail = GetGmailUnlimited();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+
             gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailNormal);
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
-
                 return gmail;
             }
             
@@ -988,30 +1056,30 @@ namespace fb_reg
         }
 
 
-        public static string GetOtpByOAuth2(MailObject inMmail)
+        public static List<string> GetOtpByOAuth2(MailObject inMmail)
         {
             
 
-            string otp = "";
-            string accessToken = HotmailOtpFetcher.GetAccessTokenFromRefreshToken(inMmail.clientId, inMmail.refreshToken).GetAwaiter().GetResult();
-            otp = HotmailOtpFetcher.GetFacebookOtp(accessToken).GetAwaiter().GetResult();
+            List<string> otps = new List<string>();
+            //string accessToken = HotmailOtpFetcher.GetAccessTokenFromRefreshToken(inMmail.clientId, inMmail.refreshToken).GetAwaiter().GetResult();
+            //otp = HotmailOtpFetcher.GetFacebookOtp(accessToken).GetAwaiter().GetResult();
 
-            if (!string.IsNullOrEmpty(otp))
+            //if (!string.IsNullOrEmpty(otp))
+            //{
+            //    return otp;
+            //}
+            otps = GetHotmailOtpByOAuth2Vandong(inMmail);
+            if (otps != null && otps.Count > 0)
             {
-                return otp;
-            }
-            otp = GetHotmailOtpByOAuth2Vandong(inMmail);
-            if (!string.IsNullOrEmpty(otp))
-            {
-                return otp;
+                return otps;
             }
             //if (inMmail.otpVandong)
             //{
-                otp = GetHotmailOtpByOAuth2Unlimit(inMmail);
+            otps = GetHotmailOtpByOAuth2Unlimit(inMmail);
             //}
-            if (!string.IsNullOrEmpty(otp))
+            if (otps != null && otps.Count > 0)
             {
-                return otp;
+                return otps;
             }
             //string code = "";
             //string accessToken = inMmail.accessToken;
@@ -1031,7 +1099,7 @@ namespace fb_reg
             //        return code;
             //    }
             //}
-            return otp;
+            return otps;
         }
 
         public static string GetOtp2faByOAuth2(MailObject inMmail)
@@ -1044,7 +1112,7 @@ namespace fb_reg
             }
             if (inMmail.otpVandong)
             {
-                return GetHotmailOtpByOAuth2Vandong(inMmail);
+                return GetHotmailOtp2faByOAuth2Vandong(inMmail);
             }
             string code = "";
             string accessToken = inMmail.accessToken;
@@ -1066,6 +1134,12 @@ namespace fb_reg
             }
             return code;
         }
+
+        private static string GetHotmailOtp2faByOAuth2Vandong(MailObject inMmail)
+        {
+            throw new NotImplementedException();
+        }
+
         public static MailObject CheckHotmailByVandong(MailObject mail)
         {
             try
@@ -1180,10 +1254,12 @@ namespace fb_reg
             return mail;
         }
 
-        public static string GetHotmailOtpByOAuth2Vandong(MailObject mail)
+        public static List<string> GetHotmailOtpByOAuth2Vandong(MailObject mail)
         {
             try
             {
+                List<string> otps = new List<string>();
+
                 HotmailDataRequest dataRequest = new HotmailDataRequest();
                 dataRequest.email = mail.email;
                 dataRequest.refresh_token = mail.refreshToken;
@@ -1212,9 +1288,10 @@ namespace fb_reg
                             string code = FindCodeInSubject(data.messages[i].subject);
                             if (!string.IsNullOrEmpty(code) && code != Constant.FAIL)
                             {
-                                return code;
+                                otps.Add( code);
                             }
                         }
+                        return otps;
                     }
                     else
                     {
@@ -1232,10 +1309,11 @@ namespace fb_reg
             }
             return null;
         }
-        public static string GetHotmailOtpByOAuth2Unlimit(MailObject mail)
+        public static List<string> GetHotmailOtpByOAuth2Unlimit(MailObject mail)
         {
             try
             {
+                List<string> otps = new List<string>();
                 HotmailDataRequest dataRequest = new HotmailDataRequest();
                 dataRequest.email = mail.email;
                 dataRequest.refresh_token = mail.refreshToken;
@@ -1264,7 +1342,7 @@ namespace fb_reg
                             string code = FindCodeInSubject(data.messages[i].subject);
                             if (!string.IsNullOrEmpty(code) && code != Constant.FAIL)
                             {
-                                return code;
+                                otps.Add( code);
                             }
                         }
                     }
@@ -1351,7 +1429,22 @@ namespace fb_reg
             [JsonProperty("client_id")]
             public string client_id { get; set; }
         }
+        public class GmailUnlimitedItem
+        {
+            [JsonProperty("status")]
+            public string status { get; set; }
 
+            [JsonProperty("mail")]
+            public string mail { get; set; }
+         
+            [JsonProperty("price")]
+            public int price { get; set; }
+        }
+        public class OtpGmailUnlimitedItem
+        {
+            [JsonProperty("otp")]
+            public string otp { get; set; }
+        }
         public class HotmailUnlimitedResponse
         {
             [JsonProperty("status")]
@@ -1361,6 +1454,24 @@ namespace fb_reg
             [JsonProperty("data")]
             public HotmailUnlimitedItem[] data { get; set; }
         }
+        public class GmailUnlimitedResponse
+        {
+            [JsonProperty("status")]
+            public bool status { get; set; }
+            [JsonProperty("messsage")]
+            public string message { get; set; }
+            [JsonProperty("data")]
+            public string data { get; set; }
+        }
+        public class OtpGmailUnlimitedResponse
+        {
+            [JsonProperty("status")]
+            public bool status { get; set; }
+            [JsonProperty("messsage")]
+            public string message { get; set; }
+            [JsonProperty("data")]
+            public OtpGmailUnlimitedItem data { get; set; }
+        }
         public class HotmailUnlimitedBodyRequest
         {
             [JsonProperty("quantity")]
@@ -1369,6 +1480,20 @@ namespace fb_reg
             public string token { get; set; }
             [JsonProperty("product_id")]
             public string product_id { get; set; }
+        }
+        public class GmailUnlimitedBodyRequest
+        {
+            [JsonProperty("token")]
+            public string token { get; set; }
+            [JsonProperty("id")]
+            public string id { get; set; }
+        }
+        public class OtpGmailUnlimitedBodyRequest
+        {
+            [JsonProperty("token")]
+            public string token { get; set; }
+            [JsonProperty("mail")]
+            public string mail { get; set; }
         }
         public static HotmailUnlimitedResponse GetHotMailUnlimited(int amount, string type)
         {
@@ -1416,6 +1541,81 @@ namespace fb_reg
             {
                 return null;
             }
+        }
+
+
+        public static MailObject GetGmailUnlimited()
+        {
+            try
+            {   
+                MailObject mail = new MailObject();
+
+                GmailUnlimitedBodyRequest requestBody = new GmailUnlimitedBodyRequest();
+                    
+                requestBody.token = PublicData.TokenUnlimit;
+                requestBody.id = "1";
+                var client = new RestClient("https://web.unlimitmail.com/");
+                    
+                var request = new RestRequest("api/otp-services/rent-otp", Method.POST);
+                request.AddHeader("Content-Type", "application/json");
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(requestBody);
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string    
+                if (content != null)
+                {
+                    GmailUnlimitedResponse data = JsonConvert.DeserializeObject<GmailUnlimitedResponse>(content);
+                    mail.email = data.data;
+                    mail.password = Constant.GMAIL_SELL_GMAIL;
+                    mail.source = "unlimit_gmail";
+                    mail.accessToken = PublicData.TokenUnlimit;
+                    return mail;
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            
+        }
+        public static string GetOtpGmailUnlimited(MailObject inMail)
+        {
+            try
+            {
+                OtpGmailUnlimitedBodyRequest requestBody = new OtpGmailUnlimitedBodyRequest();
+
+                requestBody.token = PublicData.TokenUnlimit;
+                requestBody.mail = inMail.email;
+                var client = new RestClient("https://web.unlimitmail.com/");
+
+                var request = new RestRequest("api/otp-services/get-otp", Method.POST);
+                request.AddHeader("Content-Type", "application/json");
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(requestBody);
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string    
+                if (content != null)
+                {
+                    OtpGmailUnlimitedResponse data = JsonConvert.DeserializeObject<OtpGmailUnlimitedResponse>(content);
+                    if (data != null && data.data != null && !string.IsNullOrEmpty(data.data.otp))
+                    {
+                        return data.data.otp;
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+            return "";
         }
         public class Gmail48hDataresponse
         {

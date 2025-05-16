@@ -1,7 +1,10 @@
-﻿using HttpRequest;
+﻿using fb_reg.RequestApi;
+using fb_reg.Utilities;
+using HttpRequest;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -399,7 +402,6 @@ namespace fb_reg
             {
                 return "";
             }
-            
         }
 
        
@@ -568,65 +570,785 @@ namespace fb_reg
             Thread.Sleep(500);
             Device.Home(deviceID);
         }
-        public static void PrepareForClone(string deviceId, bool needReboot)
+
+        public static Proxy GetProxyFromServer(DeviceObject device, OrderObject order, bool p1, bool p2, bool p3)
         {
-            Console.WriteLine($"🧼 Đang reset thiết bị {deviceId} trước khi reg clone...");
+            Proxy proxy = new Proxy();
+            for (int i = 0; i < 20; i++)
+            {
+                LogStatus(device, "Get proxy lần :" + (i + 1));
+                proxy = CacheServer.GetProxyFromServer(PublicData.ServerCacheMail, order);
+                if (proxy != null &&
+                    (!string.IsNullOrEmpty(proxy.host)))
+                {
 
-            // 1. Clear Facebook & Messenger
-            RunAdb(deviceId, "shell pm clear com.facebook.katana");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
-            RunAdb(deviceId, "shell pm clear com.facebook.orca");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+                    bool proxyOk = OutsideServer.TestProxy(proxy.host, Convert.ToInt32(proxy.port), proxy.username, proxy.pass);
+                    if (!proxyOk)
+                    {
+                        LogStatus(device, "❌ Proxy không ổn định, dừng reg clone.");
+                        continue;
+                    }
+                    proxy.hasProxy = true;
+                    return proxy;
+                }
+                Thread.Sleep(10000);
+            }
 
-            // 2. Clear GMS (Google Services) để reset Google Ad ID
-            RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            if (p1 || p2 || p3)
+            {
+                for (int i = 0; i < 2; i++)
+                {
+                    LogStatus(device, "Get Proxy Data ----------");
+                    proxy = CacheServer.GetProxyFromServer(PublicData.ServerCacheMail, order);
+                    if (proxy != null && !string.IsNullOrEmpty(proxy.host))
+                    {
+                        proxy.hasProxy = true;
+                        return proxy;
+                    }
+                    Thread.Sleep(10000);
+                }
+            }
+
+            return null;
+        }
+        public static string createProxyFile(Proxy proxy)
+        {
+            if (proxy == null || !proxy.hasProxy)
+            {
+                return "";
+            }
+            System.IO.Directory.CreateDirectory("data/proxy");
+
+            string fileName = "data/proxy/" + proxy.port + ".txt";
+            try
+            {
+                File.Delete(fileName);
+            }
+            catch (IOException ex)
+            {
+                Console.WriteLine("ex:" + ex.Message);
+            }
+
+            string _vcf = "socks5://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" + proxy.port + "\" *";
+            if (!string.IsNullOrEmpty(proxy.proxyType) && proxy.proxyType == "HTTP")
+            {
+                _vcf = "http://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" + proxy.port + "\" *";
+            }
+            File.AppendAllText(fileName, "# superproxy:proxylist:v1\n");
+            File.AppendAllText(fileName, _vcf);
+            return fileName;
+        }
+        public static bool StopProxySuper(DeviceObject device, OrderObject order)
+        {
+            Device.RemoveProxy(device.deviceId);
+
+           
+            Device.ForceStop(device.deviceId, "com.scheler.superproxy");
+            
+
+            device.keyProxy = "";
+            return true;
+        }
+        public static bool randomProxy(Proxy proxy, string deviceID)
+        {
+            Device.DeleteAllFileMusic(deviceID);
+            string randomFilePath = createProxyFile(proxy);
+
+            if (string.IsNullOrEmpty(randomFilePath)) return false;
+            Device.PushFile2Sdcard(deviceID, randomFilePath, proxy.port + ".txt");
+            File.Delete(randomFilePath);
+
+            return true;
+        }
+        public static bool SetProxySuperProxy(OrderObject order, DeviceObject device)
+        {
+            try
+            {
+                string deviceID = device.deviceId;
+
+                if (deviceID.Contains("line") || deviceID.Contains("rec"))
+                {
+                    return false;
+                }
+                if (order.proxy == null || !order.proxy.hasProxy)
+                {
+                    return false;
+                }
+                if (device.currentRom == "13")
+                {
+                    Device.OpenApp(deviceID, "com.estrongs.android.pop");
+                    WaitAndTapXML(deviceID, 2, "cho phép re");
+                    WaitAndTapXML(deviceID, 5, "internal");
+                    if (CheckTextExist(deviceID, "đicấpquyềntruycậpresourceid", 3))
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 64.0, 74.6);
+                        WaitAndTapXML(deviceID, 5, "quản lý tất cả các tệp");
+                    }
+                }
+
+
+
+                Device.DeleteTxtSdcard(deviceID);
+                //Device.RebootDevice(deviceID);
+                randomProxy(order.proxy, deviceID);
+                LogStatus(device, "Bắt đầu Chạy set proxy ------------");
+                Device.ForceStop(device.deviceId, "com.scheler.superproxy");
+                Device.RemoveProxy(deviceID);
+                Device.ClearCache(deviceID, "com.scheler.superproxy");
+                Device.ClearCache(deviceID, "com.estrongs.android.pop");
+
+                Device.OpenApp(deviceID, "com.scheler.superproxy");
+
+                for (int i = 0; i < 16; i++)
+                {
+                    string xml = GetUIXml(deviceID);
+
+                    if (WaitAndTapXML(deviceID, 1, "import proxies", xml))
+                    {
+                        break;
+                    }
+                    if (WaitAndTapXML(deviceID, 3, "proxies&#10;tab1of3checkable", xml))
+                    {
+                        Thread.Sleep(1000);
+                        continue;
+                    }
+
+                }
+
+                if (device.currentRom != "13")
+                {
+                    if (device.currentRom == "9")
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 72.9, 59.4);
+                    }
+                    else
+                    {
+                        if (!WaitAndTapXML(deviceID, 2, "cho phép resourceid"))
+                        {
+
+                            WaitAndTapXML(deviceID, 1, "allow resourceid");
+                        }
+                    }
+                }
+
+                if (Device.CheckAppInstall(deviceID, "com.estrongs.android.pop"))
+                {
+                    WaitAndTapXML(deviceID, 3, "duyệttậptincheckable");
+
+                    if (!CheckTextExist(deviceID, "chọn đường dẫn", 5))
+                    {
+                        return false;
+                    }
+                    //Thread.Sleep(1000);
+                    Device.Swipe(deviceID, 88, 1400, 99, 300);
+                    //Thread.Sleep(1000);
+                    Device.Swipe(deviceID, 88, 1400, 99, 300);
+                    //Thread.Sleep(1000);
+                    if (!WaitAndTapXML(deviceID, 3, order.proxy.port))
+                    {
+                        LogStatus(device, "Root xong- bật explorer", 1000);
+                        Device.OpenApp(deviceID, "com.estrongs.android.pop");
+                        WaitAndTapXML(deviceID, 2, "cho phép re");
+                        WaitAndTapXML(deviceID, 5, "internal");
+                        if (CheckTextExist(deviceID, "đicấpquyềntruycậpresourceid", 3))
+                        {
+                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 64.0, 74.6);
+                            WaitAndTapXML(deviceID, 5, "quản lý tất cả các tệp");
+                        }
+                        return false;
+                    }
+                    Thread.Sleep(1000);
+                    if (!CheckTextExist(deviceID, "lấytậptindướidạng", 2))
+                    {
+                        return false;
+                    }
+                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 51.0, 47.9);
+                    Thread.Sleep(1000);
+                }
+                else
+                {
+                    Device.TapByPercent(deviceID, 8.7, 8.3, 2000); // click setting
+                    if (!WaitAndTapXML(deviceID, new string[] { "nodeindex0textsmg935sresourceidandroididtitleclassandroidwidgettextviewpackagecomandroiddocumentsuicontentdesccheckablefalsecheckedfalseclickablefa", "còntrốngresource", "freeresource", "sm-g" }))
+                    {
+                        Device.TapByPercent(deviceID, 34.4, 33.9, 1000); ; // click to SM-G
+                    }
+                    Thread.Sleep(2000);
+                    Device.Swipe(deviceID, 33, 1500, 44, 500);
+                    Thread.Sleep(2000);
+                    //Device.TapByPercent(deviceID, 22.9, 54.7);
+                    if (device.currentRom == "9")
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 25.9, 79.7);
+                    }
+                    else
+                    {
+                        if (!WaitAndTapXMLNew(deviceID, 2, order.proxy.port))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                Device.DeleteTxtSdcard(deviceID);
+                if (!string.IsNullOrEmpty(order.proxy.proxyType) && order.proxy.proxyType == "HTTP")
+                {
+                    if (!WaitAndTapXML(deviceID, 2, "httpcheckable"))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (device.currentRom == "9")
+                    {
+                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 38.6, 15.7);
+                    }
+                    else
+                    {
+                        if (!WaitAndTapXML(deviceID, 2, "socks5checkable"))
+                        {
+                            return false;
+                        }
+                    }
+                }
+
+                if (!WaitAndTapXML(deviceID, 2, "startcheckable"))
+                {
+                    LogStatus(device, "Không thấy nút start proxy - set proxy lỗi");
+                    Thread.Sleep(6000);
+                    return false;
+                }
+
+                Device.AdbConnect(deviceID);
+                Thread.Sleep(1000);
+                WaitAndTapXML(deviceID, 1, "okresourceid");
+                LogStatus(device, "Set proxy ok");
+
+                if (!CheckTextExist(deviceID, "stopcheckable", 5))
+                {
+                    LogStatus(device, "Không thấy nút stop - khong start proxy duoc proxy - set proxy lỗi", 6000);
+                    return false;
+                }
+                Device.Home(deviceID);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        public static bool StartProxy(OrderObject order, DeviceObject device, bool proxy4g, bool forceChangeWifi, bool randomWifi)
+        {
+            string deviceID = device.deviceId;
+            if (!order.hasproxy)
+            {
+                Device.DisableWifi(deviceID);
+                return true;
+            }
+            if (order.proxyWfi)
+            {
+                return true;
+            }
+            if (proxy4g)
+            {
+                Device.DisableWifi(deviceID);
+            }
+            TurnOffAirPlane(deviceID, false);
+            if (!proxy4g && !deviceID.Contains(":"))
+            {   // Check wifi before
+                Device.EnableWifi(deviceID);
+                string ssid = "";
+                if (Utility.isScreenLock(deviceID))
+                {
+                    Device.Unlockphone(deviceID);
+                }
+
+                ssid = GetWifiName(deviceID);
+                LogStatus(device, "Wifi:" + ssid);
+                if (string.IsNullOrEmpty(ssid) || ssid.Contains("unknown") || forceChangeWifi)
+                {
+                    string mainWifi = "";
+                    if (PublicData.wifilist.Count > 0)
+                    {
+                        List<string> wifitemp = new List<string>();
+                        if (randomWifi)
+                        {
+                            wifitemp = (List<string>)PublicData.wifilist.Shuffle();
+                        }
+                        else
+                        {
+                            wifitemp = PublicData.wifilist;
+                        }
+
+                        mainWifi = wifitemp[0];
+                        LogStatus(device, "Set wifi: " + mainWifi);
+                        string[] temp = mainWifi.Split('|');
+                        Device.SetWifi(deviceID, temp[0].Trim(), temp[1].Trim());
+                        Thread.Sleep(3000);
+
+                    }
+
+                }
+
+                for (int i = 0; i < 4; i++)
+                {
+                    ssid = GetWifiName(deviceID);
+                    LogStatus(device, "Wifi:" + ssid);
+                    if (!string.IsNullOrEmpty(ssid) && !ssid.Contains("unknown"))
+                    {
+                        Utility.LogRegStatus(device, "Wifi:" + ssid);
+                        break;
+                    }
+                    Thread.Sleep(10000);
+                    ssid = GetWifiName(deviceID);
+                    LogStatus(device, "Wifi:" + ssid);
+                    if (!ssid.Contains("unknown"))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Device.DisableWifi(deviceID);
+                        Thread.Sleep(1000);
+                        Device.EnableWifi(deviceID);
+                        Device.OpenWifiSetting(deviceID);
+                        LogStatus(device, "Bật wifi lại - chờ láy ip");
+                        Thread.Sleep(20000);
+                        if (Utility.isScreenLock(deviceID))
+                        {
+                            Device.Unlockphone(deviceID);
+                        }
+                        ssid = GetWifiName(deviceID);
+                        LogStatus(device, "Wifi:" + ssid);
+                        if (!ssid.Contains("unknown"))
+                        {
+                            break;
+                        }
+                    }
+                    if (i == 3)
+                    {
+                        LogStatus(device, "Can not access wifi");
+                        return false;
+                    }
+                    Thread.Sleep(10000);
+                }
+                ssid = GetWifiName(deviceID);
+                if (ssid.Contains("unknown"))
+                {
+                    LogStatus(device, "Không Thể start proxy - Chạy lại");
+                    return false;
+                }
+            }
+
+
+            //if (proxyCMDcheckBox.Checked)
+            //{
+            //    string proxyPort = device.proxyDevice.host + ":" + device.proxyDevice.port;
+            //    Device.SetProxyCmd(deviceID, proxyPort);
+            //    return true;
+            //}
+
+            if (order.proxyFromServer)
+            {
+                LogStatus(device, "Chay set proxy mới   -tttttttttttttt-----------");
+
+                if (!SetProxySuperProxy(order, device))
+                {
+                    LogStatus(device, "Can not set proxy ---------return ", 6000);
+                    device.loadNewProxy = true;
+
+                    string fbv = Device.GetVersionFB(deviceID);
+                    LogStatus(device, "Không start dc proxy kiem tra fbversion: " + fbv);
+                    if (string.IsNullOrEmpty(fbv))
+                    {
+                        //LogStatus(device, "Máy bị lỗi mất kết nồi - restart máy ------0000");
+                        //Device.RebootByCmd(deviceID);
+                    }
+
+                    return false;
+                }
+                else
+                {
+
+                    device.loadNewProxy = false;
+                    return true;
+                }
+            }
+            if (order.proxyFromLocal)
+            {
+                if (!SetProxySuperProxy(order, device))
+                {
+                    LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
+                    device.loadNewProxy = true;
+                    return false;
+                }
+                else
+                {
+                    return true;
+                }
+            }
+
+            string domain = "";
+            //if (tinsoftRadioButton.Checked)
+            //{
+            //    domain = ProxyDomain.Tinsoft.ToString();
+            //}
+            //else if (fastProxyRadioButton.Checked)
+            //{
+            //    domain = ProxyDomain.fastProxy.ToString();
+            //}
+            //else if (zuesProxyradioButton.Checked)
+            //{
+            //    domain = ProxyDomain.zuesProxy.ToString();
+            //}
+            //else if (zuesProxy4G.Checked)
+            //{
+            //    domain = ProxyDomain.zuesProxy4G.ToString();
+            //}
+            //else if (tunProxyradioButton.Checked)
+            //{
+            //    domain = ProxyDomain.tunProxy.ToString();
+            //}
+            //else if (impulseradioButton.Checked)
+            //{
+            //    domain = ProxyDomain.impulseProxy.ToString();
+            //}
+            //else if (shopLike1RadioButton.Checked)
+            //{
+            //    domain = ProxyDomain.Softlike.ToString();
+            //}
+            //else if (tinProxyRadioButton.Checked)
+            //{
+            //    device.currentPublicIp = GetPublicIp(device);
+            //    dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
+            //    if (string.IsNullOrEmpty(device.currentPublicIp))
+            //    {
+            //        LogStatus(device, "Gỡ proxy khi không lấy được ip");
+
+            //        RemoveAllProxy(deviceID);
+            //    }
+            //    domain = ProxyDomain.TinProxy.ToString();
+            //}
+            //else if (tmProxyRadioButton.Checked)
+            //{
+            //    domain = ProxyDomain.TmProxy.ToString();
+            //}
+            //else if (dtProxyRadioButton.Checked)
+            //{
+            //    device.currentPublicIp = GetPublicIp(device);
+            //    dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
+            //    if (string.IsNullOrEmpty(device.currentPublicIp))
+            //    {
+            //        // TODO
+            //    }
+            //    domain = ProxyDomain.dtProxy.ToString();
+            //}
+            //else if (wwProxyradioButton.Checked)
+            //{
+            //    domain = ProxyDomain.wwProxy.ToString();
+
+            //}
+            //int proxyTime = 4;
+            //if (getProyx20timecheckBox.Checked)
+            //{
+            //    proxyTime = 20;
+            //}
+            //for (int i = 0; i < 3; i++)
+            //{
+            //    LogStatus(device, "Getting proxy ... lần : " + (i + 1));
+            //    if (device.proxyDevice != null && device.proxyDevice.hasProxy && !string.IsNullOrEmpty(device.proxyDevice.host))
+            //    {
+            //        break;
+            //    }
+            //    device.proxyDevice = Utility.GetProxy(domain, device.proxyDevice.key, device.currentPublicIp, locationProxyTextBox.Text);
+            //    // Handle timeout
+            //    if (device.proxyDevice != null && device.proxyDevice.isWait)
+            //    {
+            //        LogStatus(device, "Proxy timeout:" + device.proxyDevice.timeout);
+            //        Thread.Sleep(device.proxyDevice.timeout * 1000 + 5000);
+            //        device.proxyDevice = Utility.GetProxy(domain, device.proxyDevice.key, device.currentPublicIp, locationProxyTextBox.Text);
+            //    }
+            //    if (device.proxyDevice != null && device.proxyDevice.hasProxy)
+            //    {
+            //        string proxyPort = device.proxyDevice.host + ":" + device.proxyDevice.port;
+            //        if (!SetProxySuperProxy(order, device))
+            //        {
+            //            LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
+            //            device.loadNewProxy = true;
+            //            return false;
+            //        }
+            //        return true;
+            //        //break;
+            //    }
+            //    Thread.Sleep(3000);
+            //}
+
+            if (device.proxyDevice != null && !device.proxyDevice.hasProxy)
+            {
+                LogStatus(device, "error:" + device.proxyDevice.message);
+
+
+                PublicData.dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DeepPink;
+                Thread.Sleep(10000);
+            }
+
+
+            if (proxy4g)
+            {
+                Device.DisableWifi(deviceID);
+            }
+            return true;
+        }
+        public static bool SetProxy(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare,bool randomProxyData, bool p1, bool p2, bool p3, bool proxy4g,bool forceChangeWifi,bool randomWifi)
+        {
+            string deviceID = device.deviceId;
+            for (int i = 0; i < 2; i ++) 
+            {
+                if (order.proxyFromServer)
+                {
+                    Utility.LogStatus(device, "Get proxy from server");
+
+                    Proxy pp;
+
+                    if (giulaiport && !proxyShare
+                        //&& device.currentProxyCount < 3 
+                        && device.VeriOk && device.currentProxy != null && string.IsNullOrEmpty(device.currentProxy.key))
+                    {
+                        pp = device.currentProxy;
+                        device.currentProxyCount++;
+                    }
+                    else
+                    {
+                        if (!device.chuyenProxy2P1 && randomProxyData)
+                        {
+                            Random rr = new Random();
+                            int checkrRan = rr.Next(1, 100);
+
+                            if (checkrRan > 50)
+                            {
+                                order.proxyType = "3";
+                            }
+                            else
+                            {
+                                order.proxyType = "2";
+                            }
+                        }
+                        pp = GetProxyFromServer(device, order, p1, p2, p3);
+                        device.currentProxyCount = 0;
+                    }
+                    if (pp != null)
+                    {
+                        if (!proxy4g)
+                        {
+                            Device.EnableWifi(deviceID);
+                        }
+
+                        device.keyProxy = pp.proxyDomain + "-" + pp.host + ":" + pp.port + ":" + pp.key;
+                        order.hasproxy = true;
+                        if (device.proxyDevice == null || device.proxyDevice.host != pp.host)
+                        {
+                            device.loadNewProxy = true;
+                        }
+                        order.proxy = pp;
+                        device.currentProxy = pp;
+                    }
+                    else
+                    {
+                        break;
+                    }
+
+                }
+                else if (order.proxyWfi)
+                {
+                    StopProxySuper(device, order);
+                    Device.EnableWifi(deviceID);
+                    Proxy pp = new Proxy();
+                    pp.host = "1.1.1.1";
+                    pp.port = "1111";
+                    device.keyProxy = ":" + pp.host + ":" + pp.port;
+                    order.hasproxy = true;
+                    if (device.proxyDevice == null || device.proxyDevice.host != pp.host)
+                    {
+                        device.loadNewProxy = true;
+                    }
+                    order.proxy = pp;
+                    break;
+                }
+                else if (order.proxyFromLocal)
+                {
+                    //LogStatus(device, "Get proxy from Local");
+
+                    //Proxy pp = GetProxyFromLocal(device);
+                    //if (pp != null)
+                    //{
+
+                    //    Device.EnableWifi(deviceID);
+                    //    device.keyProxy = ":" + pp.host + ":" + pp.port + ":" + pp.key;
+                    //    order.hasproxy = true;
+                    //    if (device.proxyDevice == null || device.proxyDevice.host != pp.host)
+                    //    {
+                    //        device.loadNewProxy = true;
+                    //    }
+                    //    order.proxy = pp;
+                    //}
+                    //else
+                    //{
+                    //    device.keyProxy = "";
+                    //    Device.DisableWifi(deviceID);
+                    //}
+                    //break;
+                }
+                else
+                {
+                    StopProxySuper(device, order);
+                    return true;
+                    //device.keyProxy = "";
+                    //if ((wwProxyradioButton.Checked || tunProxyradioButton.Checked || order.proxyFromServer) && device.proxyDevice != null && device.proxyDevice.hasProxy)
+                    //{
+                    //    order.hasproxy = true;
+                    //}
+                    //else
+                    //{
+                    //    Device.DisableWifi(deviceID);
+                    //}
+                    //break;
+                }
+
+                string ssid = Device.GetWifiStatus(deviceID);
+
+                if (!ssid.Contains("unknown") && order != null && order.proxy == null)
+                {
+                    LogStatus(device, "Máy không có proxy mà lại chạy Wifi - chạy lại", 3000);
+                    continue;
+                }
+                if (order != null && order.proxy != null && order.proxy.hasProxy)
+                {
+                    if (device.currentProxyCount > 0)
+                    {
+                        LogStatus(device, "Giữ lại port proxy - Check proxy running");
+
+                        Device.OpenApp(deviceID, "com.scheler.superproxy");
+                        if (!CheckTextExist(deviceID, "stopcheckable", 5))
+                        {
+                            LogStatus(device, "Không thấy nút stop - khong start proxy duoc proxy - set proxy lỗi", 6000);
+                            if (!StartProxy(order, device, proxy4g, forceChangeWifi, randomWifi))
+                            {
+                                // Device.DisableWifi(deviceID);
+                                CacheServer.deleteKeyProxy(PublicData.ServerCacheMail, order);
+                                StopProxySuper(device, order);
+                                device.keyProxy = "";
+                                return false;
+                            }
+                            else
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (!StartProxy(order, device, proxy4g, forceChangeWifi, randomWifi))
+                        {
+                            // Device.DisableWifi(deviceID);
+                            CacheServer.deleteKeyProxy(PublicData.ServerCacheMail, order);
+                            StopProxySuper(device, order);
+                            device.keyProxy = "";
+                            return false;
+                        }
+                        else
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+
+                //if (order != null && order.proxy != null && order.proxy.hasProxy && device.currentPublicIp.Length < 5)
+                //{
+
+                //    Device.DisableWifi(deviceID);
+                //    CacheServer.deleteKeyProxy(serverCacheMailTextbox.Text, order);
+                //    device.keyProxy = "";
+                //    LogStatus(device, "Set proxy không có mạng --------", 2000);
+                //    continue;
+                //}
+                if (order != null && order.proxy != null && !string.IsNullOrEmpty(order.proxy.key))
+                {
+                    break;
+                }
+            }
+            return false;
+        }
+        public static void PrepareForClone(DeviceObject device)
+        {
+            LogStatus(device, "Bắt đầu chuẩn bị device");
+            string deviceId = device.deviceId;
+            //Console.WriteLine($"🧼 Đang reset thiết bị {deviceId} trước khi reg clone...");
+            //Device.ClearCache(deviceId, Constant.FACEBOOK_PACKAGE);
+            //Device.ClearCache(deviceId, Constant.FACEBOOK_LITE_PACKAGE);
+            //// 2. Clear GMS (Google Services) để reset Google Ad ID
+            //RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
+            //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 3. Xóa Android ID (Android sẽ tự tạo lại sau reboot)
-            RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
+            //RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
+            // RunAdb(deviceID, "shell settings delete secure android_id"); // delete android id
+            Device.RandomAndroidID(deviceId);
             Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 4. Xóa cache hệ thống
-            RunAdb(deviceId, "shell su -c \"rm -rf /data/cache/* /data/local/tmp/* /data/system/dropbox/*\"");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
-            // 5. Xóa ảnh, video, avatar cũ
-            RunAdb(deviceId, "shell su -c \"rm -rf /sdcard/DCIM/* /sdcard/Pictures/*\"");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
-            // 6. Reset Wi-Fi, proxy, DNS
-            RunAdb(deviceId, "shell su -c \"svc wifi disable\"");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
-            RunAdb(deviceId, "shell su -c \"rm -rf /data/misc/wifi\"");
-            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            //RunAdb(deviceId, "shell su -c \"rm -rf /data/cache/* /data/local/tmp/* /data/system/dropbox/*\"");
+            //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            //// 5. Xóa ảnh, video, avatar cũ
+            //RunAdb(deviceId, "shell su -c \"rm -rf /sdcard/DCIM/* /sdcard/Pictures/*\"");
+            //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            //// 6. Reset Wi-Fi, proxy, DNS
+            //RunAdb(deviceId, "shell su -c \"svc wifi disable\"");
+            //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
+            //RunAdb(deviceId, "shell su -c \"rm -rf /data/misc/wifi\"");
+            //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             RunAdb(deviceId, "shell su -c \"settings put global http_proxy :0\"");
             Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 7. Gợi ý reboot sau chuẩn bị
-            if (needReboot)
+            if (device.needRebootAfterClear)
             {
                 //Console.WriteLine("🔁 Đang khởi động lại thiết bị...");
                 Device.RebootByCmd(deviceId);
-                
+
             }
-            
+            LogStatus(device, "Kết thúc chuẩn bị device");
         }
         public static void ClearCacheFb(DeviceObject device)
         {
+            LogStatus(device, "Bắt đầu Clear cache fb ------------");
             string deviceID = device.deviceId;
             
             Device.ForceStop(deviceID, Constant.FACEBOOK_PACKAGE);
             Thread.Sleep(500);
-            Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
-            PrepareForClone(deviceID, device.needRebootAfterClear);
-            device.needRebootAfterClear = false;
-            //Device.ForceStop(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
-            //Thread.Sleep(300);
-            //Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
-            //Device.ForceStop(deviceID, Constant.MESSENGER_PACKAGE);
-            //Thread.Sleep(300);
-            //Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
-            //Thread.Sleep(300);
 
-            //Device.ForceStop(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
-            //Thread.Sleep(300);
-            //Device.ClearCache(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
-            //Thread.Sleep(300);
+            RunAdb(deviceID, "shell rm -rf /sdcard/Android/data/com.facebook.katana");
+            RunAdb(deviceID, "shell rm -rf /data/data/com.facebook.katana/cache");
+
+
+            RunAdb(deviceID, "shell pm clear com.facebook.katana");
+
+            RunAdb(deviceID, "shell pm clear com.facebook.lite");
+
+
+            
+
+            // 1. Clear Facebook & Messenger
+            Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
+            Device.ForceStop(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
+            Thread.Sleep(300);
+            Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
+            Device.ForceStop(deviceID, Constant.MESSENGER_PACKAGE);
+            Thread.Sleep(300);
+            Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
+            Thread.Sleep(300);
+
+            Device.ForceStop(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
+            Thread.Sleep(300);
+            Device.ClearCache(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
+            Thread.Sleep(300);
 
             //Device.ClearCache(deviceID, "com.instagram.android");
 
@@ -665,43 +1387,10 @@ namespace fb_reg
 
             //KAutoHelper.ADBHelper.ExecuteCMD("adb -s " + deviceID + " shell su -c rm -rf /data/system_ce/0/launch_params/com.facebook.katana_.activity.FbMainTabActivity.xm");
 
-
-
+            LogStatus(device, "Kết thúc Clear cache fb ------------");
         }
 
-        public static bool OpenFacebookApp(DeviceObject device, bool clearFbLite, int retry)
-        {
-            for (int i = 0; i < retry; i ++)
-            {
-                if (OpenFacebookApp2Login(device, clearFbLite))
-                {
-                    return true;
-                }
-                
-                Device.KillApp(device.deviceId, Constant.FACEBOOK_PACKAGE);
-                Thread.Sleep(1000);
-            }
-            return false;
-        }
-
-        public static bool OpenFbFromSettingAccount(DeviceObject device)
-        {
-            string deviceID = device.deviceId;
-            bool result = false;
-
-            Device.OpenSettingAccount(deviceID);
-
-            string uixml = GetUIXml(deviceID);
-
-            WaitAndTapXML(deviceID, 2, "thêm tài khoản");
-            WaitAndTapXML(deviceID, 2, "facebook");
-
-            if (CheckTextExist(deviceID,  "sốdiđộnghoặcemail", 20))
-            {
-                return true;
-            }
-            return result;
-        }
+        
         public static bool OpenFacebookApp2Login(DeviceObject device, bool clearFbLite, bool regNormal = false)
         {
             
@@ -854,7 +1543,7 @@ namespace fb_reg
         }
         public static bool OpenFacebookAppRegnormal(DeviceObject device, bool clearFbLite, bool moiKatana, bool fast)
         {
-
+            LogStatus(device, "Bắt đầu mở app fb normal");
             string deviceID = device.deviceId;
 
             if (device.clearCache)
@@ -866,6 +1555,7 @@ namespace fb_reg
             Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
             Thread.Sleep(10000);
             WaitAndTapXML(deviceID, 1, "cho phép re");
+            KAutoHelper.ADBHelper.TapByPercent(deviceID, 47.3, 88.0);
             if (!moiKatana)
             {
                
@@ -880,18 +1570,11 @@ namespace fb_reg
                             break;
                         }
                     }
-                    if (CheckTextExist(deviceID, "tạotàikhoảnmớicheckable", 1, uixml))
+                    if (CheckTextExist(deviceID, new string[] { "tạo tài khoản", "tạotàikhoảnmớicheckable", "tạo tài khoản facebook mới", "createnewAccountCheckable" }, uixml))
                     {
                         break;
                     }
-                    if (CheckTextExist(deviceID, "createnewAccountCheckable", 1, uixml))
-                    {
-                        break;
-                    }
-                    if (CheckTextExist(deviceID, "tạo tài khoản", 1, uixml))
-                    {
-                        break;
-                    }
+                    
                     if (CheckTextExist(deviceID, new string[] {  "Đăng nhập bằng tài khoản khác", "tạotin", "chưaxem", "làmbạn", "lúc khác" , "thêm ảnh", "bỏ qua"}))
                     {
                         Device.GotoFbRegister(deviceID);// Device.GotoFbRegister(deviceID);
@@ -900,6 +1583,10 @@ namespace fb_reg
                         {
                             return true;
                         }
+                    }
+                    if (CheckTextExist(deviceID, new string[] { "tiếp", "next" }, uixml))
+                    {
+                        return true;
                     }
                 }
                 if (CheckTextExist(deviceID, "trangnàyhiệnkhônghiểnthị", 1))
@@ -929,7 +1616,7 @@ namespace fb_reg
                     }
 
                     if (WaitAndTapXML(deviceID,  new string[] { "đăngkýcheckable", "createnewAccountCheckable", "tạotàikhoản", "bắt đầu", 
-                        "tạotàikhoảnmớicheckable", "tạotàikhoảnmớicheckable"  }, uixml))
+                        "tạotàikhoảnmớicheckable", "tạotàikhoảnfacebookmớicheckable"  }, uixml))
                     {
                         break;
                     }
@@ -1078,6 +1765,7 @@ namespace fb_reg
                 return false;
             }
             Thread.Sleep(2000);
+            LogStatus(device, "Kết thúc mở app fb normal");
             return Utility.CheckFacebookNormalOpen(deviceID, true);
         }
         public static bool OpenFacebookApp(string deviceID)
@@ -1089,15 +1777,7 @@ namespace fb_reg
             return true;
         }
 
-        public static bool LoginByCookie(string deviceID)
-        {
-            Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-            Thread.Sleep(10000);
-            PushBackupFb(deviceID, deviceID);
-            Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
-            Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-            return true;
-        }
+      
         public static void OpenFacebookAppVerify(DeviceObject device)
         {
             string deviceID = device.deviceId;
@@ -1113,26 +1793,6 @@ namespace fb_reg
 
             Thread.Sleep(15000);
             
-        }
-
-        public static void OpenFacebookLiteApp(string deviceID, CheckBox fbLiteCheckbox, Label status)
-        {
-            Utility.Log("Delete cache data on facebook", status);
-            int delay = 400;
-
-            Device.ClearCache(deviceID, "com.facebook.lite");
-
-            Thread.Sleep(1500);
-
-             Device.OpenApp(deviceID, "com.facebook.lite");
-            
-            Thread.Sleep(12000);
-
-            Utility.WaitAndTapXML(deviceID, 3, "AllowResource");
-            Thread.Sleep(delay);
-            Device.TapByPercent(deviceID, 18.2, 62.2); // Change to english
-            Thread.Sleep(delay);
-            Device.TapByPercent(deviceID, 51.4, 49.6);
         }
 
         public static void OpenMessengerApp(string deviceID, CheckBox fbLiteCheckbox)
@@ -1195,58 +1855,7 @@ namespace fb_reg
             catch (Exception) { }
         }
 
-        public static bool ChangeIpRomNew(string deviceID, string selectedDeviceName, Label status)
-        {
-            try
-            {
-                //string ipBefore = QLong.Phone.Lấy_IP(deviceID);
-                string ipBefore = Utility.GetIP(deviceID);
-                if (selectedDeviceName == "a30")
-                {
-                    ChangeIpA30(deviceID);
-                    return true;
-                }
-                else
-                {
-                    string openAirplaneModeCmd = string.Format("adb -s {0} shell am start -a android.settings.WIRELESS_SETTINGS", deviceID);
-                    Device.ExecuteCMD(openAirplaneModeCmd);
-                    Thread.Sleep(1000);
-                    if (Utility.CheckTextExist(deviceID, "Airplane"))
-                    {
-                        string[] yearCord = Utility.GetCordText(deviceID, "Airplane");
-                        int baseY = (Convert.ToInt32(yearCord[1]) + Convert.ToInt32(yearCord[3])) / 2;
-                        double baseYPercent = Convert.ToDouble(baseY) / 2560 * 100;
-                        //Utility.WaitAndTapXML(deviceID, 5, "Airplane");
-                        Device.TapByPercent(deviceID, 88.6, baseYPercent);
-                        Thread.Sleep(2000);
-                        //Utility.WaitAndTapXML(deviceID, 5, "Airplane");
-                        Device.TapByPercent(deviceID, 88.6, baseYPercent);
-
-                        // Check airplan mode
-                        if (Device.IsAirPlaneMode(deviceID))
-                        {
-                            //Utility.WaitAndTapXML(deviceID, 5, "Airplane");
-                            Device.TapByPercent(deviceID, 88.6, baseYPercent);
-                        }
-                    }
-
-                }
-                string ipAfter = Utility.GetIP(deviceID);
-                if (ipAfter != "" && ipAfter == ipBefore)
-                {
-                    Device.Back(deviceID);
-                    Device.Unlockphone(deviceID);
-                    return false;
-                }
-                return true;
-            }
-            catch (Exception e)
-            {
-                Utility.Log("exception:" + e.Message, status);
-                return false;
-            }
-        }
-        
+       
         public static bool ChangeIpByAirplane(DeviceObject device)
         {
             try
@@ -1268,26 +1877,6 @@ namespace fb_reg
             }
         }
 
-        public static Account GetAccMoi()
-        {
-            string fileAccMoi = "FileClone/acc_moi.txt";
-
-            Account result;
-            int tryAgain = 2;
-
-            for (int i = 0; i < tryAgain; i++)
-            {
-                result = GetAccFromFile(fileAccMoi);
-                if (result != null)
-                {
-                    
-                    return result;
-                }
-            }
-
-            return null;
-
-        }
         public static Account GetAccNoveri(bool fromServer, string deviceID, string language, bool force)
         {
             Account acc = null;
@@ -1303,7 +1892,10 @@ namespace fb_reg
                 {
                     continue;
                 }
-                
+                var validator = new FacebookSessionValidator();
+                string result = validator.CheckTokenStatusAsync(acc.token).Result;
+                Console.WriteLine(result);
+
                 if (FbUtil.CheckLiveWall(acc.uid) == Constant.DIE)
                 {
                     //using (StreamWriter HDD = new StreamWriter("FileCLone/Die_CheckLive" + ".txt", true))
@@ -1360,43 +1952,7 @@ namespace fb_reg
 
             return acc;
         }
-        public static Account GetAccNoveriLocal()
-        {
-            string fileNoveri = "noveri.txt";
-            string fileNoveriVn = "noveri_vn.txt";
-            string fileNoveriUs = "noveri_us.txt";
-            Account acc;
-            int tryAgain = 2;
-            for (int i = 0; i < tryAgain; i++)
-            {
-                acc = GetAccFromFile(fileNoveri);
-                if (acc != null)
-                {
-                    return acc;
-                }
-            }
-            for (int i = 0; i < tryAgain; i++)
-            {
-                acc = GetAccFromFile(fileNoveriUs);
-                if (acc != null)
-                {
-                    acc.language = Constant.LANGUAGE_US;
-                    return acc;
-                }
-            }
-
-            for (int i = 0; i < tryAgain; i++)
-            {
-                acc = GetAccFromFile(fileNoveriVn);
-                if (acc != null)
-                {
-                    acc.language = Constant.LANGUAGE_VN;
-                    return acc;
-                }
-            }
-
-            return null;
-        }
+        
         public static Account GetAccCheckLogin()
         {
             string fileCheckLogin = "check_login.txt";
@@ -1417,49 +1973,7 @@ namespace fb_reg
             return null;
         }
 
-        public static Account GetAccMoiDevice()
-        {
-            string fileCheckLogin = "data/acc_moi.txt";
-
-            Account acc;
-            int tryAgain = 2;
-
-            for (int i = 0; i < tryAgain; i++)
-            {
-                acc = GetAccMoiFromFile(fileCheckLogin);
-                if (acc != null)
-                {
-                    return acc;
-                }
-            }
-
-            return null;
-        }
-
-        public static Account GetAccReupFull()
-        {
-            string fileCheckLogin = "data/reup_full.txt";
-            if (!File.Exists(fileCheckLogin))
-            {
-                return null;
-            }
-            Account acc;
-            int tryAgain = 2;
-
-            for (int i = 0; i < tryAgain; i++)
-            {
-                acc = GetAccFromFile(fileCheckLogin);
-                
-                if (acc != null)
-                {
-                    
-                    
-                    return acc;
-                }
-            }
-
-            return null;
-        }
+      
         public static Account GetAccFromFile(string fileName)
         {
             string line = FileUtil.GetAndDeleteLine(fileName);
@@ -1516,195 +2030,6 @@ namespace fb_reg
                 return acc;
             }
             return null;
-        }
-
-        public static Account GetAccMoiFromFile(string fileName)
-        {
-            string line = FileUtil.GetAndDeleteLine(fileName);
-            if (string.IsNullOrEmpty(line))
-            {
-                return null;
-            }
-            string[] listData = line.Split('|');
-            if (listData != null && listData.Length >= 2)
-            {
-                Account acc = new Account();
-                acc.uid = listData[0];
-                acc.pass = listData[1];
-
-
-                if (listData.Length == 3)
-                {
-                    acc.qrCode = listData[2];
-                    if (!string.IsNullOrEmpty(acc.qrCode))
-                    {
-                        acc.has2fa = true;
-                    }
-                    else
-                    {
-                        acc.has2fa = false;
-                    }
-                }
-                acc.language = Constant.LANGUAGE_VN;
-               
-                acc.hasAvatar = true;
-                
-
-                acc.note = line;
-                return acc;
-            }
-            return null;
-        }
-        public static bool ChangeIpFast(string deviceID)
-        {
-            try
-            {
-                string ipBefore = Utility.GetIP(deviceID);
-                if (!Device.IsAirPlaneMode(deviceID))
-                {
-                    Device.AirplaneOn(deviceID);
-
-                }
-
-                if (Device.IsAirPlaneMode(deviceID))
-                {
-                    Device.AirplaneOff(deviceID);
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine("airplane:" + e.Message);
-                return false;
-            }
-        }
-
-        public static string SetProxy(OrderObject order, DeviceObject device, bool isLdplayer)
-        {
-            string deviceID = device.deviceId;
-            Device.ClearCache(deviceID, "org.proxydroid");
-            Thread.Sleep(500);
-            Device.OpenApp(deviceID, "org.proxydroid");
-            Thread.Sleep(10000);
-            //TurnOffProxy(deviceID);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 94.8, 7.8);
-            Thread.Sleep(1500);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 94.8, 7.8);
-            Thread.Sleep(500);
-            if (!Utility.WaitAndTapXML(deviceID, 2, "hostresource"))
-            {
-                return "";
-            }
-
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 47.8, 51.1); // tap to text
-            //Device.DeleteChars(deviceID, 16);
-            Device.InputText(deviceID, order.proxy.host);
-
-            Thread.Sleep(500);
-            Utility.WaitAndTapXML(deviceID, 2, "Okresource");
-
-
-            if (!Utility.WaitAndTapXML(deviceID, 2, "port"))
-            {
-                return "";
-            }
-
-            
-            if (isLdplayer)
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 67.2, 26.3);
-            } else
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 47.8, 51.1); // tap to text
-            }
-            Device.DeleteChars(deviceID, 7);
-            Device.InputText(deviceID, order.proxy.port);
-
-            Thread.Sleep(500);
-            Utility.WaitAndTapXML(deviceID, 2, "Okresource");
-            Thread.Sleep(500);
-
-            TurnOnProxy(deviceID);
-            Thread.Sleep(1000);
-            TurnOffProxy(deviceID);
-            Thread.Sleep(2000);
-            TurnOnProxy(deviceID);
-            Thread.Sleep(1000);
-            // Check network
-            for (int i = 0; i < 5; i ++)
-            {
-                string currentPublicIp = Utility.GetPublicIp(device);
-                Console.WriteLine("current ip:" + currentPublicIp);
-                if (!string.IsNullOrEmpty(currentPublicIp))
-                {
-                    return currentPublicIp;
-                }
-                TurnOffProxy(deviceID);
-                Thread.Sleep(2000);
-                TurnOnProxy(deviceID);
-            }
-            return "";
-        }
-
-        public static bool SetProxyCollege(string deviceID, Proxy proxy)
-        {
-
-            Device.OpenApp(deviceID, "com.cell47.College_Proxy");
-            Thread.Sleep(1500);
-            WaitAndTapXML(deviceID, 2, "OK"); // OK
-            Thread.Sleep(1000);
-            WaitAndTapXML(deviceID, 1, "stopproxyservice");
-
-            Device.OpenApp(deviceID, "com.cell47.College_Proxy");
-            Thread.Sleep(1500);
-
-            string uixml = GetUIXml(deviceID);
-            //if (!CheckTextExist(deviceID, "textdisconnected", 1, uixml))
-            //{
-            //    WaitAndTapXML(deviceID, 1, "stopbutton", uixml);
-            //    Thread.Sleep(1000);
-            //    uixml = GetUIXml(deviceID);
-            //    if (!CheckTextExist(deviceID, "textdisconnected", 1, uixml))
-            //    {
-            //        return false;
-            //    }
-            //}
-
-            // Tap to proxy ip textbox
-            WaitAndTapXML(deviceID, 1, "proxyidedittextaddress", uixml);
-            Device.MoveEndTextbox(deviceID);
-            Device.DeleteChars(deviceID, 15);
-            InputText(deviceID, proxy.host, true);
-            if (!WaitAndTapXML(deviceID, 3, "proxyidedittextport"))
-            {
-                return false;
-            }
-            Device.MoveEndTextbox(deviceID);
-            Device.DeleteChars(deviceID, 8);
-            InputText(deviceID, proxy.port, true);
-            if (!string.IsNullOrEmpty(proxy.username))
-            {
-                WaitAndTapXML(deviceID, 1, "proxyidedittextusername");
-                Device.MoveEndTextbox(deviceID);
-                Device.DeleteChars(deviceID, 20);
-                Device.SelectAdbKeyboard(deviceID);
-                InputText(deviceID, proxy.username, true);
-                Device.SelectLabanKeyboard(deviceID);
-                WaitAndTapXML(deviceID, 1, "proxyidedittextpassword");
-                Device.MoveEndTextbox(deviceID);
-                Device.DeleteChars(deviceID, 20);
-                InputText(deviceID, proxy.pass, false);
-            }
-            
-
-            
-            WaitAndTapXML(deviceID, 2, "startproxyservice");
-
-            WaitAndTapXML(deviceID, 5, "startservice");
-            WaitAndTapXML(deviceID, 5, "startservice");
-
-            return true;
         }
 
         public static bool SetProxySockDroid(string deviceID, Proxy proxy)
@@ -1773,49 +2098,7 @@ namespace fb_reg
             
             return true;
         }
-        public static bool SetProxySuperProxy(DeviceObject device, string deviceID, Proxy proxy)
-        {
-            string openAirplaneModeCmd = string.Format("adb -s {0} shell am start -a android.settings.AIRPLANE_MODE_SETTINGS", deviceID);
-            Device.ExecuteCMD(openAirplaneModeCmd);
-            Device.KillApp(deviceID, "com.scheler.superproxy");
-            Thread.Sleep(1000);
-            Device.ClearCache(deviceID, "com.scheler.superproxy");
-            
-            Thread.Sleep(1000);
-            Device.OpenApp(deviceID, "com.scheler.superproxy");
-            Thread.Sleep(1500);
-            // open success
-            if (!CheckTextExist(deviceID, "proxies", 3))
-            {
-                return false;
-            }
-
-            //WaitAndTapXML(deviceID, 2, "stopcheckable");
-
-            //Thread.Sleep(1000);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 91.1, 79.2); // button add proxy
-            Thread.Sleep(2000);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 30.3, 41.0);// server
-            InputText(deviceID, proxy.host, true);
-            Thread.Sleep(2000);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 38.5, 49.9); // port
-            InputText(deviceID, proxy.port, true);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 89.2, 95.4); // xong
-            Thread.Sleep(1000);
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 95.0, 7.4); // save
-
-            Thread.Sleep(1000);
-            //KAutoHelper.ADBHelper.TapByPercent(deviceID, 51.6, 79.2);
-            
-            if (!WaitAndTapXML(deviceID, 2, "startcheckable"))
-            {
-                return false;
-            }
-            Thread.Sleep(2000);
-            WaitAndTapXML(deviceID, 1, "okresourceid");
-            return true;
-        }
-
+       
         public static void RemoveProxyCollege(string deviceID)
         {
             Device.OpenApp(deviceID, "com.cell47.College_Proxy");
@@ -1858,15 +2141,7 @@ namespace fb_reg
             Thread.Sleep(1500);
             TurnOffProxy(deviceID);
         }
-        public static void TurnOnProxy(string deviceID)
-        {
-            if (Utility.CheckTextExist(deviceID, Language.TurnOffProxy()))
-            {
-                Utility.WaitAndTapXML(deviceID, 1, Language.TurnOffProxy());
-            }
-            
-        }
-
+       
         public static void TurnOffProxy(string deviceID)
         {
             if (Utility.CheckTextExist(deviceID, Language.TurnOnProxy()))
@@ -2268,45 +2543,7 @@ namespace fb_reg
 
             return "";
         }
-        static void threadChange2Ip4(string deviceID)
-        {
-            try
-            {
-                Device.Unlockphone(deviceID);
-                Thread.Sleep(2000);
-                Device.OpenRoamingSetting(deviceID);
-                Thread.Sleep(5000);
-                Device.Swipe(deviceID, 500, 2000, 500, 1000);
-                Thread.Sleep(2000);
-                Device.TapByPercent(deviceID, 32.0, 96.9); // tap advanced
-                Thread.Sleep(2000);
-                Device.Swipe(deviceID, 500, 2000, 500, 1000);
-                Thread.Sleep(2000);
-                Utility.WaitAndTapXML(deviceID, 3, "AccessPointNames");
-                Thread.Sleep(2000);
-                Device.TapByPercent(deviceID, 21.3, 15.1);
-                Thread.Sleep(2000);
-                Device.Swipe(deviceID, 500, 2000, 500, 1000);
-                Thread.Sleep(2000);
-                Utility.WaitAndTapXML(deviceID, 2, "APNProtocol");
-                Thread.Sleep(2000);
-                Device.TapByPercent(deviceID, 14.3, 45.1);
-                Thread.Sleep(1000);
-                Device.Back(deviceID);
-                Thread.Sleep(1000);
-                Device.Back(deviceID);
-                Thread.Sleep(1000);
-                Device.Back(deviceID);
-                Thread.Sleep(1000);
-                Device.Back(deviceID);
-                Thread.Sleep(1000);
-                Device.Back(deviceID);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-        }
+       
         public static void FlashSim(string deviceID)
         {
             Device.RebootDevice(deviceID);
@@ -2326,42 +2563,15 @@ namespace fb_reg
 
         }
 
-        public static bool ChangeIp2Airplane(string deviceID, string selectedDeviceName, Label status)
+        public static string CheckLiveWallFromDevice(DeviceObject device, OrderObject order)
         {
-            try
+            if (string.IsNullOrEmpty(order.uid))
             {
-                string ipBefore = Utility.GetIP(deviceID);
-                if (selectedDeviceName == "a30")
-                {
-                    ChangeIpA30(deviceID);
-                    return true;
-                }
-                else
-                {
-                    string openAirplaneModeCmd = string.Format("adb -s {0} shell am start -a android.settings.AIRPLANE_MODE_SETTINGS", deviceID);
-                    Device.ExecuteCMD(openAirplaneModeCmd);
-                    Thread.Sleep(1000);
-                    if (Utility.CheckTextExist(deviceID, "Airplane"))
-                    {
-                        Utility.WaitAndTapXML(deviceID, 5, "Airplane");
-                    }
-                    // Check airplan mode
-                    if (!Device.IsAirPlaneMode(deviceID))
-                    {
-                        Utility.WaitAndTapXML(deviceID, 5, "Airplane");
-                    }
-                }
-                string ipAfter = Utility.GetIP(deviceID);
-                
-                return true;
+                order.uid = GetUid(device.deviceId);
             }
-            catch (Exception e)
-            {
-                Utility.Log("exception:" + e.Message, status);
-                return false;
-            }
+            
+            return CheckLiveWall(order.uid);
         }
-        
         public static string CheckLiveWall(string uid)
         {
             RequestXNet requestXNet = new RequestXNet("", "", "", 0);
@@ -2986,53 +3196,7 @@ namespace fb_reg
             }
         }
 
-        public static bool PullBackupFbNew(string uid, string deviceID)
-        {
-
-
-
-            string cmd = "";
-
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
-            string result = Device.ExecuteCMD(cmd); // delete folder uid
-
-            Thread.Sleep(1000);
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-            result = Device.ExecuteCMD(cmd); // create folder uid
-            Thread.Sleep(1000);
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r  /data/data/com.facebook.katana/app_gatekeepers /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-            result = Device.ExecuteCMD(cmd); // copy app_gatekeepers
-            Thread.Sleep(1000);
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/app_light_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-            result = Device.ExecuteCMD(cmd); // copy app_light_prefs
-            Thread.Sleep(1000);
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/databases /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-            result = Device.ExecuteCMD(cmd); // copy databases
-            Thread.Sleep(1000);
-
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/shared_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-            result = Device.ExecuteCMD(cmd); // copy shared_prefs
-
-            Thread.Sleep(1000);
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c 'cd /sdcard/Alarms/ && tar  -cvz -f {1}.tar.gz data'  \"", deviceID, uid, uid);
-            result = Device.ExecuteCMD(cmd); // Tar file
-
-            Thread.Sleep(1000);
-            string temp = deviceID.Replace(":", ".");
-            if (!Directory.Exists("Authentication"))
-            {
-                Directory.CreateDirectory("Authentication");
-            }
-            Thread.Sleep(1000);
-
-            cmd = Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + "pull /sdcard/Alarms/{1}.tar.gz \"{2}/Authentication/", deviceID, uid, Application.StartupPath));
-            result = Device.ExecuteCMD(cmd); //
-            Thread.Sleep(1000);
-            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
-            result = Device.ExecuteCMD(cmd); // delete folder uid
-
-            return true;
-        }
+        
         public static bool CheckFacebookFolderPermission(string deviceId, string folderPath = "/data/data/com.facebook.katana")
         {
             Console.WriteLine($"🔍 Đang kiểm tra quyền thư mục: {folderPath}");
@@ -3105,6 +3269,9 @@ namespace fb_reg
                 string chownCmd = $"shell su -c \"chown -R {user}:{user} {folderPath}\"";
                 RunAdb(deviceId, chownCmd);
 
+                chownCmd = $"shell su -c \"chmod -R 700 /data/data/com.facebook.katana\"";
+                RunAdb(deviceId, chownCmd);
+
                 Console.WriteLine($"✅ Đã set quyền {user} cho thư mục: {folderPath}");
             }
             catch (Exception ex)
@@ -3113,86 +3280,188 @@ namespace fb_reg
             }
             return result;
         }
+        private static string ToOneLine(string script)
+        {
+            return script.Replace("\r", "").Replace("\n", " && ");
+        }
+        public static void RestoreBackup(string deviceId, string tarFilePath)
+        {
+            if (!File.Exists(tarFilePath))
+            {
+                Console.WriteLine("File backup .tar không tồn tại!");
+                return;
+            }
 
+            Console.WriteLine("🟡 Pushing backup file...");
+            RunAdb(deviceId, $"push \"{tarFilePath}\" /sdcard/facebook_backup.tar");
+
+            Console.WriteLine("🟡 Clearing app data...");
+            //RunAdb(deviceId, "shell pm clear com.facebook.katana");
+
+            Console.WriteLine("🟡 Restoring data...");
+            var restoreScript = @"
+su
+cd /
+tar -xpf /sdcard/facebook_backup.tar
+";
+
+            RunAdb(deviceId, $"shell \"{ToOneLine(restoreScript)}\"");
+
+            FixFacebookFolderPermission(deviceId, "/data/data/com.facebook.katana");
+            Console.WriteLine("🟢 Restarting Facebook app...");
+            RunAdb(deviceId, "shell am start -n com.facebook.katana/.LoginActivity");
+        }
         public static bool PushBackupFb(string uid, string deviceID )
         {
             try
             {
-                string logs = RunAdb(deviceID, "logcat -d -t 50");
-                if (logs.Contains("FATAL EXCEPTION") || logs.Contains("Zygote") || logs.Contains("SystemServer"))
+                
+                //RestoreBackup(deviceID, Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz");
+
+                //return true;
+                
+                for (int i = 0; i < 5; i++)
                 {
-                    Console.WriteLine("❌ Phát hiện lỗi nghiêm trọng trong logcat.");
-                    Device.RebootDevice(deviceID);
-                }
-                for ( int i = 0; i < 5; i ++)
-                {
+                    Device.ForceStop(deviceID, Constant.FACEBOOK_PACKAGE);
+                    Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
                     string cmd;
                     string packageFacebook = "com.facebook.katana";
                     cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
-                    string result = Device.ExecuteCMD(cmd); // delete folder uid
+                    string result = Device.ExecuteCMD(cmd); // delete file tạm cũ
+
+
                     Thread.Sleep(1000);
                     cmd = Device.ExecuteCMD(string.Format(
-                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}.tar.gz\" /sdcard/Alarms/", deviceID, uid, Application.StartupPath));
+                        Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}.tar.gz\" /sdcard/Alarms/", deviceID, uid, Application.StartupPath)); // push file mới
                     cmd = " shell su -c \"ls -l /data/data | grep com.facebook.katana | awk '{print $3\\\":\\\"$4}'\"";
                     cmd = string.Format(Device.CONSOLE_ADB, deviceID) + cmd;
                     Thread.Sleep(1000);
-                    string owner = Device.ExecuteCMD(cmd);
+                    string owner = Device.ExecuteCMD(cmd); // lấy userid
                     string[] temp = owner.Split('\n');
 
                     if (temp.Length > 1)
                     {
                         owner = temp[4].Trim().Replace("\r", "");
-                    }
-                    Thread.Sleep(1000);
-                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c cp /sdcard/Alarms/" + uid + ".tar.gz /data/data/com.facebook.katana/" + uid + ".tar.gz");
-                    Thread.Sleep(1000);
-                    cmd = Device.ExecuteCMD(cmd);
-                    Thread.Sleep(1000);
-                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c tar -xpf /data/data/" + packageFacebook + "/" + uid + ".tar.gz");
-
-                    FixFacebookFolderPermission(deviceID, "/data/data/com.facebook.katana");
-
-                    Thread.Sleep(1000);
-                    //cmd = Device.ExecuteCMD(cmd);
-
-                    RunAdb(deviceID, $"shell su -c \"rm - rf /data/data/com.facebook.katana/cache\"");
-                    RunAdb(deviceID, $"shell su -c \"rm - rf /data/dalvik-cache\"");
-                    Thread.Sleep(1000);
-                    bool check = CheckFacebookFolderPermission(deviceID);
-                    if (check)
-                    {
-                        break;
+                        Console.WriteLine("owner:" + owner);
                     } else
                     {
-                        //Console.WriteLine("retry");
-                        //// Bước 3: Check logcat lỗi nặng
-                        string logss = RunAdb(deviceID, "logcat -d -t 50");
-                        //if (logss.Contains("FATAL EXCEPTION") || logss.Contains("Zygote") || logss.Contains("SystemServer"))
-                        //{
-                        Console.WriteLine("❌ Phát hiện lỗi nghiêm trọng trong logcat.");
-                            Device.RebootDevice(deviceID);
-                        //}
-
+                        continue;
                     }
-                }
-                
+                        Thread.Sleep(1000);
+                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c cp /sdcard/Alarms/" + uid + ".tar.gz /data/data/com.facebook.katana/" + uid + ".tar.gz"); // chep file tạm vào com.facebook.katana
 
-                Thread.Sleep(1000);
-                //if (text.Contains("bytes in"))
-                //{
-                //Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + "shell am start -n com.facebook.katana/.LoginActivity", deviceID));
-                //}
-                //}
-                return CheckFacebookFolderPermission(deviceID);
+                    Thread.Sleep(1000);
+                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c tar -xpf /data/data/" + packageFacebook + "/" + uid + ".tar.gz"); // giải nén file
+
+                    cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /data/data/com.facebook.katana/{1}.tar.gz' \"", deviceID, uid); // xóa file
+                    result = Device.ExecuteCMD(cmd); // delete folder uid
+
+
+                    string folderPath = "/data/data/com.facebook.katana";
+                    string chownCmd = $"shell su -c \"chown -R {owner} {folderPath}\"";
+                    RunAdb(deviceID, chownCmd);  //update user
+
+                    chownCmd = $"shell su -c \"chmod -R 700 /data/data/com.facebook.katana\"";
+                    RunAdb(deviceID, chownCmd);
+
+                    Thread.Sleep(1000);
+
+                    if (FbUtil.CheckLiveWall(uid) == Constant.DIE)
+                    {
+                        //using (StreamWriter HDD = new StreamWriter("FileCLone/Die_CheckLive" + ".txt", true))
+                        //{
+                        //    HDD.WriteLine(acc.note);
+                        //    HDD.Close();
+                        //}
+                        return false;
+                    }
+
+                    Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                    Thread.Sleep(20000);
+                    
+
+                    var analyzer = new FacebookLogcatAnalyzer(deviceID);
+                    var statusList = analyzer.Analyze();
+                    foreach (var line in statusList) {
+                        Console.WriteLine(line);
+                        if (line.ToLower().Contains("checkpoint"))
+                        {
+                            //Device.RebootByCmd(deviceID);
+                            continue;
+                        }
+                    }
+
+                    if (WaitAndTapXML(deviceID,new string[] { "đăng nhập","tiếp tục"}))
+                    {
+                        Console.WriteLine("het session");
+                    }
+                    return true;
+                    
+                }
             }
             catch (Exception ex)
             {
                 return false;
             }
-            
+            return true;
         }
 
-        
+        public static bool PullBackupFbNew(string uid, string deviceID)
+        {
+
+
+
+            string cmd = "";
+
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
+            string result = Device.ExecuteCMD(cmd); // delete folder uid
+
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /data/data/com.facebook.katana/{1}.tar.gz' \"", deviceID, uid);
+            result = Device.ExecuteCMD(cmd); // delete folder uid
+
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // create folder uid
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana/files' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // create folder uid
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r  /data/data/com.facebook.katana/app_gatekeepers /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy app_gatekeepers
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/app_light_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy app_light_prefs
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/databases /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy databases
+            Thread.Sleep(1000);
+
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/shared_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy shared_prefs
+
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/files/mobileconfig /sdcard/Alarms/data/data/com.facebook.katana/files' \"", deviceID);
+            result = Device.ExecuteCMD(cmd); // copy shared_prefs
+
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c 'cd /sdcard/Alarms/ && tar  -cvz -f {1}.tar.gz data'  \"", deviceID, uid, uid);
+            result = Device.ExecuteCMD(cmd); // Tar file
+
+            Thread.Sleep(1000);
+            string temp = deviceID.Replace(":", ".");
+            if (!Directory.Exists("Authentication"))
+            {
+                Directory.CreateDirectory("Authentication");
+            }
+            Thread.Sleep(1000);
+
+            cmd = Device.ExecuteCMD(string.Format(Device.CONSOLE_ADB + "pull /sdcard/Alarms/{1}.tar.gz \"{2}/Authentication/", deviceID, uid, Application.StartupPath));
+            result = Device.ExecuteCMD(cmd); //
+            Thread.Sleep(1000);
+            cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
+            
+            result = Device.ExecuteCMD(cmd); // delete folder uid
+
+            return true;
+        }
         public static FBItems GetKatanaCookieFromBackup(string innn)
         {
             FBItems fff = new FBItems();

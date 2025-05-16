@@ -8,6 +8,9 @@ namespace fb_reg
 {
     public class OrderObject
     {
+        public string currentIp;
+        public string otp1;
+        public string otp2;
         public string proxyType = "3";
         public bool RootRom = false;
         public bool mailEdu = false;

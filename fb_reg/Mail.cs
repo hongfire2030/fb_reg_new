@@ -10,6 +10,14 @@ using System.Net;
 using ActiveUp.Net.Mail;
 using static fb_reg.ServerApi;
 using static fb_reg.OutsideServer;
+using EAGetMail;
+using System.Windows.Forms;
+using fb_reg.RequestApi;
+using System.Data;
+using fb_reg.Utilities;
+using static fb_reg.CacheServer;
+using System.Drawing;
+using Chilkat;
 
 namespace fb_reg
 {
@@ -98,6 +106,211 @@ namespace fb_reg
 
     public static class Mail
     {
+        public static MailObject GetMail(DeviceObject device, OrderObject order, bool getTrustMail, bool getDecision, DataGridView dataGridView, bool forceGmail)
+        {
+            if (order.isHotmail)
+            {
+                MailObject mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
+
+                if (mail == null)
+                {
+                    return GetHotmail(device, order, getTrustMail);
+                } else
+                {
+                    return mail;
+                }
+            } else
+            {
+                try
+                {
+                    string deviceID = device.deviceId;
+                    int count = 100;
+
+                    Utility.LogStatus(device, "Kiểm tra mạng ổn định mới get mail:");
+                    if (!order.proxyWfi && order.hasproxy && order.proxy != null)
+                    {
+                        Proxy proxy = order.proxy;
+                        OutsideServer.WaitUntilProxyStable(order.proxy);
+                    }
+                    else
+                    {
+                        OutsideServer.WaitUntilNetworkStable();
+                    }
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (getDecision)
+                        {
+                            Decision shouldStop = CacheServer.CheckDecision(device.deviceId);
+                            if (shouldStop != null && shouldStop.stop)
+                            {
+
+                                order.isSuccess = true;
+                                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkSeaGreen;
+                                return null;
+                            }
+                        }
+                        Utility.LogStatus(device, "Get mail lần:" + i);
+                        if (Utility.isScreenLock(deviceID))
+                        {
+                            Utility.LogStatus(device, "Screen is locking screen - Opening it");
+                            Device.Unlockphone(deviceID);
+                            Thread.Sleep(1000);
+                        }
+                        if (device.currentRom == "9")
+                        {
+
+                        }
+                        else
+                        {
+                            string xmmnmm = Utility.GetUIXml(deviceID);
+                            if (!Utility.CheckTextExist(deviceID, "nhậpemail", 1, xmmnmm)
+                                && !Utility.CheckTextExist(deviceID, "email mới", 1, xmmnmm))
+                            {
+                                Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                                Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                                Thread.Sleep(10000);
+                                return null;
+                            }
+                        }
+
+                        bool cache = false;
+                        bool vip = false;
+                        if (i % 4 == 0)
+                        {
+                            cache = true;
+
+                        }
+                        if (i % 2 == 0)
+                        {
+                            vip = true;
+                        }
+                        order.currentMail = GetTempmail(vip, "", order.tempmailType, PublicData.CacheServerUri, cache);
+
+                        if (!IsMailEmpty(order.currentMail))
+                        {
+                            return order.currentMail;
+                        }
+
+                        if (i > 15)
+                        {
+                            if (Utility.isScreenLock(deviceID))
+                            {
+                                Utility.LogStatus(device, "Screen is locking screen - Opening it");
+                                Device.Unlockphone(deviceID);
+                                Thread.Sleep(1000);
+                            }
+                        }
+                    }
+                    int countTime = 30;
+
+                    if (IsMailEmpty(order.currentMail) && forceGmail)
+                    {
+                        Utility.LogStatus(device, "Không thể lấy gmail -> store nvr - color: DarkSeaGreen");
+                        return null;
+                    }
+
+                    if (IsMailEmpty(order.currentMail)) // get hotmail
+                    {
+                        order.isHotmail = true;
+                        order.currentMail = Mail.GetHotmail(device, order, getTrustMail);
+                        Utility.LogStatus(device, "Get hotmail");
+                    }
+                    if (IsMailEmpty(order.currentMail)) // get tempmail
+                    {
+                        order.isHotmail = false;
+                        Utility.LogStatus(device, " tempmail generator");
+                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
+
+                        order.tempmailType = Constant.TEMP_GENERATOR_EMAIL;
+                        order.currentMail = Mail.GetTempmail(true, "", order.tempmailType, PublicData.CacheServerUri);
+                        Thread.Sleep(2000);
+                    }
+                    if (!IsMailEmpty(order.currentMail))
+                    {
+
+                        Thread.Sleep(3000);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Utility.LogStatus(device, "Lỗi trang mail exception");
+                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkMagenta;
+                    return null;
+                }
+            }
+                
+            return null;
+        }
+
+        public static bool IsMailEmpty(MailObject currentMail)
+        {
+            if (currentMail == null || string.IsNullOrEmpty(currentMail.email)) { return true; }
+            return false;
+        }
+
+        public static MailObject GetHotmail(DeviceObject device, OrderObject order, bool getTrustMail)
+        {
+            order.currentMail = GetHotmailUnlimitTime(device, 30);
+
+            if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
+            {
+                if (getTrustMail)
+                {
+                    order.currentMail = Mail.GetHotmailUnlimited(1, "43");
+                    if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
+                    {
+                        order.currentMail = Mail.GetTrustMailVandong();
+                    }
+
+                }
+                if (PublicData.ForceHotmail)
+                {
+                    return order.currentMail;
+                }
+                if ( order.currentMail == null || order.currentMail.status == Constant.FAIL)
+                {
+                    Utility.LogStatus(device, "Hotmail error: ------------get gmail", 2000);
+                    order.isHotmail = false;
+                    order.tempmailType = Constant.GMAIL_SUPERTEAM;
+                    Utility.LogStatus(device, "Get super gmail ");
+                    order.currentMail = Mail.GetTempmail(true, "", order.tempmailType, PublicData.CacheServerUri);
+
+                    if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
+                    {
+                        order.tempmailType = Constant.TEMP_GENERATOR_1_SEC_EMAIL;
+                        Utility.LogStatus(device, "Get tempmail 1 sec   ", 2000);
+                        order.currentMail = Mail.GetTempmail(true, "", order.tempmailType, PublicData.CacheServerUri);
+
+                    }
+
+                    if (order.currentMail != null)
+                    {
+                        Utility.LogStatus(device, "Gmail ok kkkkkkkk: " + order.currentMail.message);
+                    }
+                }
+            }
+            return order.currentMail;
+        }
+        public static MailObject GetHotmailUnlimitTime(DeviceObject device, int time)
+        {
+            MailObject mail = new MailObject();
+            for (int i = 1; i <= time; i++)
+            {
+                Utility.LogStatus(device, "Get hotmail từ tool------: " + i);
+                List<string> types = new List<string> { "5", "6", "14", "15", "16", "45", "46" };
+
+                foreach (string type in types)
+                {
+                    mail = Mail.GetHotmailUnlimited(1, type);
+                    if (mail != null && mail.status != Constant.FAIL && !string.IsNullOrEmpty(mail.email))
+                    {
+                        return mail;
+                    }
+                }
+            }
+            return mail;
+        }
         public static MailObject GetHotmailUnlimited(int amount, string type)
         {
             try
@@ -116,7 +329,7 @@ namespace fb_reg
                         mailObj.refreshToken = responseData.data[i].refresh_token;
                         mailObj.clientId = responseData.data[i].client_id;
                         mailObj.source = "unlimit";
-                        
+                        mailObj.unlimitType = type;
                         return mailObj;
                     }
                 }
@@ -559,7 +772,7 @@ namespace fb_reg
         public static MailObject GetGmailSellGmail(string server)
         {
             MailObject mail = CacheServer.GetSellGmailLocalCache(server);
-            if (Utility.IsMailEmpty(mail))
+            if (Mail.IsMailEmpty(mail))
             {
                 mail = OutsideServer.GetGmailSellGmail();
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
@@ -583,7 +796,7 @@ namespace fb_reg
                 mail = CacheServer.GetSuperGmailLocalCache(server);
             }
              
-            if (Utility.IsMailEmpty(mail))
+            if (IsMailEmpty(mail))
             {
                 mail = OutsideServer.GetGmailAllSite(vip);
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
@@ -602,7 +815,7 @@ namespace fb_reg
         public static MailObject GetGmailOtp(string server)
         {
             MailObject mail = CacheServer.GetGmailOtpLocalCache(server);
-            if (Utility.IsMailEmpty(mail))
+            if (IsMailEmpty(mail))
             {
                 mail = OutsideServer.GetGmailOtp();
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
@@ -621,7 +834,7 @@ namespace fb_reg
         {
 
             MailObject mail = CacheServer.GetDichvuGmailLocalCache(server);
-            if (Utility.IsMailEmpty(mail))
+            if (IsMailEmpty(mail))
             {
                 mail = OutsideServer.GetGmailDichVuGmail(RequestApi.PublicData.AccessTokenDvgmNormal, "Facebook");
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
@@ -946,7 +1159,10 @@ namespace fb_reg
                 for (int i = 0; i < time; i++)
                 {
                     string code = "";
-
+                    if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "unlimit_gmail")
+                    {
+                        code = OutsideServer.GetOtpGmailUnlimited(inMail);
+                    }
                     if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "shopgmail_gmail")
                     {
                         code = OutsideServer.GetOtpGmailShopgmail(inMail);

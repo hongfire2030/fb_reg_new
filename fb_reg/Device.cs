@@ -1,6 +1,8 @@
 ﻿using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
+using fb_reg.RequestApi;
+using fb_reg.Utilities;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -87,16 +89,19 @@ namespace fb_reg
 
         public static void PushChargerFile(string deviceID)
         {
+            string remoteTempPath = "/data/local/tmp/charger.rc";
             string cmd = "";
-            cmd = string.Format(CONSOLE_ADB + "shell mount -o rw,remount /", deviceID);
+            cmd = string.Format(CONSOLE_ADB + "shell su -c ' mount -o rw,remount /'", deviceID);
             string ddd = ExecuteCMD(cmd);
             Console.WriteLine("ddd:" + ddd);
+            cmd = string.Format(CONSOLE_ADB + " push charger.rc /data/local/tmp/", deviceID);
+            ddd = ExecuteCMD(cmd);
 
-            cmd = string.Format(CONSOLE_ADB + " push charger.rc /etc/init", deviceID);
+            cmd = string.Format(CONSOLE_ADB, deviceID)  + $" shell su -c 'cp {remoteTempPath} /etc/init/charger.rc'";
             ddd = ExecuteCMD(cmd);
             Console.WriteLine("ddd:" + ddd);
 
-            cmd = string.Format(CONSOLE_ADB + "shell mount -o ro,remount /", deviceID);
+            cmd = string.Format(CONSOLE_ADB + "shell su -c ' mount -o ro,remount /'", deviceID);
             ddd = ExecuteCMD(cmd);
             Console.WriteLine("ddd:" + ddd);
         }
@@ -134,6 +139,7 @@ namespace fb_reg
         {
             string cmd = string.Format(CONSOLE_ADB + "shell pm clear {1}", deviceID, package);
             ExecuteCMD(cmd);
+            Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
         }
         public static void OpenAppDetail(string deviceID, string package)
         {
@@ -774,43 +780,23 @@ namespace fb_reg
         }
         public static void RebootDevice(string deviceID)
         {
+            DeviceObject device = DeviceManager.GetDevice(deviceID);
+            if (device == null)
+            {
+                return;
+            }
+            device.adbStatus = Constant.ADB_DEVICE_RESTART;
+            device.deviceId = DeviceManager.GetRealDeviceId(deviceID) + Constant.ADB_DEVICE_RESTART;
+
             RunAdb(deviceID, "shell su -c reboot");
-            //DeleteAllScreenshot(deviceID);
-            //string cmd = string.Format(CONSOLE_ADB + "shell input keyevent --longpress KEYCODE_POWER", deviceID);
-            //ExecuteCMD(cmd);
-            //Thread.Sleep(3000);
-            ////TapByPercent(deviceID, 86.3, 32.5);
-            //KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.7, 29.0);
-            //Thread.Sleep(500);
-            ////KAutoHelper.ADBHelper.TapByPercent(deviceID, 88.7, 24.0);
-            //Thread.Sleep(60 * 1000);
-            //for (int i = 0;i < 20; i ++)
-            //{
-            //    if (!Device.GetScreenStatus(deviceID).Contains("not found"))
-            //    {
-            //        break;
-            //    } else
-            //    {
-            //        Thread.Sleep(1000);
-            //    }
-            //}
-            //if (deviceID.Contains(":"))
-            //{
-            //    Thread.Sleep(2000);
-            //    Device.AdbConnect(deviceID);
-
-            //}
-            //if (Utility.isScreenLock(deviceID))
-            //{
-
-            //    Unlockphone(deviceID);
-            //}
             WaitForBootComplete(deviceID);
             if (Utility.isScreenLock(deviceID))
             {
-                
                 Device.Unlockphone(deviceID);
             }
+
+            device.adbStatus = Constant.ADB_DEVICE_NORMAL;
+            device.deviceId = DeviceManager.GetRealDeviceId(deviceID);
         }
         public static bool WaitForBootComplete(string deviceId = "", int timeoutSeconds = 60)
         {
@@ -1287,7 +1273,7 @@ namespace fb_reg
             Device.DeleteAllScreenshot(deviceID);
 
 
-            AvatarObject cacheName = CacheServer.GetAvatarLocalCache( Utility.SERVER_LOCAL, order.gender, deviceID);
+            AvatarObject cacheName = CacheServer.GetAvatarLocalCache( PublicData.CacheServerUri, order.gender, deviceID);
 
             if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
             {
@@ -1443,7 +1429,9 @@ namespace fb_reg
             {
                 text = text + " && " + string.Format(CONSOLE_ADB + "shell input tap {1} {2}", deviceID, x, y);
             }
-            return ExecuteCMD(text);
+            string rr = ExecuteCMD(text);
+            Thread.Sleep(100);
+            return rr;
         }
 
         public static string TapRoot(string deviceID, int x, int y, int count = 1)
@@ -1689,6 +1677,10 @@ namespace fb_reg
 
         public static void GotoFbFriendRequests(string deviceID)
         {
+            Device.PermissionReadContact(deviceID);
+            Device.PermissionCallPhone(deviceID);
+            Device.PermissionReadPhoneState(deviceID);
+            Device.PermissionCamera(deviceID);
             string cmd = string.Format(CONSOLE_ADB + " shell am start -a android.intent.action.VIEW -d fb://requests", deviceID);
             ExecuteCMD(cmd);
 

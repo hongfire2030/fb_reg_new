@@ -1,4 +1,11 @@
-﻿using Newtonsoft.Json;
+﻿using Chilkat;
+using EAGetMail;
+using Emgu.CV.Ocl;
+using fb_reg.Model;
+using fb_reg.RequestApi;
+using Microsoft.Graph.Models;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using RestSharp;
 using System;
 using System.Collections.Generic;
@@ -14,7 +21,120 @@ namespace fb_reg
     public class CacheServer
     {
 
+        public  class Decision
+        {
+            public  bool stop { get; set; } 
+            public  string reason { get; set; }
+            public  int remaining { get; set; }
+        }
+        public static string LogCheckpoint(DeviceObject device, OrderObject order, string status)
+        {
+            try
+            {
+                LogEntryDevice log = new LogEntryDevice();
+                log.DeviceId = device.deviceId;
+                log.ProxyIp = order.currentIp;
+                log.Status = status;
+                log.Pcname = Environment.MachineName;
+                log.AndroidVersion = Device.GetAndroidVersion(device.deviceId);
 
+                string submitLog = string.Format("log/submit-log");
+                var client = new RestClient(PublicData.CacheServerUri);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(submitLog);
+                request.AddHeader("Content-Type", "application/json");
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(log);
+
+                var response = client.Post(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("submit log:" + content);
+                return "";
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            return "";
+        }
+        public static Decision CheckDecision(string deviceId)
+        {
+            Decision dd = new Decision();
+            var client = new RestClient(PublicData.CacheServerUri);
+            var request = new RestRequest("log/should-stop", Method.GET);
+            request.AddParameter("device", deviceId);
+
+            IRestResponse response = client.Execute(request);
+            if (response.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                var json = JObject.Parse(response.Content);
+                dd.stop = json["stop"].Value<bool>();
+                dd.reason = json["reason"].Value<string>();
+                dd.remaining = json["remainingSeconds"]?.Value<int>() ?? 0;
+                return dd;
+            }
+            else
+            {
+                Console.WriteLine("Failed to connect: " + response.StatusCode);
+            }
+            return null;
+        }
+
+        public static bool ShouldStop(string deviceId)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(deviceId))
+                {
+                    return false;
+                }
+                var client = new RestClient(PublicData.CacheServerUri); // chỉnh lại URL nếu cần
+                var request = new RestRequest("log/should-stop", Method.GET);
+                request.AddParameter("device", deviceId);
+
+                var response = client.Execute(request);
+                
+                var content = response.Content; // JSON string như: { "stop": true }
+                return content.Contains("\"stop\":true");
+                
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            return false;
+        }
+
+        public static string UpdateCheckpointIp(string server, string checkpointIp)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(checkpointIp))
+                {
+                    return "";
+                }
+                string apiGetHotMail = string.Format("api/log?ipCheckpoint={0}", checkpointIp);
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetHotMail);
+
+
+                var response = client.Put(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("checkpointIp:" + content);
+                return "";
+            }
+            catch (Exception ex)
+            {
+
+            }
+
+            return "";
+        }
         public static string SetCacheMail(string server, int dvgm, int sellgmail, int superGmail, int gmailOtp, int hotmail, int id, int ratecachehotmail, int runveri)
         {
             try
@@ -52,7 +172,7 @@ namespace fb_reg
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("SetCacheMail2:" + content);
                 return content;
             }
             catch (Exception ex)
@@ -107,7 +227,7 @@ namespace fb_reg
                 var response = client.Put(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("UpdateInvalidName:" + content);
                 return "";
             }
             catch (Exception ex)
@@ -172,7 +292,7 @@ namespace fb_reg
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("GetDichvuGmailLocalCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
 
@@ -288,7 +408,7 @@ namespace fb_reg
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("GetSellGmailLocalCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
 
@@ -322,7 +442,7 @@ namespace fb_reg
                 var response = client.Post(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("AddMailServerCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
 
@@ -382,7 +502,7 @@ namespace fb_reg
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("GetSuperGmailLocalCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
 
@@ -423,7 +543,7 @@ namespace fb_reg
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("GetGmailOtpLocalCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
 
@@ -557,7 +677,7 @@ namespace fb_reg
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
-                Console.WriteLine("get mail:" + content);
+                Console.WriteLine("GetHotmailLocalCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
 
