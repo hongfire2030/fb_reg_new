@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "releasemimiolab",
+  "private_key_id": "4ed9f389d391a987ae5182f5470bd24c9b14e690",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC1e2G+8RqWXULC\n2DgtztdVq1fM8gqe876AdwVQlKwMbSAPGQ9k7HyGTP45r6SrHS4ahwXGltH9bli5\n8Y7uT4Q8WGwHRvZUoDexWPh4s+HYxEmlHSxQVCtb9cyfJm81mrL63sU+d78DUxVb\nbDHlDtzlzk92DLzcirBWjJwzvP+sylRVTmJNHFOuQ5mqASZWHD+QwzUr8fP3/my6\nlNVDD9JjgJcQOqageMAxHveuehlfm6Ox6v1RrwFN2cY5vMIBMgt7Lztd4EWvBJqN\nizI1Z4x4PrdgLF5jBCkf2q0UcZ62jrNi2m5aeI6VGDFevyZZTZU8bPB/Tym8drRY\nWpEbGNr/AgMBAAECggEAB9aM2bDTG6RqgjzRbFUPItGUKLNZdxUC6Mx7K8hIB/9c\nj5pe+lZmaGyB3F70JznK6HVlb/bKmf3+kgVXTX6csPiGrefIMs56qUu0642lVvXf\nUmTIqa2A8+dRT5xa2D9WtJQTg8erNcsMVJb/LqvuKXS4JNqW+5V32T0Yb/mdN0qx\nIXLaF5eKw9ongTgm07X92Skq7f7Vc/7XKSjXrPwsItQCvrLCUyNE0BF74TxQeSFM\n2mlk9qJ4hb0/Y2xKAa6q3zRNvZmJosw/DbI6zziReK5+nFTtpJB24pFG8JzyQabP\nyxrMZyHP48Gw8uyTXz/p9h6vH2VKLRFjDa4CDGOQPQKBgQDmoOEG4ff/BLqIGeKT\niEWxGxu0i0FDvvB2XyqUN54WLQoUAVbHu/kqDIXKLyPbgHkoeWMHExQ+75w8M71f\nRx1g0rphYnUdDJwZjQdq1FIx5xW7DBw3r3QsCrr2L0AMc+pc7VSWxTtKb+Xcqgp5\nYaNsgSeTowU5oE8JRO9edUl86wKBgQDJcmezYTnqFZPMkOtVRQ8UB9rGkiZzR4tN\nf9F3AoEN7aSKgDcfKXP4EAp2dyJagIGVhUuOmAOGEZCwt79+Z7dej7/hFzRrTloL\n4g4Q9Zo+MMAipZgilj/FGF18kbmFAGLRBHXVPNtQZOgafsEKI9IGinate8ssz3QJ\nZvudhBCFPQKBgBrfG9kFczPPhTxeZ7vw4M3l7rB2mUAfez0PkZJ7eHv0+3uhPE9B\nY6K2mtAX9gGZUoSYwCUO4AkFOhr5nFMBojap1vWJ10NvOLDxca/M1VbjKfEFVDRY\nyRxok6gjkT7iMqhpLrXyfRoLN6kiVt4VtkjqM4ZMNEumlg7qbUmAOPPJAoGANavi\njztnR8Pp9gXifXyB0O9qzZ8g2XQFXGeislebdM+NGE2i4g2UVVJIx1lkcMJuRB0Y\njWxY+/5wE3VRcudFRs976wfYsoJUoXfgEYquRsWMW27NQuHPKb8dIVReHl6E9XV/\nw4mMUTYhVPXSjtYOXinEBuLFtjGrk9m5TjVihW0CgYEAuAHm3lraiBcYwsQrbG5t\nB6dcCPm040kgndfOn80ecNB71PkRFDyL11cnLL2EwnmjOg4CGDzd1m84gjKada5U\nbuCq8gFR+8GVY6cg5AqqFfxiB7D1YAV7QoPgdAFVQpUAm8NIlHGBLf2yWd2WWVyg\naz6SWQ93g+i41pr7Cf4k38w=\n-----END PRIVATE KEY-----\n",
+  "client_email": "reg-face@releasemimiolab.iam.gserviceaccount.com",
+  "client_id": "107690588027980539048",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/reg-face%40releasemimiolab.iam.gserviceaccount.com"
+}

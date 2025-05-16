@@ -561,14 +561,14 @@ namespace fb_reg
             {
                 return;
             }
-            string ssid = Device.GetWifiStatus(deviceID);
-            if (!ssid.Contains("unknown"))
-            {
-                return;
-            }
-            string cmd = string.Format(CONSOLE_ADB + "shell settings put global airplane_mode_on 1", deviceID);
-            ExecuteCMD(cmd);
-            cmd = string.Format(CONSOLE_ADB + "shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true", deviceID);
+            //string ssid = Device.GetWifiStatus(deviceID);
+            //if (!ssid.Contains("unknown"))
+            //{
+            //    return;
+            //}
+            //string cmd = string.Format(CONSOLE_ADB + "shell settings put global airplane_mode_on 1", deviceID);
+            //ExecuteCMD(cmd);
+            string cmd = string.Format(CONSOLE_ADB + "shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true", deviceID);
             ExecuteCMD(cmd);
         }
         public static void OpenSetting(string deviceID)
@@ -2210,6 +2210,7 @@ namespace fb_reg
         public static void RandomAndroidID(string deviceID)
         {
             string randomAdId = Guid.NewGuid().ToString("N").Substring(0, 16);
+            Utility.LogStatus(deviceID, "Random Android ID: " + randomAdId);
             SetAndroidID(deviceID, randomAdId);
             // adb shell content query --uri content://settings/secure --where "name=\'android_id\'"
         }

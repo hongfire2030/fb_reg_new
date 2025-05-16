@@ -11,6 +11,7 @@ using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Web.SessionState;
 using System.Windows.Forms;
 using static fb_reg.Utility;
 namespace fb_reg
@@ -1099,6 +1100,25 @@ namespace fb_reg
             }
             return true;
         }
+        public static bool ChangeIp(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare, bool randomProxyData, bool p1, bool p2, bool p3, bool proxy4g, bool forceChangeWifi, bool randomWifi)
+        {
+            Device.AirplaneOff(device.deviceId);
+            if (order.proxyFromServer)
+            {
+                bool checkStartProxy = FbUtil.SetProxy(order, device, giulaiport, proxyShare, randomProxyData, p1, p2, p3, proxy4g, forceChangeWifi, randomWifi);
+
+                if (!checkStartProxy)
+                {
+                    return false;
+                }
+            }
+            else
+            {
+                LogStatus(device, "change ip by airplane - run sim 4g");
+                FbUtil.ChangeIpByAirplane(device);
+            }
+            return true;
+        }
         public static bool SetProxy(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare,bool randomProxyData, bool p1, bool p2, bool p3, bool proxy4g,bool forceChangeWifi,bool randomWifi)
         {
             string deviceID = device.deviceId;
@@ -1201,6 +1221,7 @@ namespace fb_reg
                 else
                 {
                     StopProxySuper(device, order);
+                    FbUtil.ChangeIpByAirplane(device);
                     return true;
                     //device.keyProxy = "";
                     //if ((wwProxyradioButton.Checked || tunProxyradioButton.Checked || order.proxyFromServer) && device.proxyDevice != null && device.proxyDevice.hasProxy)
@@ -1281,29 +1302,29 @@ namespace fb_reg
         }
         public static void PrepareForClone(DeviceObject device)
         {
-            LogStatus(device, "Bắt đầu chuẩn bị device");
+            LogStatus(device, "Bắt đầu chuẩn bị device - trước khi start proxy");
             string deviceId = device.deviceId;
             //Console.WriteLine($"🧼 Đang reset thiết bị {deviceId} trước khi reg clone...");
-            //Device.ClearCache(deviceId, Constant.FACEBOOK_PACKAGE);
-            //Device.ClearCache(deviceId, Constant.FACEBOOK_LITE_PACKAGE);
+            Device.ClearCache(deviceId, Constant.FACEBOOK_PACKAGE);
+            Device.ClearCache(deviceId, Constant.FACEBOOK_LITE_PACKAGE);
             //// 2. Clear GMS (Google Services) để reset Google Ad ID
-            //RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
+            RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
             //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 3. Xóa Android ID (Android sẽ tự tạo lại sau reboot)
-            //RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
+            RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
             // RunAdb(deviceID, "shell settings delete secure android_id"); // delete android id
             Device.RandomAndroidID(deviceId);
             Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 4. Xóa cache hệ thống
-            //RunAdb(deviceId, "shell su -c \"rm -rf /data/cache/* /data/local/tmp/* /data/system/dropbox/*\"");
+            RunAdb(deviceId, "shell su -c \"rm -rf /data/cache/* /data/local/tmp/* /data/system/dropbox/*\"");
             //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             //// 5. Xóa ảnh, video, avatar cũ
-            //RunAdb(deviceId, "shell su -c \"rm -rf /sdcard/DCIM/* /sdcard/Pictures/*\"");
+            RunAdb(deviceId, "shell su -c \"rm -rf /sdcard/DCIM/* /sdcard/Pictures/*\"");
             //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             //// 6. Reset Wi-Fi, proxy, DNS
-            //RunAdb(deviceId, "shell su -c \"svc wifi disable\"");
+            RunAdb(deviceId, "shell su -c \"svc wifi disable\"");
             //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
-            //RunAdb(deviceId, "shell su -c \"rm -rf /data/misc/wifi\"");
+            RunAdb(deviceId, "shell su -c \"rm -rf /data/misc/wifi\"");
             //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             RunAdb(deviceId, "shell su -c \"settings put global http_proxy :0\"");
             Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
@@ -1312,7 +1333,6 @@ namespace fb_reg
             {
                 //Console.WriteLine("🔁 Đang khởi động lại thiết bị...");
                 Device.RebootByCmd(deviceId);
-
             }
             LogStatus(device, "Kết thúc chuẩn bị device");
         }
@@ -1322,30 +1342,24 @@ namespace fb_reg
             string deviceID = device.deviceId;
             
             Device.ForceStop(deviceID, Constant.FACEBOOK_PACKAGE);
+            Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+
             Thread.Sleep(500);
 
             RunAdb(deviceID, "shell rm -rf /sdcard/Android/data/com.facebook.katana");
-            RunAdb(deviceID, "shell rm -rf /data/data/com.facebook.katana/cache");
 
-
-            RunAdb(deviceID, "shell pm clear com.facebook.katana");
-
-            RunAdb(deviceID, "shell pm clear com.facebook.lite");
-
-
-            
+            RunAdb(deviceID, "shell rm -rf /data/data/com.facebook.katana/*");
+            RunAdb(deviceID, "shell rm -rf /data/data/com.facebook.lite/*");
 
             // 1. Clear Facebook & Messenger
-            Device.ClearCache(deviceID, Constant.FACEBOOK_PACKAGE);
-            Device.ForceStop(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
+
             Thread.Sleep(300);
             Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
-            Device.ForceStop(deviceID, Constant.MESSENGER_PACKAGE);
+            
             Thread.Sleep(300);
             Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
             Thread.Sleep(300);
 
-            Device.ForceStop(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
             Thread.Sleep(300);
             Device.ClearCache(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
             Thread.Sleep(300);
@@ -1862,12 +1876,12 @@ namespace fb_reg
             {
                 string deviceID = device.deviceId;
 
-                Utility.TurnOnAirPlane(deviceID);
-                Utility.TurnOffAirPlane(deviceID, false);
+                Device.AirplaneOn(deviceID);
+                Thread.Sleep(1000);
+                Device.AirplaneOff(deviceID);
 
-                Device.ForceStop(deviceID, "com.android.settings");
-                //Thread.Sleep(5000);
-                //Device.Home(deviceID);
+                Device.DisableWifi(deviceID);
+                Device.EnableMobileData(deviceID);
                 return true;
             }
             catch (Exception e)
