@@ -309,7 +309,7 @@ namespace fb_reg
         public OrderObject PreProcess(DeviceObject device, OrderObject order)
         {
 
-
+            string deviceID = device.deviceId;
             if (device.deviceId.Contains("recov"))
             {
                 RootRom(device);
@@ -334,47 +334,32 @@ namespace fb_reg
             }
 
 
-            Device.ForceStop(device.deviceId, "com.android.vending");
-            Device.ForceStop(device.deviceId, "com.google.android.gms");
-            Device.ForceStop(device.deviceId, "com.google.android.youtube");
-            Device.ForceStop(device.deviceId, "com.google.android.gsf");
-            Device.ForceStop(device.deviceId, "com.google.android.gsf.login");
-            Device.ForceStop(device.deviceId, "com.android.chrome");
-            Device.ForceStop(device.deviceId, "com.google.android.ext.services");
-            Device.ForceStop(device.deviceId, "com.google.android.googlequicksearchbox");
-
+            //Device.ForceStop(device.deviceId, "com.android.vending");
+            //Device.ForceStop(device.deviceId, "com.google.android.gms");
+            //Device.ForceStop(device.deviceId, "com.google.android.youtube");
+            //Device.ForceStop(device.deviceId, "com.google.android.gsf");
+            //Device.ForceStop(device.deviceId, "com.google.android.gsf.login");
+            //Device.ForceStop(device.deviceId, "com.android.chrome");
+            //Device.ForceStop(device.deviceId, "com.google.android.ext.services");
+            //Device.ForceStop(device.deviceId, "com.google.android.googlequicksearchbox");
+            Device.ClearCache(deviceID, "com.estrongs.android.pop");
             LogStatus(device, "Chạy preprocesss-------------");
 
             device.regStatus = "";
-            //if (device.globalTotal % 5 == 0)
-            //{
-            //    device.needRebootAfterClear = true;
-            //}
-            //if (forceRebootAfterClearcheckBox.Checked)
-            //{
-            //    device.needRebootAfterClear = true;
-            //}
-            //if (device.needRebootAfterClear)
-            //{
-            //    LogStatus(device, "Clear cache và reboot ----------------");
-            //} else
-            //{
-            //    LogStatus(device, "Clear app facebook -----");
-            //}
+
             LogStatus(device, "Clear Account trong setting trước khi change proxy");
-            string deviceID = device.deviceId;
-            //FbUtil.ClearCacheFb(device);
-            FbUtil.ClearCacheFbLite(deviceID, false);
+            
+            FbUtil.ClearCacheFb(device);
             FbUtil.ClearAccountFbInSetting(deviceID, true);
             LogStatus(device, "Clear app facebook -----xong");
 
-            Device.ClearCache(deviceID, "com.estrongs.android.pop");
-
+            
             FbUtil.PrepareForClone(device);
             
             LogStatus(device, "Bắt đầu change ip");
             bool checkStartProxy = FbUtil.ChangeIp(order, device, giulaiportcheckBox.Checked, proxySharecheckBox.Checked, randomProxyDatacheckBox.Checked,
-            p1ProxycheckBox.Checked, p2ProxycheckBox.Checked, p3ProxycheckBox.Checked, proxy4GcheckBox.Checked, forceChangeWificheckBox.Checked, randomWificheckBox.Checked);
+                        p1ProxycheckBox.Checked, p2ProxycheckBox.Checked, p3ProxycheckBox.Checked, proxy4GcheckBox.Checked, 
+                        forceChangeWificheckBox.Checked, randomWificheckBox.Checked);
 
             if (!checkStartProxy)
             {
@@ -397,8 +382,6 @@ namespace fb_reg
                 return order;
             }
 
-
-            Device.KillApp(deviceID, "com.android.deskclock");
             if (device.installFb)
             {
                 LogStatus(device, "Install facebook " + fbVersioncomboBox.SelectedItem.ToString());
@@ -482,16 +465,6 @@ namespace fb_reg
             device.restartCount++;
             device.reInstallFb++;
 
-            //if (installfblitecheckBox.Checked)
-            //{
-            //    FbUtil.InstallMissingFbLite(deviceID);
-            //}
-            //if (installMissingMessengercheckBox.Checked)
-            //{
-            //    FbUtil.InstallMissingMessenger(deviceID);
-            //}
-
-            //FbUtil.InstallMissingBusiness(deviceID);
             Device.SelectLabanKeyboard(deviceID);
 
             if (isScreenLock(deviceID) && !holdingCheckBox.Checked)
@@ -511,8 +484,6 @@ namespace fb_reg
             Utility.adbKeyboard = adbKeyCheckBox.Checked;
             Utility.labanKeyboard = true;
             Utility.inputString = inputStringCheckbox.Checked;
-
-
 
             if (!randomMailPhoneCheckBox.Checked && !randomMailPhoneSimCheckBox.Checked)
             {
@@ -562,10 +533,6 @@ namespace fb_reg
                 Language.language = Constant.LANGUAGE_US;
             }
 
-
-
-
-
             if (randomNewContactCheckBox.Checked || randomOldContactCheckBox.Checked)
             {
                 LogStatus(device, "Random contact ");
@@ -582,13 +549,12 @@ namespace fb_reg
 
             }
         ACTION_HANDLE:
-            ActionHandle(device); // PreProcess
+            ActionHandle(device);
 
             if (deviceFakerPlusCheckBox.Checked)
             {
                 FbUtil.FakerPlusChange(deviceID, rebootFakerpluscheckBox.Checked);
             }
-
 
             Device.Home(deviceID);
 
@@ -608,25 +574,6 @@ namespace fb_reg
                 dataGridView.Rows[device.index].Cells[10].Value = version;
                 device.showVersion = false;
             }
-            //if (clearCacheFBcheckBox.Checked)
-            //{
-            //    int maxNumberClearAccSetting = 5;
-            //    try
-            //    {
-            //        maxNumberClearAccSetting = Convert.ToInt32(numberClearAccSettingTextBox.Text);
-            //    }
-            //    catch (Exception ddddd)
-            //    {
-
-            //    }
-            //    if (device.numberClearAccSetting >= maxNumberClearAccSetting)
-            //    {
-            //        LogStatus(device, "Lỗi quá nhiều - Clear Account facebook in setting", 2000);
-            //        FbUtil.ClearAccountFbInSetting(deviceID, clearAllAccSettingcheckBox.Checked);
-            //        device.numberClearAccSetting = -1;
-            //    }
-            //    device.numberClearAccSetting++;
-            //}
 
             if (isScreenLock(deviceID) && !holdingCheckBox.Checked)
             {
@@ -639,7 +586,7 @@ namespace fb_reg
             {
                 dataGridView.Rows[device.index].Cells[14].Value = ddd;
             }
-            Device.RandomAndroidID(deviceID);
+
             if (device.globalTotal > 0 && device.globalTotal % 3 == 0 && changer60checkBox.Checked && Device.CheckAppInstall(deviceID, "com.phoneinfo.changerpro"))
             {
                 LogStatus(device, "Change infor device");
@@ -8223,10 +8170,6 @@ InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                             }
                         }
                     }
-                    if (removeProxy2checkBox.Checked)
-                    {
-                        order.hasproxy = false;
-                    }
 
                     if (device.fistTime)
                     {
@@ -8237,16 +8180,6 @@ InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                         }
                         Device.PortraitRotate(deviceID);
                         device.showVersion = true;
-
-                        //CheckOnSim(device);
-                    }
-                    if (device.globalTotal > 0 && device.globalTotal % 5 == 0)
-                    {
-                        device.needRebootAfterClear = true;
-                    }
-                    if (forceRebootAfterClearcheckBox.Checked)
-                    {
-                        device.needRebootAfterClear = true;
                     }
                     
                     LogStatus(device, "Pre process");
@@ -9215,21 +9148,8 @@ InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                 if (CheckTextExist(deviceID, "Nhập mã xác nhận", 1, xmll))
                 {
 
-                    CacheServer.LogCheckpoint(device, order, Constant.CHECKPOINT);
+                    LogCheckpoint(device, order, Constant.CHECKPOINT);
                     return -3;
-                    KAutoHelper.ADBHelper.TapByPercent(deviceID, 39.6, 28.4);
-                    Thread.Sleep(1000);
-                    LogStatus(device, "Confirm code: " + order.otp1);
-
-                    InputConfirmCode(deviceID, order.otp1);
-
-
-                    WaitAndTapXML(deviceID, 1, "tiếp");
-                    Thread.Sleep(5000);
-                    xmll = GetUIXml(deviceID);
-                    
-                    Device.GotoFbProfileEdit(deviceID);
-
                 }
                         
                 if (CheckTextExist(deviceID, "trang cá nhân", 1, xmll))
@@ -9267,21 +9187,6 @@ InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                     return -1;
                 }
             }
-
-            
-            
-            //if (order.account != null && !string.IsNullOrEmpty(order.account.uid) && FbUtil.CheckLiveWall(order.account.uid) == Constant.DIE)
-            //{
-
-            //    fail++;
-
-            //    order.isSuccess = false;
-
-            //    return -1;
-            //}
-
-            
-            
             
             if (CheckTextExist(deviceID, "Edit profile"))
             {
@@ -9314,9 +9219,6 @@ InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                 
                 if (!WaitAndTapXMLNew(deviceID, 1, "save"))
                 {
-                    //Device.TapByPercent(deviceID, 92.5, 19.9, 5000);
-                    //Device.TapByPercent(deviceID, 8.1, 93.5, 5000);
-                    //Device.TapByPercent(deviceID, 7.7, 2.5, 2000);
                     // Check image
                     KAutoHelper.ADBHelper.TapByPercent(deviceID, 92.1, 7.4); // save image
                 }
@@ -9337,7 +9239,6 @@ InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                 {
                     return -1;
                 }
-
             }
 
 UPLOAD_AVATAR_TIENG_VIET:
@@ -9400,8 +9301,6 @@ UPLOAD_AVATAR_TIENG_VIET:
             }
         UP_AVATAR:
 
-            //if (!WaitAndTapXML(deviceID, 2, "allowaccesscheckable"))
-            //{
             if (!WaitAndTapXML(deviceID, 3, "cho phép truy cập"))
             {
                 if (!FindImageAndTap(deviceID, CHO_PHEP_TRUY_CAP, 3))
@@ -9509,11 +9408,6 @@ UPLOAD_AVATAR_TIENG_VIET:
                     }
                 }
             }
-            
-            //if (needBacktohome)
-            //{
-            //    FbUtil.BackToFbHome(deviceID);
-            //}
 
             return 0;
         }

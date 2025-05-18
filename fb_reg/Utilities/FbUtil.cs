@@ -1305,13 +1305,13 @@ namespace fb_reg
             LogStatus(device, "Bắt đầu chuẩn bị device - trước khi start proxy");
             string deviceId = device.deviceId;
             //Console.WriteLine($"🧼 Đang reset thiết bị {deviceId} trước khi reg clone...");
-            Device.ClearCache(deviceId, Constant.FACEBOOK_PACKAGE);
-            Device.ClearCache(deviceId, Constant.FACEBOOK_LITE_PACKAGE);
+            //Device.ClearCache(deviceId, Constant.FACEBOOK_PACKAGE);
+            //Device.ClearCache(deviceId, Constant.FACEBOOK_LITE_PACKAGE);
             //// 2. Clear GMS (Google Services) để reset Google Ad ID
-            RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
+            //RunAdb(deviceId, "shell su -c \"pm clear com.google.android.gms\"");
             //Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 3. Xóa Android ID (Android sẽ tự tạo lại sau reboot)
-            RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
+            //RunAdb(deviceId, "shell su -c \"settings delete secure android_id\"");
             // RunAdb(deviceID, "shell settings delete secure android_id"); // delete android id
             Device.RandomAndroidID(deviceId);
             Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
@@ -1329,7 +1329,7 @@ namespace fb_reg
             RunAdb(deviceId, "shell su -c \"settings put global http_proxy :0\"");
             Thread.Sleep(800); // Delay nhẹ cho thiết bị phản ứng
             // 7. Gợi ý reboot sau chuẩn bị
-            if (device.needRebootAfterClear)
+            if (device.globalTotal > 4 && device.globalTotal % 5 == 0)
             {
                 //Console.WriteLine("🔁 Đang khởi động lại thiết bị...");
                 Device.RebootByCmd(deviceId);
@@ -1346,21 +1346,18 @@ namespace fb_reg
 
             Thread.Sleep(500);
 
-            RunAdb(deviceID, "shell rm -rf /sdcard/Android/data/com.facebook.katana");
+            RunAdb(deviceID, "shell su -c \"rm -rf /sdcard/Android/data/com.facebook.katana\"");
 
-            RunAdb(deviceID, "shell rm -rf /data/data/com.facebook.katana/*");
-            RunAdb(deviceID, "shell rm -rf /data/data/com.facebook.lite/*");
+            RunAdb(deviceID, "shell su -c \"rm -rf /data/data/com.facebook.katana/*\"");
+            RunAdb(deviceID, "shell su -c \"rm -rf /data/data/com.facebook.lite/*\"");
 
             // 1. Clear Facebook & Messenger
 
             Thread.Sleep(300);
             Device.ClearCache(deviceID, Constant.FACEBOOK_BUSINESS_PACKAGE);
-            
-            Thread.Sleep(300);
-            Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
-            Thread.Sleep(300);
 
-            Thread.Sleep(300);
+            Device.ClearCache(deviceID, Constant.MESSENGER_PACKAGE);
+
             Device.ClearCache(deviceID, Constant.FACEBOOK_LITE_PACKAGE);
             Thread.Sleep(300);
 

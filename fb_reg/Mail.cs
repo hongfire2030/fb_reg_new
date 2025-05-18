@@ -112,7 +112,7 @@ namespace fb_reg
             {
                 MailObject mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
 
-                if (mail == null)
+                if (IsMailEmpty(mail))
                 {
                     return GetHotmail(device, order, getTrustMail);
                 } else
