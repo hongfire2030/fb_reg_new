@@ -15,10 +15,9 @@ namespace fb_reg.Utilities
         {
             try
             {
+                Utility.LogStatus(device, "Status before :" + FetchController.GetState());
                 if (!FetchController.IsFetchAllowed())
                 {
-
-                    Thread.Sleep(500);
                     return;
                 }
                 FetchController.SetState(FetchState.Fetching);
@@ -28,16 +27,18 @@ namespace fb_reg.Utilities
                 {
                     try
                     {
-                        Utility.LogStatus(device, mail.source + "-" + mail.email + "b:" + mail.balanceAfter);
-                        //maxMaillabel.Text = mail.balanceAfter + "";
+                        PublicData.dataGridView.Rows[device.index].Cells[13].Value = mail.source + "-" + mail.email + "-b:" + mail.balanceAfter;
                         FetchController.SetState(FetchState.WaitingServer);
                         MailObject resp = CacheServer.AddMailServerCache(mail, PublicData.ServerCacheMail);
+                        PublicData.PublicmaxMaillabel.Text = mail.email + "-" + mail.source + "-" + mail.balanceAfter + "-" + PublicData.FetchMailLog;
                         if (resp != null)
                         {
                             int cacheMail = resp.mailCount;
                             if (cacheMail > PublicData.maxMail)
                             {
                                 FetchController.Pause();
+                                PublicData.MaxThreadGetMail = 1;
+                                PublicData.PublicmaxThreadMailTextbox.Text = "1";
                             }
                             else
                             {
@@ -54,9 +55,10 @@ namespace fb_reg.Utilities
                         Console.WriteLine("❌ Server ERROR: " + ex.Message);
                         //File.AppendAllText("status.log", $"[ERROR] {DateTime.Now}: {ex.Message}\n");
                         FetchController.SetState(FetchState.ServerError);
+                        Utility.LogStatus(device, "exception status :" + FetchController.GetState() + " er:" + ex.Message);
                     }
-
-                    Thread.Sleep(200); // giả lập delay API mail
+                    //Utility.LogStatus(device, "Status affter :" + FetchController.GetState());
+                    Thread.Sleep(2000); // giả lập delay API mail
                 }
             }
             catch (Exception ex)

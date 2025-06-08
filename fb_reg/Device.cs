@@ -604,7 +604,7 @@ namespace fb_reg
         {
             string cmd = string.Format(CONSOLE_ADB + "shell settings put system screen_brightness_mode 0", deviceID);
             ExecuteCMD(cmd);
-            cmd = string.Format(CONSOLE_ADB + "shell settings put system screen_brightness 0", deviceID);
+            cmd = string.Format(CONSOLE_ADB + "shell settings put system screen_brightness 2", deviceID);
             ExecuteCMD(cmd);
         }
         public static void OpenRoamingSetting(string deviceID)
@@ -1238,6 +1238,10 @@ namespace fb_reg
 
                 // Bước 2: Cắt base64 thành từng dòng nhỏ và gửi qua echo
                 int chunkSize = 3000;
+                if (base64 == null)
+                {
+                    return false;
+                }
                 for (int i = 0; i < base64.Length; i += chunkSize)
                 {
                     string chunk = base64.Substring(i, Math.Min(chunkSize, base64.Length - i));
@@ -1266,10 +1270,10 @@ namespace fb_reg
         public static bool PushAvatar(string deviceID, OrderObject order)
         {
 
-            //if (order.pushAvatar)
-            //{
-            //    return false;
-            //}
+            if (order.pushAvatar)
+            {
+                return true;
+            }
             Device.DeleteAllScreenshot(deviceID);
 
 
@@ -1277,52 +1281,13 @@ namespace fb_reg
 
             if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
             {
-                return false;
+                Thread.Sleep(10000);
+                if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
+                {
+                    return false;
+                }
             }
 
-            //string pcPath = Utility.RandomAvatar(deviceID, order.gender, order.language, order.forceAvatarUs);
-            //if (string.IsNullOrEmpty(pcPath) || !File.Exists(pcPath))
-            //{
-            //    order.pushAvatar = false;
-            //    return false;
-            //}
-            //byte[] imageBytes = File.ReadAllBytes(pcPath);
-
-            //using (var ms = new MemoryStream(imageBytes))
-            //{
-            //    //var image = Image.FromStream(ms);
-            //    string newPath = pcPath.Insert(pcPath.Length - 5, "temp");
-            //    //string randomImage = Utility.DownloadRandomCover();
-            //    //if (File.Exists(randomImage))
-            //    //{
-            //    //    Image imageBackground = image;
-            //    //    Image imageOverlay = Image.FromFile(randomImage);
-
-            //    //    Image img = new Bitmap(imageBackground.Width, imageBackground.Height);
-            //    //    using (Graphics gr = Graphics.FromImage(img))
-            //    //    {
-            //    //        gr.DrawImage(imageBackground, new Point(0, 0));
-            //    //        gr.DrawImage(imageOverlay, new Point(0, 0));
-            //    //    }
-            //    //    img.Save(newPath, ImageFormat.Png);
-            //    //}
-            //    PushAvatarRaw(deviceID, pcPath);
-
-            //    if (File.Exists(newPath))
-            //    {
-            //        // If file found, delete it    
-            //        File.Delete(newPath);
-            //        Console.WriteLine("File deleted.");
-            //    }
-            //}
-
-            //// Delete
-            //if (File.Exists(pcPath))
-            //{
-            //    // If file found, delete it    
-            //    File.Delete(pcPath);
-            //    Console.WriteLine("File deleted.");
-            //}
             order.pushAvatar = true;
             return true;
         }

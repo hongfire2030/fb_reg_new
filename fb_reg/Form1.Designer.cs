@@ -225,6 +225,7 @@ namespace fb_reg
             this.drkDomainTextbox = new System.Windows.Forms.TextBox();
             this.nvrByDeviceCheckBox = new System.Windows.Forms.CheckBox();
             this.startButtonGroupBox = new System.Windows.Forms.GroupBox();
+            this.maxThreadGetmailtextBox = new System.Windows.Forms.TextBox();
             this.getDecisioncheckBox = new System.Windows.Forms.CheckBox();
             this.button17 = new System.Windows.Forms.Button();
             this.Rombutton = new System.Windows.Forms.Button();
@@ -297,6 +298,7 @@ namespace fb_reg
             this.regByGmailcheckBox = new System.Windows.Forms.CheckBox();
             this.checkDieStopCheckBox = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.gmailUnlimitcheckBox = new System.Windows.Forms.CheckBox();
             this.checkChangeIpcheckBox = new System.Windows.Forms.CheckBox();
             this.hvlgmailcheckBox = new System.Windows.Forms.CheckBox();
             this.shopgmailLocalcheckBox = new System.Windows.Forms.CheckBox();
@@ -754,6 +756,8 @@ namespace fb_reg
             // TempMailcheckBox
             // 
             this.TempMailcheckBox.AutoSize = true;
+            this.TempMailcheckBox.Checked = true;
+            this.TempMailcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.TempMailcheckBox.ForeColor = System.Drawing.Color.Red;
             this.TempMailcheckBox.Location = new System.Drawing.Point(280, 144);
             this.TempMailcheckBox.Margin = new System.Windows.Forms.Padding(2);
@@ -1361,7 +1365,7 @@ namespace fb_reg
             this.maxAccBlockRuntextBox.Name = "maxAccBlockRuntextBox";
             this.maxAccBlockRuntextBox.Size = new System.Drawing.Size(111, 20);
             this.maxAccBlockRuntextBox.TabIndex = 82;
-            this.maxAccBlockRuntextBox.Text = "11";
+            this.maxAccBlockRuntextBox.Text = "6";
             // 
             // timebreakDeadLocktextBox
             // 
@@ -2549,7 +2553,7 @@ namespace fb_reg
             this.numberOfFriendRequestTextBox.Name = "numberOfFriendRequestTextBox";
             this.numberOfFriendRequestTextBox.Size = new System.Drawing.Size(111, 20);
             this.numberOfFriendRequestTextBox.TabIndex = 212;
-            this.numberOfFriendRequestTextBox.Text = "1";
+            this.numberOfFriendRequestTextBox.Text = "0";
             // 
             // showFbVersionCheckBox
             // 
@@ -2590,6 +2594,7 @@ namespace fb_reg
             // 
             // startButtonGroupBox
             // 
+            this.startButtonGroupBox.Controls.Add(this.maxThreadGetmailtextBox);
             this.startButtonGroupBox.Controls.Add(this.getDecisioncheckBox);
             this.startButtonGroupBox.Controls.Add(this.button17);
             this.startButtonGroupBox.Controls.Add(this.Rombutton);
@@ -2694,6 +2699,14 @@ namespace fb_reg
             this.startButtonGroupBox.TabIndex = 219;
             this.startButtonGroupBox.TabStop = false;
             this.startButtonGroupBox.Text = "Start Button";
+            // 
+            // maxThreadGetmailtextBox
+            // 
+            this.maxThreadGetmailtextBox.Location = new System.Drawing.Point(151, 8);
+            this.maxThreadGetmailtextBox.Name = "maxThreadGetmailtextBox";
+            this.maxThreadGetmailtextBox.Size = new System.Drawing.Size(48, 20);
+            this.maxThreadGetmailtextBox.TabIndex = 341;
+            this.maxThreadGetmailtextBox.Text = "1";
             // 
             // getDecisioncheckBox
             // 
@@ -3353,6 +3366,7 @@ namespace fb_reg
             this.thoatGmailcheckBox.TabIndex = 272;
             this.thoatGmailcheckBox.Text = "Thoát gmail";
             this.thoatGmailcheckBox.UseVisualStyleBackColor = true;
+            this.thoatGmailcheckBox.CheckedChanged += new System.EventHandler(this.thoatGmailcheckBox_CheckedChanged);
             // 
             // storeAccMoicheckBox
             // 
@@ -3442,6 +3456,7 @@ namespace fb_reg
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.gmailUnlimitcheckBox);
             this.groupBox1.Controls.Add(this.checkChangeIpcheckBox);
             this.groupBox1.Controls.Add(this.hvlgmailcheckBox);
             this.groupBox1.Controls.Add(this.shopgmailLocalcheckBox);
@@ -3479,6 +3494,17 @@ namespace fb_reg
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Tempmail";
             // 
+            // gmailUnlimitcheckBox
+            // 
+            this.gmailUnlimitcheckBox.AutoSize = true;
+            this.gmailUnlimitcheckBox.Location = new System.Drawing.Point(202, 44);
+            this.gmailUnlimitcheckBox.Name = "gmailUnlimitcheckBox";
+            this.gmailUnlimitcheckBox.Size = new System.Drawing.Size(83, 17);
+            this.gmailUnlimitcheckBox.TabIndex = 292;
+            this.gmailUnlimitcheckBox.Text = "GmailUnlimit";
+            this.gmailUnlimitcheckBox.UseVisualStyleBackColor = true;
+            this.gmailUnlimitcheckBox.CheckedChanged += new System.EventHandler(this.gmailUnlimitcheckBox_CheckedChanged);
+            // 
             // checkChangeIpcheckBox
             // 
             this.checkChangeIpcheckBox.AutoSize = true;
@@ -3505,6 +3531,8 @@ namespace fb_reg
             // shopgmailLocalcheckBox
             // 
             this.shopgmailLocalcheckBox.AutoSize = true;
+            this.shopgmailLocalcheckBox.Checked = true;
+            this.shopgmailLocalcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.shopgmailLocalcheckBox.Location = new System.Drawing.Point(283, 62);
             this.shopgmailLocalcheckBox.Name = "shopgmailLocalcheckBox";
             this.shopgmailLocalcheckBox.Size = new System.Drawing.Size(98, 17);
@@ -3963,7 +3991,7 @@ namespace fb_reg
             this.releaseNoteLabel.Name = "releaseNoteLabel";
             this.releaseNoteLabel.Size = new System.Drawing.Size(112, 46);
             this.releaseNoteLabel.TabIndex = 226;
-            this.releaseNoteLabel.Text = "2098";
+            this.releaseNoteLabel.Text = "2126";
             this.releaseNoteLabel.Click += new System.EventHandler(this.releaseNoteLabel_Click);
             // 
             // forceDungMayCheckBox
@@ -6162,7 +6190,7 @@ namespace fb_reg
             // 
             // InforMailtimer
             // 
-            this.InforMailtimer.Interval = 5000;
+            this.InforMailtimer.Interval = 4000;
             this.InforMailtimer.Tick += new System.EventHandler(this.InforMailtimer_Tick);
             // 
             // forceRebootAfterClearcheckBox
@@ -6196,7 +6224,7 @@ namespace fb_reg
             this.AutoScroll = true;
             this.AutoValidate = System.Windows.Forms.AutoValidate.EnableAllowFocusChange;
             this.BackColor = System.Drawing.SystemColors.ActiveCaption;
-            this.ClientSize = new System.Drawing.Size(2401, 1111);
+            this.ClientSize = new System.Drawing.Size(1924, 1061);
             this.Controls.Add(this.HideRootbutton);
             this.Controls.Add(this.forceRebootAfterClearcheckBox);
             this.Controls.Add(this.button16);
@@ -6883,6 +6911,8 @@ namespace fb_reg
         private System.Windows.Forms.CheckBox checkChangeIpcheckBox;
         private System.Windows.Forms.Timer ScanDevicetimer;
         private System.Windows.Forms.CheckBox veriDirectGmailcheckBox;
+        private System.Windows.Forms.CheckBox gmailUnlimitcheckBox;
+        private System.Windows.Forms.TextBox maxThreadGetmailtextBox;
     }
 }
 

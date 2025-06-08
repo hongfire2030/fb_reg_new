@@ -1,5 +1,6 @@
 ﻿using ActiveUp.Net.Security.OpenPGP.Packets;
 using fb_reg.RequestApi;
+using fb_reg.Utilities.FetchMail;
 using Newtonsoft.Json;
 using OpenQA.Selenium;
 using RestSharp;
@@ -103,6 +104,7 @@ namespace fb_reg
         {
             try
             {
+                return true;
                 var proxy = new WebProxy(host, port)
                 {
                     Credentials = new NetworkCredential(username, password)
@@ -110,7 +112,7 @@ namespace fb_reg
 
                 var request = (HttpWebRequest)WebRequest.Create("https://m.facebook.com/");
                 request.Proxy = proxy;
-                request.Timeout = 5000;
+                request.Timeout = 6000;
                 request.Method = "GET";
 
                 using (var response = (HttpWebResponse)request.GetResponse())
@@ -226,8 +228,12 @@ namespace fb_reg
                 request.AddHeader("Content-Type", "application/json");
                 request.AddHeader("ZGM-API-TOKEN", key);
                 request.RequestFormat = DataFormat.Json;
+                request.Timeout = 20000;
                 request.AddJsonBody(mail);
-
+                if (!FetchController.IsFetchAllowed())
+                {
+                    return null;
+                }
                 var response = client.Post(request);
                 var content = response.Content; // Raw content as string
 
@@ -395,6 +401,10 @@ namespace fb_reg
                 request.AddParameter("apiKey", key);
                 request.AddParameter("otpServiceCode", "facebook");
                 request.Timeout = 20000;
+                if (!FetchController.IsFetchAllowed())
+                {
+                    return null;
+                }
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
@@ -455,7 +465,7 @@ namespace fb_reg
                 var client = new RestClient("https://api.thuesim.app/rent/email/facebook/" + PublicData.AccessTokenThueSimGmail);
                 //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-                request.Timeout = 2000;
+                request.Timeout = 20000;
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
@@ -508,7 +518,7 @@ namespace fb_reg
                 var client = new RestClient("https://api.thuesim.app/rent/email/facebookvip/" + PublicData.AccessTokenThueSimGmail);
                 //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-                request.Timeout = 2000;
+                request.Timeout = 20000;
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
@@ -695,8 +705,11 @@ namespace fb_reg
                 var client = new RestClient(string.Format("https://api.shopgmail9999.com/api/ApiUsers/createorder?username={0}&apikey={1}&service={2}", user, key, "facebook"));
                 //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-                request.Timeout = 2000;
-
+                request.Timeout = 20000;
+                if (!FetchController.IsFetchAllowed())
+                {
+                    return null;
+                }
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
@@ -739,8 +752,34 @@ namespace fb_reg
         }
         public static MailObject GetGmailAllSite(bool vip)
         {
+            if (!FetchController.IsFetchAllowed())
+            {
+                return null;
+            }
             MailObject gmail = new MailObject();
+            gmail = GetGmailThueSimTeam();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+            gmail = GetGmailThueSimVipTeam();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+            gmail = GetGmailShopGmailTeam(PublicData.AccessTokenShopMail9999Current);
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
 
+
+            gmail = GetMailHvl();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+
+                return gmail;
+            }
             gmail = GetGmailUnlimited();
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
@@ -753,16 +792,7 @@ namespace fb_reg
                 return gmail;
             }
             
-            gmail = GetGmailThueSimTeam();
-            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
-            {
-                return gmail;
-            }
-            gmail = GetGmailThueSimVipTeam();
-            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
-            {
-                return gmail;
-            }
+            
             gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailVip);
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
@@ -774,20 +804,11 @@ namespace fb_reg
             {
                 return gmail;
             }
-            gmail = GetMailHvl();
-            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
-            {
-
-                return gmail;
-            }
+            
 
             if (vip)
             {
-                gmail = GetGmailShopGmailTeam(PublicData.AccessTokenShopMail9999Current);
-                if (gmail != null && !string.IsNullOrEmpty(gmail.email))
-                {
-                    return gmail;
-                }
+                
 
 
 
@@ -1548,6 +1569,10 @@ namespace fb_reg
         {
             try
             {   
+                if (!PublicData.GetGmailUnlimit)
+                {
+                    return null;
+                }
                 MailObject mail = new MailObject();
 
                 GmailUnlimitedBodyRequest requestBody = new GmailUnlimitedBodyRequest();
@@ -1560,11 +1585,17 @@ namespace fb_reg
                 request.AddHeader("Content-Type", "application/json");
                 request.RequestFormat = DataFormat.Json;
                 request.AddJsonBody(requestBody);
+                if (!FetchController.IsFetchAllowed())
+                {
+                    return null;
+                }
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string    
                 if (content != null)
                 {
                     GmailUnlimitedResponse data = JsonConvert.DeserializeObject<GmailUnlimitedResponse>(content);
+                    if (data == null)
+                        return null;
                     mail.email = data.data;
                     mail.password = Constant.GMAIL_SELL_GMAIL;
                     mail.source = "unlimit_gmail";

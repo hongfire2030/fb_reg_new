@@ -31,6 +31,7 @@ using System.IO.MemoryMappedFiles;
 using fb_reg.RequestApi;
 using Exception = System.Exception;
 using fb_reg.Utilities;
+using ActiveUp.Net.Security.OpenPGP.Packets;
 
 
 namespace fb_reg
@@ -2696,49 +2697,6 @@ class Utility
 
                 }
             }
-            
-            needBackup = true;
-            if (needBackup)
-            {
-                FbUtil.PullBackupFbNew(uid, deviceID);
-                //Thread.Sleep(1000);
-                //ZipFile.CreateFromDirectory("Authentication/" + uid, "Authentication/" + uid + ".zip");
-                //Thread.Sleep(3000);
-
-                //// push to server
-                //if (order.NAM_SERVER)
-                //{
-                //    NamServer.UploadFileAuth("Authentication/" + uid + ".zip", uid);
-                //} else
-                //{
-                //    ServerApi.UploadAuthAcc("Authentication/" + uid + ".zip", uid);
-                //}
-
-                //Thread.Sleep(3000);
-
-                Thread.Sleep(1000);
-              
-                // push to server
-                if (order.NAM_SERVER)
-                {
-                    NamServer.UploadFileAuth("Authentication/" + uid + ".zip", uid);
-                }
-                else
-                {
-                    ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
-                }
-
-                Thread.Sleep(3000);
-                try
-                {
-                    
-                    File.Delete("Authentication/" + uid + ".tar.gz");
-                }
-                catch (IOException ex)
-                {
-                    Console.WriteLine("ex:" + ex.Message);
-                }
-            }
 
             if (isServer)
             {
@@ -2752,30 +2710,74 @@ class Utility
 
                 if (!order.NAM_SERVER)
                 {
-                    if (!ServerApi.PostData(isServer, data, status, order.accType))
+                    bool checkOk = false;
+                    for (int i = 0; i < 4; i ++)
                     {
-                        bool checkOk = GoogleSheet.WriteAccount(data, fileName.Substring(10));
+                        checkOk = ServerApi.PostData(isServer, data, status, order.accType);
+                        if (! checkOk)
+                        {
+                            LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 300000);
+                        } else
+                        {
+                            LogStatus(device, "Lưu Acc Thành công ---" + i, 1000);
+                            break;
+                        }
+                    }
+                    if (!checkOk)
+                    {
+                        LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào googlesheet-----" , 30000);
+                        checkOk = GoogleSheet.WriteAccount(data, fileName.Substring(10));
                         if (!checkOk)
                         {
-                            DateTime dateTime = DateTime.UtcNow.Date;
-                            using (StreamWriter HDD = new StreamWriter(fileName + "_Missing_" + dateTime.ToString("dd/MM/yyyy") + ".txt", true))
+                            try
                             {
-                                HDD.WriteLine(data);
-                                HDD.Close();
+                                LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào file-----", 10000);
+                                DateTime dateTime = DateTime.UtcNow.Date;
+                                using (StreamWriter HDD = new StreamWriter(fileName + "_Missing_" + dateTime.ToString("dd/MM/yyyy") + ".txt", true))
+                                {
+                                    HDD.WriteLine(data);
+                                    HDD.Close();
+                                }
+                            } catch (Exception edeee)
+                            {
+                                LogStatus(device, "eeee lưu acc file: " + edeee.Message);
                             }
                         }
                         return false;
                     }
+
                     ServerApi.DeleteAccWait2Veri(uid);
                 }
-                
-                
             }
-            
+            needBackup = true;
+            if (needBackup)
+            {
+                FbUtil.PullBackupFbNew(uid, deviceID);
+                Thread.Sleep(1000);
+
+                if (order.NAM_SERVER)
+                {
+                    NamServer.UploadFileAuth("Authentication/" + uid + ".zip", uid);
+                }
+                else
+                {
+                    ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
+                }
+
+                Thread.Sleep(3000);
+                try
+                {
+
+                    File.Delete("Authentication/" + uid + ".tar.gz");
+                }
+                catch (IOException ex)
+                {
+                    Console.WriteLine("ex:" + ex.Message);
+                }
+            }
 
             try
             {
-                
                 Account acc = new Account();
                 acc.uid = uid;
                
@@ -2814,18 +2816,11 @@ class Utility
                 string fbLiteVersion = Device.GetVersionFBLite(deviceID);
                 string fbBusinessVersion = Device.GetVersionFBBusiness(deviceID);
                 order.versionFb = fbVersion + "|" + fbLiteVersion + "|" + fbBusinessVersion;
-                //NamServer.PostData(acc, order, device);
             } catch(Exception eee)
             {
 
             }
             
-            
-            
-
-            //watch.Stop();
-            //long second = watch.ElapsedMilliseconds / 1000;
-            //Console.WriteLine($"---------------------Store Time: {second} s");
             return true;
         }
         public static bool storeAccWithThread(bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
@@ -3908,6 +3903,10 @@ class Utility
             return XML;
         }
 
+        public static void GetUIXml(DeviceObject device)
+        {
+            device.currentUIxml = GetUIXml(device.deviceId);
+        }
         public static string GetUIxmlNew(string deviceID)
         {
             string XML = Device.ExecuteCMD("adb -s " + deviceID + " exec-out uiautomator dump /dev/tty");
@@ -4105,7 +4104,7 @@ class Utility
             return false;
         }
 
-        
+
         public static bool DeleteFile(string path)
         {
             try

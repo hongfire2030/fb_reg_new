@@ -5,6 +5,7 @@ namespace fb_reg
 {
     public class DeviceObject
     {
+        public string currentUIxml;
         public string otp1;
         public string currentIp;
         public string owner = "";

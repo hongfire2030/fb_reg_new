@@ -30,7 +30,7 @@ namespace fb_reg.RequestApi
         public static string AccessTokenThueSimGmail = "44d568423b4d344595c6aae53337eae182f1a9bd";
 
 
-        public static string AccessTokenShopMail9999Current = "cbadb4b11fd2f0562daeca96038c78d3";
+        public static string AccessTokenShopMail9999Current = "107e65bf0ab9ed85cb4a27b5a305c0af";
         public static string AccessTokenShopMail9999Normal = "cbadb4b11fd2f0562daeca96038c78d3";
         public static string AccessTokenShopMail9999Vip = "107e65bf0ab9ed85cb4a27b5a305c0af";
 
@@ -40,13 +40,20 @@ namespace fb_reg.RequestApi
         public static bool GetMailThuesimVip = false;
         public static bool GetMailDvgm = false;
         public static bool GetMailDvgmNormal = false;
-        public static bool GetMailSptLocal = true;
-        public static bool GetMailSptNormal = true;
-        public static bool GetShopgmailLocal = false;
+        public static bool GetMailSptLocal = false;
+        public static bool GetMailSptNormal = false;
+        public static bool GetShopgmailLocal = true;
         public static bool GetHvlMaillocal = true;
+        public static bool GetGmailUnlimit = false;
         public static string TokenUnlimit = "8vnz9yfkcdsjmp6lnoosuju5990hec3jesfsq7yeiz7xwt1mgyvshouq5dt7g8exttoyan1722140071";
         public static List<string> wifilist = new List<string>();
 
         public static string ServerCacheMail = "";
+
+        public static bool ThoatGmail = false;
+        public static string FetchMailLog = "";
+        public static System.Windows.Forms.Label PublicmaxMaillabel;
+        public static System.Windows.Forms.TextBox PublicmaxThreadMailTextbox;
+        public static int MaxThreadGetMail = 1;
     }
 }

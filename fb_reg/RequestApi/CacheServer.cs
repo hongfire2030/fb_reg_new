@@ -39,13 +39,13 @@ namespace fb_reg
                 log.AndroidVersion = Device.GetAndroidVersion(device.deviceId);
 
                 string submitLog = string.Format("log/submit-log");
-                var client = new RestClient(PublicData.CacheServerUri);
+                var client = new RestClient(PublicData.CacheServerUri.Replace("8081", "8082"));
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(submitLog);
                 request.AddHeader("Content-Type", "application/json");
                 request.RequestFormat = DataFormat.Json;
                 request.AddJsonBody(log);
-
+                request.Timeout = 5000;
                 var response = client.Post(request);
                 var content = response.Content; // Raw content as string
 

@@ -407,7 +407,6 @@
     <Compile Include="Utilities\FbUtil.cs" />
     <Compile Include="Utilities\FetchMail\FetchController.cs" />
     <Compile Include="Utilities\FetchMail\FetchMail.cs" />
-    <Compile Include="Utilities\FetchMail\MailDispatcher.cs" />
     <Compile Include="Utilities\FetchMail\MailUtility.cs" />
     <Compile Include="Utilities\FileUtil.cs" />
     <Compile Include="Form1.cs">

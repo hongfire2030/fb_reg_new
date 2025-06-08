@@ -18,6 +18,8 @@ using fb_reg.Utilities;
 using static fb_reg.CacheServer;
 using System.Drawing;
 using Chilkat;
+using Microsoft.Graph.AuditLogs;
+using Microsoft.Graph.Groups.Item.Team.Schedule.TimeCards.Item.EndBreak;
 
 namespace fb_reg
 {
@@ -124,7 +126,7 @@ namespace fb_reg
                 try
                 {
                     string deviceID = device.deviceId;
-                    int count = 100;
+                    int count = 200;
 
                     Utility.LogStatus(device, "Kiểm tra mạng ổn định mới get mail:");
                     if (!order.proxyWfi && order.hasproxy && order.proxy != null)
@@ -139,6 +141,7 @@ namespace fb_reg
 
                     for (int i = 0; i < count; i++)
                     {
+
                         if (getDecision)
                         {
                             Decision shouldStop = CacheServer.CheckDecision(device.deviceId);
@@ -169,7 +172,8 @@ namespace fb_reg
                             {
                                 Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
                                 Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                                Thread.Sleep(10000);
+                                Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 20000);
+                                
                                 return null;
                             }
                         }
@@ -179,7 +183,6 @@ namespace fb_reg
                         if (i % 4 == 0)
                         {
                             cache = true;
-
                         }
                         if (i % 2 == 0)
                         {
@@ -200,6 +203,10 @@ namespace fb_reg
                                 Device.Unlockphone(deviceID);
                                 Thread.Sleep(1000);
                             }
+                        }
+                        if (PublicData.ThoatGmail && i > 50)
+                        {
+                            break;
                         }
                     }
                     int countTime = 30;
@@ -231,6 +238,7 @@ namespace fb_reg
 
                         Thread.Sleep(3000);
                     }
+                    
                 }
                 catch (Exception ex)
                 {
