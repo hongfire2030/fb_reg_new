@@ -1,4 +1,5 @@
 ﻿using ActiveUp.Net.Security.OpenPGP.Packets;
+using EAGetMail;
 using fb_reg.RequestApi;
 using fb_reg.Utilities.FetchMail;
 using Newtonsoft.Json;
@@ -152,6 +153,23 @@ namespace fb_reg
             public HvlRespData data { get; set; }
 
         }
+
+        public class ShopmailmmoResp
+        {
+            [JsonProperty("mail")]
+            public string mail { get; set; }
+
+
+            [JsonProperty("order_id")]
+            public string order_id { get; set; }
+
+            [JsonProperty("error")]
+            public string error { get; set; }
+
+            [JsonProperty("status")]
+            public string status { get; set; }
+        }
+
         public class HvlRespData
         {
             [JsonProperty("orderId")]
@@ -182,6 +200,19 @@ namespace fb_reg
 
             [JsonProperty("data")]
             public HvlOtpRespData data { get; set; }
+
+        }
+        public class ShopgmailmmoOtpResp
+        {
+            [JsonProperty("otp")]
+            public string otp { get; set; }
+
+
+            [JsonProperty("amount")]
+            public string amount { get; set; }
+
+            [JsonProperty("time")]
+            public string time { get; set; }
 
         }
         public class HvlOtpRespData
@@ -228,7 +259,7 @@ namespace fb_reg
                 request.AddHeader("Content-Type", "application/json");
                 request.AddHeader("ZGM-API-TOKEN", key);
                 request.RequestFormat = DataFormat.Json;
-                request.Timeout = 20000;
+                request.Timeout = 40000;
                 request.AddJsonBody(mail);
                 if (!FetchController.IsFetchAllowed())
                 {
@@ -260,6 +291,99 @@ namespace fb_reg
             return null;
         }
 
+
+        public static MailObject GetShopMailmmo()
+        {
+            try
+            {
+                if (!PublicData.GetShopgmailmmoLocal)
+                {
+                    return null;
+                }
+                string key = PublicData.AccessTokengmailShopgmailmmo;
+
+                string server = "https://shopmailmmo.store";
+                string apiGetSellGmail = "/v1/orders";
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetSellGmail);
+                request.AddHeader("api_key", key);
+
+                request.Timeout = 40000;
+
+                if (!FetchController.IsFetchAllowed())
+                {
+                    return null;
+                }
+                var response = client.Post(request);
+                var content = response.Content; // Raw content as string
+
+                Console.WriteLine("get mail:" + content);
+                string decode = Utility.Decode_UTF8(content);
+                ShopmailmmoResp data = JsonConvert.DeserializeObject<ShopmailmmoResp>(decode);
+
+                if (data != null && data != null && data.status != "fail" && !string.IsNullOrEmpty(data.mail))
+                {
+                    MailObject respmail = new MailObject();
+                    respmail.email = data.mail;
+                    respmail.orderId = data.order_id;
+                    respmail.password = Constant.GMAIL_SELL_GMAIL;
+                    respmail.key = key;
+                    respmail.source = "shopmailmmo";
+                    respmail.createdAt = DateTime.UtcNow;
+
+                    return respmail;
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return null;
+        }
+        public static string GetOtpShopgmailmmo(MailObject mail)
+        {
+            string otp = "";
+            try
+            {
+                string key = mail.key;
+                var client = new RestClient("https://shopmailmmo.store");
+                var request = new RestRequest("/v1/otp", Method.GET);
+
+
+                request.AddHeader("api_key", key);
+                request.AddParameter("id", mail.orderId);
+                request.Timeout = 20000;
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+
+                try
+                {
+                    ShopgmailmmoOtpResp data = JsonConvert.DeserializeObject<ShopgmailmmoOtpResp>(content);
+
+                    if (data != null && data != null && !string.IsNullOrEmpty(data.otp) && data.otp.Length > 4)
+                    {
+                        return data.otp;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                Console.WriteLine("GetGmailSuperTeam:" + eee.Message);
+                return null;
+            }
+
+
+            return otp;
+        }
         public static string GetOtpHvl(MailObject mail)
         {
             string otp = "";
@@ -364,6 +488,7 @@ namespace fb_reg
                     mail.source = "dvgm";
                     mail.key = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ";
                     mail.accessToken = key;
+                    mail.createdAt = DateTime.UtcNow;
                 }
             }
             catch (Exception ex)
@@ -384,11 +509,10 @@ namespace fb_reg
         }
 
         
-        public static MailObject GetGmailSuperTeam(string key)
+        public static MailObject GetGmailSptTeam(string key)
         {
             try
             {
-             
                 if (!PublicData.GetMailSptLocal)
                 {
                     return null;
@@ -400,7 +524,7 @@ namespace fb_reg
 
                 request.AddParameter("apiKey", key);
                 request.AddParameter("otpServiceCode", "facebook");
-                request.Timeout = 20000;
+                request.Timeout = 40000;
                 if (!FetchController.IsFetchAllowed())
                 {
                     return null;
@@ -419,6 +543,7 @@ namespace fb_reg
                         mail.password = Constant.GMAIL_SELL_GMAIL;
                         mail.source = "super_gmail";
                         mail.accessToken = key;
+                        mail.createdAt = DateTime.UtcNow;
                         return mail;
                     }
                     else
@@ -465,7 +590,7 @@ namespace fb_reg
                 var client = new RestClient("https://api.thuesim.app/rent/email/facebook/" + PublicData.AccessTokenThueSimGmail);
                 //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-                request.Timeout = 20000;
+                request.Timeout = 40000;
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
@@ -518,7 +643,7 @@ namespace fb_reg
                 var client = new RestClient("https://api.thuesim.app/rent/email/facebookvip/" + PublicData.AccessTokenThueSimGmail);
                 //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-                request.Timeout = 20000;
+                request.Timeout = 40000;
                 var response = client.Execute(request);
                 var content = response.Content; // Raw content as string
 
@@ -705,7 +830,7 @@ namespace fb_reg
                 var client = new RestClient(string.Format("https://api.shopgmail9999.com/api/ApiUsers/createorder?username={0}&apikey={1}&service={2}", user, key, "facebook"));
                 //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest("", Method.GET);
-                request.Timeout = 20000;
+                request.Timeout = 40000;
                 if (!FetchController.IsFetchAllowed())
                 {
                     return null;
@@ -732,6 +857,7 @@ namespace fb_reg
                         mail.clientId = data.orderNumber;
                         mail.source = "shopgmail_gmail";
                         mail.accessToken = key;
+                        mail.createdAt = DateTime.UtcNow;
                         return mail;
                     }
                     else
@@ -757,6 +883,20 @@ namespace fb_reg
                 return null;
             }
             MailObject gmail = new MailObject();
+            gmail = GetGmailSptTeam(PublicData.AccessTokenSuperGmailNormal);
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+
+
+            gmail = GetGmailSptTeam(PublicData.AccessTokenSuperGmailVip);
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+
+                return gmail;
+            }
+
             gmail = GetGmailThueSimTeam();
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
@@ -780,25 +920,20 @@ namespace fb_reg
 
                 return gmail;
             }
+
+            gmail = GetShopMailmmo();
+            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
+            {
+                return gmail;
+            }
+
             gmail = GetGmailUnlimited();
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
                 return gmail;
             }
 
-            gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailNormal);
-            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
-            {
-                return gmail;
-            }
             
-            
-            gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailVip);
-            if (gmail != null && !string.IsNullOrEmpty(gmail.email))
-            {
-
-                return gmail;
-            }
             gmail = GetGmailDichVuGmail(PublicData.AccessTokenDvgmNormal);
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
@@ -808,14 +943,9 @@ namespace fb_reg
 
             if (vip)
             {
-                
-
-
-
-                gmail = GetGmailSuperTeam(PublicData.AccessTokenSuperGmailCurrent);
+                gmail = GetGmailSptTeam(PublicData.AccessTokenSuperGmailCurrent);
                 if (gmail != null && !string.IsNullOrEmpty(gmail.email))
                 {
-
                     return gmail;
                 }
 
@@ -826,7 +956,6 @@ namespace fb_reg
                 }
             }
 
-           
             return gmail;
         }
 
@@ -1915,8 +2044,11 @@ namespace fb_reg
 
                     if (data != null && !string.IsNullOrEmpty(data.status) && data.status == "Success" && !string.IsNullOrEmpty(data.otp))
                     {
-
-                        return data.otp;
+                        if (data.otp.Length > 4)
+                        {
+                            return data.otp;
+                        }
+                        
                     }
                     else
                     {
@@ -1932,6 +2064,7 @@ namespace fb_reg
             {
                 return null;
             }
+            return null;
         }
 
         public class OtpGmailOtpResponse
@@ -2107,7 +2240,7 @@ namespace fb_reg
                 string decode = Utility.Decode_UTF8(content);
                 DichVuGmailEmail data = JsonConvert.DeserializeObject<DichVuGmailEmail>(decode);
 
-                if (data != null && data.status == 200 && data.orders != null && !string.IsNullOrEmpty(data.orders.otp))
+                if (data != null && data.status == 200 && data.orders != null && !string.IsNullOrEmpty(data.orders.otp) && data.orders.otp.Length > 4)
                 {
                     otp = data.orders.otp;
                 }

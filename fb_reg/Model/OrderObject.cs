@@ -8,6 +8,10 @@ namespace fb_reg
 {
     public class OrderObject
     {
+        public bool getOtp = false;
+        public int countVaoManHinhNhapMaXacNhan = 0;
+        public bool updateSuccessfull = false;
+        public bool StoreAccUrgent = false;
         public string currentIp;
         public string otp1;
         public string otp2;
@@ -93,6 +97,7 @@ namespace fb_reg
         public int currentAmount;
         public string status;
         public bool veriAcc;
+        public bool randomNewContact;
         public bool veriDirectHotmail;
         public bool veriDirectGmail;
         public bool veriByPhone;

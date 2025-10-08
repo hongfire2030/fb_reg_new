@@ -64,6 +64,7 @@ namespace fb_reg
             Decision dd = new Decision();
             var client = new RestClient(PublicData.CacheServerUri);
             var request = new RestRequest("log/should-stop", Method.GET);
+            request.Timeout = 20000; // 20 seconds timeout
             request.AddParameter("device", deviceId);
 
             IRestResponse response = client.Execute(request);
@@ -93,7 +94,7 @@ namespace fb_reg
                 var client = new RestClient(PublicData.CacheServerUri); // chỉnh lại URL nếu cần
                 var request = new RestRequest("log/should-stop", Method.GET);
                 request.AddParameter("device", deviceId);
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Execute(request);
                 
                 var content = response.Content; // JSON string như: { "stop": true }
@@ -120,7 +121,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
-
+                request.Timeout = 20000; // 20 seconds timeout
 
                 var response = client.Put(request);
                 var content = response.Content; // Raw content as string
@@ -135,40 +136,40 @@ namespace fb_reg
 
             return "";
         }
-        public static string SetCacheMail(string server, int dvgm, int sellgmail, int superGmail, int gmailOtp, int hotmail, int id, int ratecachehotmail, int runveri)
+        //public static string SetCacheMail(string server, int dvgm, int sellgmail, int superGmail, int gmailOtp, int hotmail, int id, int ratecachehotmail, int runveri)
+        //{
+        //    try
+        //    {
+        //        string apiGetHotMail = string.Format("api/setting?dvgm={0}&sellgmail={1}&supergmail={2}&gmailotp={3}&hotmail={4}&hotmailtype={5}&ratecachehotmail={6}&runveri={7}", dvgm, sellgmail, superGmail, gmailOtp, hotmail, id, ratecachehotmail, runveri);
+        //        var client = new RestClient(server);
+        //        client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+        //        var request = new RestRequest(apiGetHotMail);
+        //        request.Timeout = 20000; // 20 seconds timeout
+
+        //        var response = client.Get(request);
+        //        var content = response.Content; // Raw content as string
+
+        //        Console.WriteLine("get Setting:" + content);
+        //        return content;
+        //    }
+        //    catch (Exception ex)
+        //    {
+
+        //    }
+
+        //    return "";
+        //}
+
+        public static string SetCacheMail2(string server, int dvgm, int sellgmail, int superGmail, int sptVip, int gmailOtp, int hotmail, int id, int ratecachehotmail, int runVeri)
         {
             try
             {
-                string apiGetHotMail = string.Format("api/setting?dvgm={0}&sellgmail={1}&supergmail={2}&gmailotp={3}&hotmail={4}&hotmailtype={5}&ratecachehotmail={6}&runveri={7}", dvgm, sellgmail, superGmail, gmailOtp, hotmail, id, ratecachehotmail, runveri);
+                string apiGetHotMail = string.Format("api/setting?dvgm={0}&sellgmail={1}&supergmail={2}&sptvip={3}&gmailotp={4}&hotmail={5}&hotmailtype={6}&ratecachehotmail={7}&runveri={8}", dvgm, sellgmail, superGmail, sptVip, gmailOtp, hotmail, id, ratecachehotmail, runVeri);
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
 
-
-                var response = client.Get(request);
-                var content = response.Content; // Raw content as string
-
-                Console.WriteLine("get Setting:" + content);
-                return content;
-            }
-            catch (Exception ex)
-            {
-
-            }
-
-            return "";
-        }
-
-        public static string SetCacheMail2(string server, int dvgm, int sellgmail, int superGmail, int sptVip, int gmailOtp, int hotmail, int id, int ratecachehotmail)
-        {
-            try
-            {
-                string apiGetHotMail = string.Format("api/setting?dvgm={0}&sellgmail={1}&supergmail={2}&sptvip={3}&gmailotp={4}&hotmail={5}&hotmailtype={6}&ratecachehotmail={7}&runveri=-1", dvgm, sellgmail, superGmail, sptVip, gmailOtp, hotmail, id, ratecachehotmail, -1);
-                var client = new RestClient(server);
-                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
-                var request = new RestRequest(apiGetHotMail);
-
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -184,11 +185,12 @@ namespace fb_reg
         }
         public static string SetRunVeri(string server, int runVeri)
         {
-            return SetCacheMail(server, -1, -1, -1, -1, -1, -1, -1, runVeri);
+            PublicData.countSuccessVeribackup = 0;
+            return SetCacheMail2(server, -1, -1, -1, -1, -1, -1, -1,-1, runVeri);
         }
         public static int GetRunVeri(string server)
         {
-            string temp = SetCacheMail(server, -1, -1, -1, -1, -1, -1, -1, -1);
+            string temp = SetCacheMail2(server, -1, -1, -1, -1, -1, -1, -1, -1, -1);
             temp = temp.Replace("\"", "");
             temp = temp.Replace("/", "");
             temp = temp.Replace("\\", "");
@@ -222,7 +224,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
-
+                request.Timeout = 20000; // 20 seconds timeout
 
                 var response = client.Put(request);
                 var content = response.Content; // Raw content as string
@@ -249,7 +251,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
-
+                request.Timeout = 20000; // 20 seconds timeout
 
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
@@ -287,7 +289,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
-
+                request.Timeout = 20000; // 20 seconds timeout
 
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
@@ -327,7 +329,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
 
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -370,7 +372,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotMail);
 
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -404,7 +406,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetSellGmail);
 
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -427,10 +429,11 @@ namespace fb_reg
             return mail;
         }
         
-        public static MailObject AddMailServerCache(MailObject mail, string server)
+        public static MailObject AddMailServerCache(MailObject mail)
         {
             try
             {
+                string server = PublicData.CacheServerUri;
                 string apiGetSellGmail = "api/supergmail";
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
@@ -438,7 +441,7 @@ namespace fb_reg
                 request.AddHeader("Content-Type", "application/json");
                 request.RequestFormat = DataFormat.Json;
                 request.AddJsonBody(mail);
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Post(request);
                 var content = response.Content; // Raw content as string
 
@@ -457,7 +460,36 @@ namespace fb_reg
             }
             return null;
         }
+        public static MailObject LogMailServerCache(MailObject mail, string server)
+        {
+            try
+            {
+                string apiGetSellGmail = "api/logmail";
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetSellGmail);
+                request.AddHeader("Content-Type", "application/json");
+                request.RequestFormat = DataFormat.Json;
+                request.AddJsonBody(mail);
+                request.Timeout = 20000; // 20 seconds timeout
+                var response = client.Post(request);
+                var content = response.Content; // Raw content as string
 
+                Console.WriteLine("AddMailServerCache:" + content);
+                string decode = Utility.Decode_UTF8(content);
+                MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
+
+                if (data != null)
+                {
+                    return data;
+                }
+            }
+            catch (Exception ex)
+            {
+
+            }
+            return null;
+        }
         public static Proxy AddProxyShareServerCache(Proxy proxy, string server)
         {
             try
@@ -469,7 +501,7 @@ namespace fb_reg
                 request.AddHeader("Content-Type", "application/json");
                 request.RequestFormat = DataFormat.Json;
                 request.AddJsonBody(proxy);
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Post(request);
                 var content = response.Content; // Raw content as string
 
@@ -498,7 +530,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetSuperGmail);
 
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -539,7 +571,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetGmailOtp);
 
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -572,6 +604,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetAccMoi);
                 request.AddParameter("type", "");
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -605,7 +638,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetProxy);
-               
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 
@@ -650,7 +683,7 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetProxy);
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Delete(request);
                 var content = response.Content; // Raw content as string
 
@@ -673,7 +706,7 @@ namespace fb_reg
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotmail);
 
-
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
                 var content = response.Content; // Raw content as string
 

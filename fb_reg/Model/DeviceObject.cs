@@ -5,6 +5,7 @@ namespace fb_reg
 {
     public class DeviceObject
     {
+        public int countVeriBackupSuccess = 0;
         public string currentUIxml;
         public string otp1;
         public string currentIp;
@@ -35,6 +36,7 @@ namespace fb_reg
         public bool chuyenQuaVeriGmail = false;
         public bool chuyenProxy2P1 = false;
         public bool chuyenVeri4g = false;
+        public bool chuyenQuaVeriBackup = false;
 
         public bool installFb = false;
         public bool updateFb = false;

@@ -260,14 +260,14 @@ class Utility
             }
 
         }
-        public static void LogStatus(string deviceId, string status)
+        public static void LogStatus(string deviceId, string status, int sleep = 0)
         {
             DeviceObject device = DeviceManager.GetDevice(deviceId);
             if (device == null)
             {
                 return;
             }
-            LogStatus(device, status);
+            LogStatus(device, status, sleep);
         }
 
         public static void LogStatus(DeviceObject device, string text, int sleep = 0)
@@ -2565,6 +2565,13 @@ class Utility
             if (string.IsNullOrEmpty(Hotmail) || Hotmail == Constant.FAIL)
             {
                 Hotmail = Constant.FAIL + "|" + Constant.FAIL;
+            } else
+            {
+                string[] temp = Hotmail.Split('|');
+                if (temp.Length > 2)
+                {
+                    Hotmail = temp[0] + "|" + temp[1];
+                }
             }
 
             if (order.hasAddFriend)
@@ -2711,12 +2718,14 @@ class Utility
                 if (!order.NAM_SERVER)
                 {
                     bool checkOk = false;
-                    for (int i = 0; i < 4; i ++)
+                    for (int i = 0; i < 5; i ++)
                     {
                         checkOk = ServerApi.PostData(isServer, data, status, order.accType);
                         if (! checkOk)
                         {
-                            LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 300000);
+                            
+                            LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 1000);
+                            Device.RebootDevice(deviceID);
                         } else
                         {
                             LogStatus(device, "Lưu Acc Thành công ---" + i, 1000);
@@ -2750,19 +2759,19 @@ class Utility
                 }
             }
             needBackup = true;
-            if (needBackup)
+            if (!verified || needBackup)
             {
                 FbUtil.PullBackupFbNew(uid, deviceID);
                 Thread.Sleep(1000);
 
-                if (order.NAM_SERVER)
-                {
-                    NamServer.UploadFileAuth("Authentication/" + uid + ".zip", uid);
-                }
-                else
-                {
+                //if (order.NAM_SERVER)
+                //{
+                //    NamServer.UploadFileAuth("Authentication/" + uid + ".zip", uid);
+                //}
+                //else
+                //{
                     ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
-                }
+                //}
 
                 Thread.Sleep(3000);
                 try
@@ -3576,7 +3585,7 @@ class Utility
         public static string GetOtp(OrderObject order, string deviceID, string tempmailType, MailObject inMail, int time)
         {
             string code = Constant.FAIL;
-            
+            order.getOtp = true;
 
             if (inMail.password == Constant.TEMP_MAIL || inMail.password == Constant.GMAIL_SELL_GMAIL)
             {
@@ -3719,7 +3728,50 @@ class Utility
 
             return code;
         }
+        public static int GetIntFromTextbox(TextBox tt)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(tt.Text))
+                {
+                    return 0;
+                }
+                int result = Convert.ToInt32(tt.Text);
+                if (result < 0)
+                {
+                    return 0;
+                }
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Get int from textbox:" + ex.Message);
+                return 0;
+            }
+        }
 
+        public static void DelayChayChamlai()
+        {
+            if (PublicData.ChayChamLai)
+            {
+                int time = PublicData.ChayChamlaiDelay;
+                
+                if (time < 1000)
+                {
+                    time = 1000;
+                }
+                DelayRandom(time);
+            }
+        }
+        public static void DelayRandom( int time)
+        {
+            int min = (int)(time * 0.8);
+            int max = (int)(time * 1.2);
+            Random random = new Random();
+            int delay = random.Next(min, max);
+            
+            Thread.Sleep(delay);
+        }
         public static string GetCode2faInMail(MailObject inMail, int time)
         {
             string code = Constant.FAIL;

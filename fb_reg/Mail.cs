@@ -20,6 +20,7 @@ using System.Drawing;
 using Chilkat;
 using Microsoft.Graph.AuditLogs;
 using Microsoft.Graph.Groups.Item.Team.Schedule.TimeCards.Item.EndBreak;
+using Google.Apis.Util;
 
 namespace fb_reg
 {
@@ -110,6 +111,10 @@ namespace fb_reg
     {
         public static MailObject GetMail(DeviceObject device, OrderObject order, bool getTrustMail, bool getDecision, DataGridView dataGridView, bool forceGmail)
         {
+            if (!IsMailEmpty(order.currentMail))
+            {
+                return order.currentMail;
+            }
             if (order.isHotmail)
             {
                 MailObject mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
@@ -141,7 +146,6 @@ namespace fb_reg
 
                     for (int i = 0; i < count; i++)
                     {
-
                         if (getDecision)
                         {
                             Decision shouldStop = CacheServer.CheckDecision(device.deviceId);
@@ -160,27 +164,22 @@ namespace fb_reg
                             Device.Unlockphone(deviceID);
                             Thread.Sleep(1000);
                         }
-                        if (device.currentRom == "9")
+                        
+                        string xmmnmm = Utility.GetUIXml(deviceID);
+                        if (!Utility.CheckTextExist(deviceID, "nhậpemail", 1, xmmnmm)
+                            && !Utility.CheckTextExist(deviceID, "email mới", 1, xmmnmm))
                         {
-
-                        }
-                        else
-                        {
-                            string xmmnmm = Utility.GetUIXml(deviceID);
-                            if (!Utility.CheckTextExist(deviceID, "nhậpemail", 1, xmmnmm)
-                                && !Utility.CheckTextExist(deviceID, "email mới", 1, xmmnmm))
-                            {
-                                Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                                Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                                Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 20000);
+                            Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                            Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                            Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 20000);
                                 
-                                return null;
-                            }
+                            return null;
                         }
+                        
 
                         bool cache = false;
                         bool vip = false;
-                        if (i % 4 == 0)
+                        if (i % 2 == 0)
                         {
                             cache = true;
                         }
@@ -188,7 +187,7 @@ namespace fb_reg
                         {
                             vip = true;
                         }
-                        order.currentMail = GetTempmail(vip, "", order.tempmailType, PublicData.CacheServerUri, cache);
+                        order.currentMail = GetTempmail(deviceID, vip, "", order.tempmailType, PublicData.CacheServerUri, cache);
 
                         if (!IsMailEmpty(order.currentMail))
                         {
@@ -230,12 +229,12 @@ namespace fb_reg
                         dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
 
                         order.tempmailType = Constant.TEMP_GENERATOR_EMAIL;
-                        order.currentMail = Mail.GetTempmail(true, "", order.tempmailType, PublicData.CacheServerUri);
+                        order.currentMail = Mail.GetTempmail(deviceID, true, "", order.tempmailType, PublicData.CacheServerUri);
                         Thread.Sleep(2000);
                     }
                     if (!IsMailEmpty(order.currentMail))
                     {
-
+                        return order.currentMail;
                         Thread.Sleep(3000);
                     }
                     
@@ -282,13 +281,13 @@ namespace fb_reg
                     order.isHotmail = false;
                     order.tempmailType = Constant.GMAIL_SUPERTEAM;
                     Utility.LogStatus(device, "Get super gmail ");
-                    order.currentMail = Mail.GetTempmail(true, "", order.tempmailType, PublicData.CacheServerUri);
+                    order.currentMail = Mail.GetTempmail(device.deviceId, true, "", order.tempmailType, PublicData.CacheServerUri);
 
                     if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
                     {
                         order.tempmailType = Constant.TEMP_GENERATOR_1_SEC_EMAIL;
                         Utility.LogStatus(device, "Get tempmail 1 sec   ", 2000);
-                        order.currentMail = Mail.GetTempmail(true, "", order.tempmailType, PublicData.CacheServerUri);
+                        order.currentMail = Mail.GetTempmail(device.deviceId, true, "", order.tempmailType, PublicData.CacheServerUri);
 
                     }
 
@@ -795,7 +794,7 @@ namespace fb_reg
             return mail;
         }
 
-        public static MailObject GetGmailSuperGmail(bool vip, string server, bool cache = true)
+        public static MailObject GetGmailSptGmail(string deviceId, bool vip, string server, bool cache = true)
         {
             
             MailObject mail = new MailObject();
@@ -809,14 +808,20 @@ namespace fb_reg
                 mail = OutsideServer.GetGmailAllSite(vip);
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
-                    mail.message = "super gmail trực tiếp từ tool";
+                    mail.message = "gmail trực tiếp từ tool";
+                    mail.createdAt = DateTime.UtcNow;
                 }
             }
             else
             {
                 Console.WriteLine("Get mail cache thanh cong:" + mail.email);
             }
-            
+            if (!IsMailEmpty(mail) && !string.IsNullOrEmpty(deviceId) && !deviceId.Contains("Virtual"))
+            {
+                mail.deviceId = deviceId;
+                mail.pcName = Environment.MachineName;
+                CacheServer.LogMailServerCache(mail, PublicData.LogServerUri);
+            }
             return mail;
         }
 
@@ -1196,10 +1201,18 @@ namespace fb_reg
                     {
                         code = GetOtpHvl(inMail);
                     }
-
-                        if (!string.IsNullOrEmpty(code))
+                    else if (!string.IsNullOrEmpty(inMail.source) && inMail.source == "shopmailmmo")
                     {
-                        return code;
+                        code = GetOtpShopgmailmmo(inMail);
+                    }
+
+                    if (!string.IsNullOrEmpty(code))
+                    {
+                        if (code.Length == 5)
+                        {
+                            return code;
+                        }
+                        
                     }
                     Thread.Sleep(10000);
                 }
@@ -1537,7 +1550,7 @@ namespace fb_reg
             }
         }
 
-        public static MailObject GetTempmail(bool vip, string duoiMail, string tempmailType, string server, bool cache = true)
+        public static MailObject GetTempmail(string deviceId, bool vip, string duoiMail, string tempmailType, string server, bool cache = true)
         {
             MailObject dd = new MailObject();
             
@@ -1592,13 +1605,28 @@ namespace fb_reg
             }
             else if (tempmailType == Constant.GMAIL_SUPERTEAM)
             {
-                dd = GetGmailSuperGmail(vip, server, cache);
+                dd = GetGmailSptGmail(deviceId, vip, server, cache);
             }
             else if (tempmailType == Constant.GMAIL_48h)
             {
                 dd = GetMail48hGmail();
             }
-
+            if (dd!= null && dd.createdAt != null)
+            {
+                try
+                {
+                    DateTime local = TimeZoneInfo.ConvertTimeFromUtc(dd.createdAt, TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"));
+                    if (local.AddMinutes(12).CompareTo(DateTime.Now) < 0)
+                    {
+                        Utility.LogStatus(deviceId, "Mail hết hạn:" + dd.email + "|" + dd.createdAt);
+                        dd.status = Constant.FAIL;
+                        return null;
+                    }
+                }
+                catch (Exception ex)
+                {
+                }
+            }
             return dd;
         }
     }

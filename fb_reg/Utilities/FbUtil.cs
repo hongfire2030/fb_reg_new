@@ -1420,7 +1420,16 @@ namespace fb_reg
                 string dddd = GetUIXml(device.deviceId);
                 if (CheckTextExist(deviceID, new string[] { "tạotàikhoảnmớicheckable", "createnewAccountCheckable" }))
                 {
+                    LogStatus(device, "Đã vào màn hình chính fb, tiếp tục check mạng : " + i);
                     break;
+                }
+                if (CheckTextExist(deviceID, "kếtnốivớibạnbè", 1, dddd))
+                {
+                    LogStatus(device, "Giao diện login mới - kết nối với bạn bè - chờ 5s");
+                    WaitAndTapXML(deviceID, 1, "tôi có tài khoản rồi");
+                    Thread.Sleep(1000);
+                    return true;
+                    
                 }
             }
 
@@ -1430,7 +1439,7 @@ namespace fb_reg
                 bool check = false;
                 for (int i = 0;i < 10; i ++)
                 {
-                    if (CheckTextExist(deviceID, new string[] { "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable" }))
+                    if (CheckTextExist(deviceID, new string[] { "tạo tài khoản mới", "bắt đầu", "nodeindex0textđồngý&amp;tiếptụcresourceidclassandroidviewviewpackagecomfacebookkatanacontentdescđồngý&amp;tiếptụccheckable" }))
                     {
                         check = true;
                         break;
@@ -1439,6 +1448,7 @@ namespace fb_reg
                 if (check)
                 {
                     Device.Back(deviceID);
+                    Thread.Sleep(1000);
                     for (int i = 0; i < 2; i ++)
                     {
                         xmlCheck = GetUIXml(deviceID);
@@ -1447,6 +1457,7 @@ namespace fb_reg
 
                             if (WaitAndTapXML(deviceID, 1, "englishusresourceid", xmlCheck))
                             {
+                                LogStatus(device, "Chuyển sang ngôn ngữ tiếng việt");
                                 if (WaitAndTapXML(deviceID, 5, "tiếngviệtcheckable"))
                                 {
                                     //Thread.Sleep(1000);
@@ -1464,7 +1475,6 @@ namespace fb_reg
                             return false;
                         }
                     }
-                    
                 }
                 if (CheckTextExist(deviceID, "Bạn tên gì", 1))
                 {
@@ -1582,8 +1592,9 @@ namespace fb_reg
                             break;
                         }
                     }
-                    if (CheckTextExist(deviceID, new string[] { "tạo tài khoản", "tạotàikhoảnmớicheckable", "tạo tài khoản facebook mới", "createnewAccountCheckable" }, uixml))
+                    if (CheckTextExist(deviceID, new string[] { "bắt đầu", "tạo tài khoản", "tạotàikhoảnmớicheckable", "tạo tài khoản facebook mới", "createnewAccountCheckable" }, uixml))
                     {
+                        LogStatus(device, "Đã mở app facebook thành công ---");
                         break;
                     }
                     
@@ -1915,6 +1926,7 @@ namespace fb_reg
                     //    HDD.WriteLine(acc.note);
                     //    HDD.Close();
                     //}
+                    LogStatus(deviceID, i + " - Check live die: " + acc.uid, 2000);
                     acc = null;
                     continue;
                 }

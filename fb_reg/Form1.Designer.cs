@@ -225,6 +225,13 @@ namespace fb_reg
             this.drkDomainTextbox = new System.Windows.Forms.TextBox();
             this.nvrByDeviceCheckBox = new System.Windows.Forms.CheckBox();
             this.startButtonGroupBox = new System.Windows.Forms.GroupBox();
+            this.startVeribackupbutton = new System.Windows.Forms.Button();
+            this.stopveribackupbutton = new System.Windows.Forms.Button();
+            this.chayDoKhocheckBox = new System.Windows.Forms.CheckBox();
+            this.proxy4checkBox = new System.Windows.Forms.CheckBox();
+            this.upAvatar1checkBox = new System.Windows.Forms.CheckBox();
+            this.chaychamlaitextBox = new System.Windows.Forms.TextBox();
+            this.ChaychamcheckBox = new System.Windows.Forms.CheckBox();
             this.maxThreadGetmailtextBox = new System.Windows.Forms.TextBox();
             this.getDecisioncheckBox = new System.Windows.Forms.CheckBox();
             this.button17 = new System.Windows.Forms.Button();
@@ -245,6 +252,7 @@ namespace fb_reg
             this.getMailcheckBox = new System.Windows.Forms.CheckBox();
             this.maxMailtextBox = new System.Windows.Forms.TextBox();
             this.maxMaillabel = new System.Windows.Forms.Label();
+            this.randomVersioncheckBox = new System.Windows.Forms.CheckBox();
             this.virtualDevicetextBox = new System.Windows.Forms.TextBox();
             this.rootRom11checkBox = new System.Windows.Forms.CheckBox();
             this.docMailEducheckBox = new System.Windows.Forms.CheckBox();
@@ -298,6 +306,7 @@ namespace fb_reg
             this.regByGmailcheckBox = new System.Windows.Forms.CheckBox();
             this.checkDieStopCheckBox = new System.Windows.Forms.CheckBox();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.shopgmailmmocheckBox = new System.Windows.Forms.CheckBox();
             this.gmailUnlimitcheckBox = new System.Windows.Forms.CheckBox();
             this.checkChangeIpcheckBox = new System.Windows.Forms.CheckBox();
             this.hvlgmailcheckBox = new System.Windows.Forms.CheckBox();
@@ -349,6 +358,7 @@ namespace fb_reg
             this.avatarByCameraCheckBox = new System.Windows.Forms.CheckBox();
             this.delayAfterRegTextBox = new System.Windows.Forms.TextBox();
             this.orderGroupBox = new System.Windows.Forms.GroupBox();
+            this.ChangeBase64checkBox = new System.Windows.Forms.CheckBox();
             this.tamdungKiemTraAvatarcheckBox = new System.Windows.Forms.CheckBox();
             this.clearAccsettingsauregcheckBox = new System.Windows.Forms.CheckBox();
             this.uploadContactNewCheckbox = new System.Windows.Forms.CheckBox();
@@ -536,7 +546,6 @@ namespace fb_reg
             this.moiBusinessNhanhcheckBox = new System.Windows.Forms.CheckBox();
             this.randomMoicheckBox = new System.Windows.Forms.CheckBox();
             this.chuyenQuaveriGmailcheckBox = new System.Windows.Forms.CheckBox();
-            this.randomVersioncheckBox = new System.Windows.Forms.CheckBox();
             this.button13 = new System.Windows.Forms.Button();
             this.randomVersionSaudiecheckBox = new System.Windows.Forms.CheckBox();
             this.randomVersionAfterverifailcheckBox = new System.Windows.Forms.CheckBox();
@@ -550,6 +559,7 @@ namespace fb_reg
             this.forceRebootAfterClearcheckBox = new System.Windows.Forms.CheckBox();
             this.HideRootbutton = new System.Windows.Forms.Button();
             this.ScanDevicetimer = new System.Windows.Forms.Timer(this.components);
+            this.chuyenQuaVeriBackupcheckBox = new System.Windows.Forms.CheckBox();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView)).BeginInit();
             this.contextMenuStrip.SuspendLayout();
             this.startButtonGroupBox.SuspendLayout();
@@ -570,10 +580,10 @@ namespace fb_reg
             // 
             this.runAllBtn.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.runAllBtn.ForeColor = System.Drawing.Color.Crimson;
-            this.runAllBtn.Location = new System.Drawing.Point(7, 12);
+            this.runAllBtn.Location = new System.Drawing.Point(1259, 211);
             this.runAllBtn.Margin = new System.Windows.Forms.Padding(2, 3, 2, 3);
             this.runAllBtn.Name = "runAllBtn";
-            this.runAllBtn.Size = new System.Drawing.Size(132, 32);
+            this.runAllBtn.Size = new System.Drawing.Size(132, 55);
             this.runAllBtn.TabIndex = 2;
             this.runAllBtn.Text = "Run All Normal";
             this.runAllBtn.TextAlign = System.Drawing.ContentAlignment.TopCenter;
@@ -1934,7 +1944,7 @@ namespace fb_reg
             // randomVeriCheckBox
             // 
             this.randomVeriCheckBox.AutoSize = true;
-            this.randomVeriCheckBox.Location = new System.Drawing.Point(11, 63);
+            this.randomVeriCheckBox.Location = new System.Drawing.Point(11, 13);
             this.randomVeriCheckBox.Name = "randomVeriCheckBox";
             this.randomVeriCheckBox.Size = new System.Drawing.Size(73, 17);
             this.randomVeriCheckBox.TabIndex = 147;
@@ -2259,7 +2269,7 @@ namespace fb_reg
             // noveriCoverCheckBox
             // 
             this.noveriCoverCheckBox.AutoSize = true;
-            this.noveriCoverCheckBox.Location = new System.Drawing.Point(10, 22);
+            this.noveriCoverCheckBox.Location = new System.Drawing.Point(9, 62);
             this.noveriCoverCheckBox.Name = "noveriCoverCheckBox";
             this.noveriCoverCheckBox.Size = new System.Drawing.Size(74, 17);
             this.noveriCoverCheckBox.TabIndex = 171;
@@ -2594,6 +2604,13 @@ namespace fb_reg
             // 
             // startButtonGroupBox
             // 
+            this.startButtonGroupBox.Controls.Add(this.startVeribackupbutton);
+            this.startButtonGroupBox.Controls.Add(this.stopveribackupbutton);
+            this.startButtonGroupBox.Controls.Add(this.chayDoKhocheckBox);
+            this.startButtonGroupBox.Controls.Add(this.proxy4checkBox);
+            this.startButtonGroupBox.Controls.Add(this.upAvatar1checkBox);
+            this.startButtonGroupBox.Controls.Add(this.chaychamlaitextBox);
+            this.startButtonGroupBox.Controls.Add(this.ChaychamcheckBox);
             this.startButtonGroupBox.Controls.Add(this.maxThreadGetmailtextBox);
             this.startButtonGroupBox.Controls.Add(this.getDecisioncheckBox);
             this.startButtonGroupBox.Controls.Add(this.button17);
@@ -2610,6 +2627,7 @@ namespace fb_reg
             this.startButtonGroupBox.Controls.Add(this.getMailcheckBox);
             this.startButtonGroupBox.Controls.Add(this.maxMailtextBox);
             this.startButtonGroupBox.Controls.Add(this.maxMaillabel);
+            this.startButtonGroupBox.Controls.Add(this.randomVersioncheckBox);
             this.startButtonGroupBox.Controls.Add(this.virtualDevicetextBox);
             this.startButtonGroupBox.Controls.Add(this.rootRom11checkBox);
             this.startButtonGroupBox.Controls.Add(this.docMailEducheckBox);
@@ -2700,6 +2718,76 @@ namespace fb_reg
             this.startButtonGroupBox.TabStop = false;
             this.startButtonGroupBox.Text = "Start Button";
             // 
+            // startVeribackupbutton
+            // 
+            this.startVeribackupbutton.Location = new System.Drawing.Point(1280, 6);
+            this.startVeribackupbutton.Name = "startVeribackupbutton";
+            this.startVeribackupbutton.Size = new System.Drawing.Size(110, 23);
+            this.startVeribackupbutton.TabIndex = 348;
+            this.startVeribackupbutton.Text = "Start Veribackup";
+            this.startVeribackupbutton.UseVisualStyleBackColor = true;
+            this.startVeribackupbutton.Click += new System.EventHandler(this.startVeribackupbutton_Click);
+            // 
+            // stopveribackupbutton
+            // 
+            this.stopveribackupbutton.Location = new System.Drawing.Point(1280, 32);
+            this.stopveribackupbutton.Name = "stopveribackupbutton";
+            this.stopveribackupbutton.Size = new System.Drawing.Size(110, 23);
+            this.stopveribackupbutton.TabIndex = 347;
+            this.stopveribackupbutton.Text = "Stop Veribackup";
+            this.stopveribackupbutton.UseVisualStyleBackColor = true;
+            this.stopveribackupbutton.Click += new System.EventHandler(this.stopveribackupbutton_Click);
+            // 
+            // chayDoKhocheckBox
+            // 
+            this.chayDoKhocheckBox.AutoSize = true;
+            this.chayDoKhocheckBox.Location = new System.Drawing.Point(1016, 173);
+            this.chayDoKhocheckBox.Name = "chayDoKhocheckBox";
+            this.chayDoKhocheckBox.Size = new System.Drawing.Size(45, 17);
+            this.chayDoKhocheckBox.TabIndex = 346;
+            this.chayDoKhocheckBox.Text = "Khó";
+            this.chayDoKhocheckBox.UseVisualStyleBackColor = true;
+            // 
+            // proxy4checkBox
+            // 
+            this.proxy4checkBox.AutoSize = true;
+            this.proxy4checkBox.Location = new System.Drawing.Point(241, 168);
+            this.proxy4checkBox.Name = "proxy4checkBox";
+            this.proxy4checkBox.Size = new System.Drawing.Size(38, 17);
+            this.proxy4checkBox.TabIndex = 345;
+            this.proxy4checkBox.Text = "p4";
+            this.proxy4checkBox.UseVisualStyleBackColor = true;
+            this.proxy4checkBox.CheckedChanged += new System.EventHandler(this.proxy4checkBox_CheckedChanged);
+            // 
+            // upAvatar1checkBox
+            // 
+            this.upAvatar1checkBox.AutoSize = true;
+            this.upAvatar1checkBox.Location = new System.Drawing.Point(10, 73);
+            this.upAvatar1checkBox.Name = "upAvatar1checkBox";
+            this.upAvatar1checkBox.Size = new System.Drawing.Size(79, 17);
+            this.upAvatar1checkBox.TabIndex = 344;
+            this.upAvatar1checkBox.Text = "Upavatar 1";
+            this.upAvatar1checkBox.UseVisualStyleBackColor = true;
+            // 
+            // chaychamlaitextBox
+            // 
+            this.chaychamlaitextBox.Location = new System.Drawing.Point(85, 81);
+            this.chaychamlaitextBox.Name = "chaychamlaitextBox";
+            this.chaychamlaitextBox.Size = new System.Drawing.Size(34, 20);
+            this.chaychamlaitextBox.TabIndex = 343;
+            this.chaychamlaitextBox.Text = "1000";
+            // 
+            // ChaychamcheckBox
+            // 
+            this.ChaychamcheckBox.AutoSize = true;
+            this.ChaychamcheckBox.Location = new System.Drawing.Point(10, 89);
+            this.ChaychamcheckBox.Name = "ChaychamcheckBox";
+            this.ChaychamcheckBox.Size = new System.Drawing.Size(79, 17);
+            this.ChaychamcheckBox.TabIndex = 342;
+            this.ChaychamcheckBox.Text = "Chạy chậm";
+            this.ChaychamcheckBox.UseVisualStyleBackColor = true;
+            this.ChaychamcheckBox.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged_6);
+            // 
             // maxThreadGetmailtextBox
             // 
             this.maxThreadGetmailtextBox.Location = new System.Drawing.Point(151, 8);
@@ -2712,7 +2800,7 @@ namespace fb_reg
             // 
             this.getDecisioncheckBox.AutoSize = true;
             this.getDecisioncheckBox.ForeColor = System.Drawing.Color.Red;
-            this.getDecisioncheckBox.Location = new System.Drawing.Point(1216, 18);
+            this.getDecisioncheckBox.Location = new System.Drawing.Point(1115, 5);
             this.getDecisioncheckBox.Name = "getDecisioncheckBox";
             this.getDecisioncheckBox.Size = new System.Drawing.Size(87, 17);
             this.getDecisioncheckBox.TabIndex = 340;
@@ -2906,6 +2994,17 @@ namespace fb_reg
             this.maxMaillabel.TabIndex = 326;
             this.maxMaillabel.Text = "Max Mail";
             // 
+            // randomVersioncheckBox
+            // 
+            this.randomVersioncheckBox.AutoSize = true;
+            this.randomVersioncheckBox.Location = new System.Drawing.Point(10, 56);
+            this.randomVersioncheckBox.Name = "randomVersioncheckBox";
+            this.randomVersioncheckBox.Size = new System.Drawing.Size(104, 17);
+            this.randomVersioncheckBox.TabIndex = 291;
+            this.randomVersioncheckBox.Text = "Random Version";
+            this.randomVersioncheckBox.UseVisualStyleBackColor = true;
+            this.randomVersioncheckBox.CheckedChanged += new System.EventHandler(this.randomVersioncheckBox_CheckedChanged);
+            // 
             // virtualDevicetextBox
             // 
             this.virtualDevicetextBox.Font = new System.Drawing.Font("Microsoft Sans Serif", 20.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
@@ -2945,6 +3044,7 @@ namespace fb_reg
             this.p2ProxycheckBox.TabIndex = 322;
             this.p2ProxycheckBox.Text = "P2";
             this.p2ProxycheckBox.UseVisualStyleBackColor = true;
+            this.p2ProxycheckBox.CheckedChanged += new System.EventHandler(this.p2ProxycheckBox_CheckedChanged);
             // 
             // soLanLayMailtextBox
             // 
@@ -3040,12 +3140,13 @@ namespace fb_reg
             // proxyKeycheckBox
             // 
             this.proxyKeycheckBox.AutoSize = true;
-            this.proxyKeycheckBox.Location = new System.Drawing.Point(241, 175);
+            this.proxyKeycheckBox.Location = new System.Drawing.Point(241, 140);
             this.proxyKeycheckBox.Name = "proxyKeycheckBox";
             this.proxyKeycheckBox.Size = new System.Drawing.Size(44, 17);
             this.proxyKeycheckBox.TabIndex = 312;
             this.proxyKeycheckBox.Text = "Key";
             this.proxyKeycheckBox.UseVisualStyleBackColor = true;
+            this.proxyKeycheckBox.CheckedChanged += new System.EventHandler(this.proxyKeycheckBox_CheckedChanged);
             // 
             // ipRangeLantextBox
             // 
@@ -3087,6 +3188,7 @@ namespace fb_reg
             this.p3ProxycheckBox.TabIndex = 308;
             this.p3ProxycheckBox.Text = "P3";
             this.p3ProxycheckBox.UseVisualStyleBackColor = true;
+            this.p3ProxycheckBox.CheckedChanged += new System.EventHandler(this.p3ProxycheckBox_CheckedChanged);
             // 
             // p1ProxycheckBox
             // 
@@ -3097,6 +3199,7 @@ namespace fb_reg
             this.p1ProxycheckBox.TabIndex = 307;
             this.p1ProxycheckBox.Text = "P1";
             this.p1ProxycheckBox.UseVisualStyleBackColor = true;
+            this.p1ProxycheckBox.CheckedChanged += new System.EventHandler(this.p1ProxycheckBox_CheckedChanged);
             // 
             // proxyWificheckBox
             // 
@@ -3303,14 +3406,13 @@ namespace fb_reg
             // showIpcheckBox
             // 
             this.showIpcheckBox.AutoSize = true;
-            this.showIpcheckBox.Checked = true;
-            this.showIpcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.showIpcheckBox.Location = new System.Drawing.Point(280, 196);
             this.showIpcheckBox.Name = "showIpcheckBox";
             this.showIpcheckBox.Size = new System.Drawing.Size(66, 17);
             this.showIpcheckBox.TabIndex = 280;
             this.showIpcheckBox.Text = "Show IP";
             this.showIpcheckBox.UseVisualStyleBackColor = true;
+            this.showIpcheckBox.CheckedChanged += new System.EventHandler(this.showIpcheckBox_CheckedChanged);
             // 
             // reinstallSaudiecheckBox
             // 
@@ -3456,6 +3558,7 @@ namespace fb_reg
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.shopgmailmmocheckBox);
             this.groupBox1.Controls.Add(this.gmailUnlimitcheckBox);
             this.groupBox1.Controls.Add(this.checkChangeIpcheckBox);
             this.groupBox1.Controls.Add(this.hvlgmailcheckBox);
@@ -3494,6 +3597,17 @@ namespace fb_reg
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Tempmail";
             // 
+            // shopgmailmmocheckBox
+            // 
+            this.shopgmailmmocheckBox.AutoSize = true;
+            this.shopgmailmmocheckBox.Location = new System.Drawing.Point(283, 44);
+            this.shopgmailmmocheckBox.Name = "shopgmailmmocheckBox";
+            this.shopgmailmmocheckBox.Size = new System.Drawing.Size(97, 17);
+            this.shopgmailmmocheckBox.TabIndex = 293;
+            this.shopgmailmmocheckBox.Text = "Shopgmailmmo";
+            this.shopgmailmmocheckBox.UseVisualStyleBackColor = true;
+            this.shopgmailmmocheckBox.CheckedChanged += new System.EventHandler(this.shopgmailmmocheckBox_CheckedChanged);
+            // 
             // gmailUnlimitcheckBox
             // 
             this.gmailUnlimitcheckBox.AutoSize = true;
@@ -3518,8 +3632,6 @@ namespace fb_reg
             // hvlgmailcheckBox
             // 
             this.hvlgmailcheckBox.AutoSize = true;
-            this.hvlgmailcheckBox.Checked = true;
-            this.hvlgmailcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.hvlgmailcheckBox.Location = new System.Drawing.Point(202, 62);
             this.hvlgmailcheckBox.Name = "hvlgmailcheckBox";
             this.hvlgmailcheckBox.Size = new System.Drawing.Size(66, 17);
@@ -3531,8 +3643,6 @@ namespace fb_reg
             // shopgmailLocalcheckBox
             // 
             this.shopgmailLocalcheckBox.AutoSize = true;
-            this.shopgmailLocalcheckBox.Checked = true;
-            this.shopgmailLocalcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.shopgmailLocalcheckBox.Location = new System.Drawing.Point(283, 62);
             this.shopgmailLocalcheckBox.Name = "shopgmailLocalcheckBox";
             this.shopgmailLocalcheckBox.Size = new System.Drawing.Size(98, 17);
@@ -3544,6 +3654,8 @@ namespace fb_reg
             // sptVipcheckBox
             // 
             this.sptVipcheckBox.AutoSize = true;
+            this.sptVipcheckBox.Checked = true;
+            this.sptVipcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.sptVipcheckBox.Location = new System.Drawing.Point(202, 79);
             this.sptVipcheckBox.Name = "sptVipcheckBox";
             this.sptVipcheckBox.Size = new System.Drawing.Size(57, 17);
@@ -3555,6 +3667,8 @@ namespace fb_reg
             // sptLocalcheckBox
             // 
             this.sptLocalcheckBox.AutoSize = true;
+            this.sptLocalcheckBox.Checked = true;
+            this.sptLocalcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.sptLocalcheckBox.Location = new System.Drawing.Point(202, 98);
             this.sptLocalcheckBox.Name = "sptLocalcheckBox";
             this.sptLocalcheckBox.Size = new System.Drawing.Size(71, 17);
@@ -3566,6 +3680,8 @@ namespace fb_reg
             // dvgmNormalcheckBox
             // 
             this.dvgmNormalcheckBox.AutoSize = true;
+            this.dvgmNormalcheckBox.Checked = true;
+            this.dvgmNormalcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.dvgmNormalcheckBox.Location = new System.Drawing.Point(283, 98);
             this.dvgmNormalcheckBox.Name = "dvgmNormalcheckBox";
             this.dvgmNormalcheckBox.Size = new System.Drawing.Size(90, 17);
@@ -3610,6 +3726,8 @@ namespace fb_reg
             // dvgmcheckVipBox
             // 
             this.dvgmcheckVipBox.AutoSize = true;
+            this.dvgmcheckVipBox.Checked = true;
+            this.dvgmcheckVipBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.dvgmcheckVipBox.Location = new System.Drawing.Point(283, 79);
             this.dvgmcheckVipBox.Name = "dvgmcheckVipBox";
             this.dvgmcheckVipBox.Size = new System.Drawing.Size(72, 17);
@@ -3949,11 +4067,11 @@ namespace fb_reg
             // 
             // delayAfterDieTextBox
             // 
-            this.delayAfterDieTextBox.Location = new System.Drawing.Point(1164, 211);
+            this.delayAfterDieTextBox.Location = new System.Drawing.Point(1168, 211);
             this.delayAfterDieTextBox.Name = "delayAfterDieTextBox";
-            this.delayAfterDieTextBox.Size = new System.Drawing.Size(100, 20);
+            this.delayAfterDieTextBox.Size = new System.Drawing.Size(41, 20);
             this.delayAfterDieTextBox.TabIndex = 232;
-            this.delayAfterDieTextBox.Text = "1";
+            this.delayAfterDieTextBox.Text = "300";
             // 
             // label14
             // 
@@ -3991,7 +4109,7 @@ namespace fb_reg
             this.releaseNoteLabel.Name = "releaseNoteLabel";
             this.releaseNoteLabel.Size = new System.Drawing.Size(112, 46);
             this.releaseNoteLabel.TabIndex = 226;
-            this.releaseNoteLabel.Text = "2126";
+            this.releaseNoteLabel.Text = "2218";
             this.releaseNoteLabel.Click += new System.EventHandler(this.releaseNoteLabel_Click);
             // 
             // forceDungMayCheckBox
@@ -4018,12 +4136,13 @@ namespace fb_reg
             // 
             this.delayAfterRegTextBox.Location = new System.Drawing.Point(1168, 166);
             this.delayAfterRegTextBox.Name = "delayAfterRegTextBox";
-            this.delayAfterRegTextBox.Size = new System.Drawing.Size(100, 20);
+            this.delayAfterRegTextBox.Size = new System.Drawing.Size(41, 20);
             this.delayAfterRegTextBox.TabIndex = 227;
-            this.delayAfterRegTextBox.Text = "1";
+            this.delayAfterRegTextBox.Text = "2";
             // 
             // orderGroupBox
             // 
+            this.orderGroupBox.Controls.Add(this.ChangeBase64checkBox);
             this.orderGroupBox.Controls.Add(this.tamdungKiemTraAvatarcheckBox);
             this.orderGroupBox.Controls.Add(this.clearAccsettingsauregcheckBox);
             this.orderGroupBox.Controls.Add(this.uploadContactNewCheckbox);
@@ -4038,6 +4157,17 @@ namespace fb_reg
             this.orderGroupBox.TabStop = false;
             this.orderGroupBox.Text = "Order";
             // 
+            // ChangeBase64checkBox
+            // 
+            this.ChangeBase64checkBox.AutoSize = true;
+            this.ChangeBase64checkBox.Location = new System.Drawing.Point(70, 12);
+            this.ChangeBase64checkBox.Name = "ChangeBase64checkBox";
+            this.ChangeBase64checkBox.Size = new System.Drawing.Size(102, 17);
+            this.ChangeBase64checkBox.TabIndex = 30;
+            this.ChangeBase64checkBox.Text = "Change Base64";
+            this.ChangeBase64checkBox.UseVisualStyleBackColor = true;
+            this.ChangeBase64checkBox.CheckedChanged += new System.EventHandler(this.checkBox1_CheckedChanged_7);
+            // 
             // tamdungKiemTraAvatarcheckBox
             // 
             this.tamdungKiemTraAvatarcheckBox.AutoSize = true;
@@ -4051,7 +4181,7 @@ namespace fb_reg
             // clearAccsettingsauregcheckBox
             // 
             this.clearAccsettingsauregcheckBox.AutoSize = true;
-            this.clearAccsettingsauregcheckBox.Location = new System.Drawing.Point(82, 42);
+            this.clearAccsettingsauregcheckBox.Location = new System.Drawing.Point(70, 48);
             this.clearAccsettingsauregcheckBox.Name = "clearAccsettingsauregcheckBox";
             this.clearAccsettingsauregcheckBox.Size = new System.Drawing.Size(160, 17);
             this.clearAccsettingsauregcheckBox.TabIndex = 28;
@@ -4063,7 +4193,7 @@ namespace fb_reg
             this.uploadContactNewCheckbox.AutoSize = true;
             this.uploadContactNewCheckbox.Checked = true;
             this.uploadContactNewCheckbox.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.uploadContactNewCheckbox.Location = new System.Drawing.Point(82, 13);
+            this.uploadContactNewCheckbox.Location = new System.Drawing.Point(70, 31);
             this.uploadContactNewCheckbox.Name = "uploadContactNewCheckbox";
             this.uploadContactNewCheckbox.Size = new System.Drawing.Size(63, 17);
             this.uploadContactNewCheckbox.TabIndex = 27;
@@ -5487,6 +5617,8 @@ namespace fb_reg
             // sleep1MinuteCheckBox
             // 
             this.sleep1MinuteCheckBox.AutoSize = true;
+            this.sleep1MinuteCheckBox.Checked = true;
+            this.sleep1MinuteCheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.sleep1MinuteCheckBox.Location = new System.Drawing.Point(1080, 57);
             this.sleep1MinuteCheckBox.Name = "sleep1MinuteCheckBox";
             this.sleep1MinuteCheckBox.Size = new System.Drawing.Size(81, 17);
@@ -5511,7 +5643,7 @@ namespace fb_reg
             this.delayTimeTextBox.Name = "delayTimeTextBox";
             this.delayTimeTextBox.Size = new System.Drawing.Size(35, 20);
             this.delayTimeTextBox.TabIndex = 225;
-            this.delayTimeTextBox.Text = "250";
+            this.delayTimeTextBox.Text = "1";
             // 
             // label16
             // 
@@ -6055,7 +6187,7 @@ namespace fb_reg
             // chuyenQuaMoiKatanacheckBox
             // 
             this.chuyenQuaMoiKatanacheckBox.AutoSize = true;
-            this.chuyenQuaMoiKatanacheckBox.Location = new System.Drawing.Point(1411, 239);
+            this.chuyenQuaMoiKatanacheckBox.Location = new System.Drawing.Point(1411, 244);
             this.chuyenQuaMoiKatanacheckBox.Name = "chuyenQuaMoiKatanacheckBox";
             this.chuyenQuaMoiKatanacheckBox.Size = new System.Drawing.Size(138, 17);
             this.chuyenQuaMoiKatanacheckBox.TabIndex = 287;
@@ -6087,22 +6219,12 @@ namespace fb_reg
             // chuyenQuaveriGmailcheckBox
             // 
             this.chuyenQuaveriGmailcheckBox.AutoSize = true;
-            this.chuyenQuaveriGmailcheckBox.Location = new System.Drawing.Point(1411, 254);
+            this.chuyenQuaveriGmailcheckBox.Location = new System.Drawing.Point(1411, 259);
             this.chuyenQuaveriGmailcheckBox.Name = "chuyenQuaveriGmailcheckBox";
             this.chuyenQuaveriGmailcheckBox.Size = new System.Drawing.Size(130, 17);
             this.chuyenQuaveriGmailcheckBox.TabIndex = 290;
             this.chuyenQuaveriGmailcheckBox.Text = "Chuyển qua veri gmail";
             this.chuyenQuaveriGmailcheckBox.UseVisualStyleBackColor = true;
-            // 
-            // randomVersioncheckBox
-            // 
-            this.randomVersioncheckBox.AutoSize = true;
-            this.randomVersioncheckBox.Location = new System.Drawing.Point(1411, 209);
-            this.randomVersioncheckBox.Name = "randomVersioncheckBox";
-            this.randomVersioncheckBox.Size = new System.Drawing.Size(104, 17);
-            this.randomVersioncheckBox.TabIndex = 291;
-            this.randomVersioncheckBox.Text = "Random Version";
-            this.randomVersioncheckBox.UseVisualStyleBackColor = true;
             // 
             // button13
             // 
@@ -6146,7 +6268,7 @@ namespace fb_reg
             // chuyenquanvrcheckBox
             // 
             this.chuyenquanvrcheckBox.AutoSize = true;
-            this.chuyenquanvrcheckBox.Location = new System.Drawing.Point(1411, 270);
+            this.chuyenquanvrcheckBox.Location = new System.Drawing.Point(1411, 274);
             this.chuyenquanvrcheckBox.Name = "chuyenquanvrcheckBox";
             this.chuyenquanvrcheckBox.Size = new System.Drawing.Size(101, 17);
             this.chuyenquanvrcheckBox.TabIndex = 307;
@@ -6166,7 +6288,7 @@ namespace fb_reg
             // chuyenQuaHotmailcheckBox
             // 
             this.chuyenQuaHotmailcheckBox.AutoSize = true;
-            this.chuyenQuaHotmailcheckBox.Location = new System.Drawing.Point(1411, 224);
+            this.chuyenQuaHotmailcheckBox.Location = new System.Drawing.Point(1411, 229);
             this.chuyenQuaHotmailcheckBox.Name = "chuyenQuaHotmailcheckBox";
             this.chuyenQuaHotmailcheckBox.Size = new System.Drawing.Size(119, 17);
             this.chuyenQuaHotmailcheckBox.TabIndex = 309;
@@ -6218,6 +6340,16 @@ namespace fb_reg
             this.ScanDevicetimer.Interval = 30000;
             this.ScanDevicetimer.Tick += new System.EventHandler(this.ScanDevicetimer_Tick);
             // 
+            // chuyenQuaVeriBackupcheckBox
+            // 
+            this.chuyenQuaVeriBackupcheckBox.AutoSize = true;
+            this.chuyenQuaVeriBackupcheckBox.Location = new System.Drawing.Point(1411, 213);
+            this.chuyenQuaVeriBackupcheckBox.Name = "chuyenQuaVeriBackupcheckBox";
+            this.chuyenQuaVeriBackupcheckBox.Size = new System.Drawing.Size(142, 17);
+            this.chuyenQuaVeriBackupcheckBox.TabIndex = 336;
+            this.chuyenQuaVeriBackupcheckBox.Text = "Chuyển qua veri backup";
+            this.chuyenQuaVeriBackupcheckBox.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.None;
@@ -6225,6 +6357,7 @@ namespace fb_reg
             this.AutoValidate = System.Windows.Forms.AutoValidate.EnableAllowFocusChange;
             this.BackColor = System.Drawing.SystemColors.ActiveCaption;
             this.ClientSize = new System.Drawing.Size(1924, 1061);
+            this.Controls.Add(this.chuyenQuaVeriBackupcheckBox);
             this.Controls.Add(this.HideRootbutton);
             this.Controls.Add(this.forceRebootAfterClearcheckBox);
             this.Controls.Add(this.button16);
@@ -6243,7 +6376,6 @@ namespace fb_reg
             this.Controls.Add(this.chuyenHotmailNhanhcheckBox);
             this.Controls.Add(this.button13);
             this.Controls.Add(this.gmailOtpRadioButton);
-            this.Controls.Add(this.randomVersioncheckBox);
             this.Controls.Add(this.chuyenQuaveriGmailcheckBox);
             this.Controls.Add(this.sellGmailServerradioButton);
             this.Controls.Add(this.randomMoicheckBox);
@@ -6913,6 +7045,16 @@ namespace fb_reg
         private System.Windows.Forms.CheckBox veriDirectGmailcheckBox;
         private System.Windows.Forms.CheckBox gmailUnlimitcheckBox;
         private System.Windows.Forms.TextBox maxThreadGetmailtextBox;
+        private System.Windows.Forms.CheckBox shopgmailmmocheckBox;
+        private System.Windows.Forms.CheckBox ChaychamcheckBox;
+        private System.Windows.Forms.TextBox chaychamlaitextBox;
+        private System.Windows.Forms.CheckBox upAvatar1checkBox;
+        private System.Windows.Forms.CheckBox ChangeBase64checkBox;
+        private System.Windows.Forms.CheckBox proxy4checkBox;
+        private System.Windows.Forms.CheckBox chuyenQuaVeriBackupcheckBox;
+        private System.Windows.Forms.CheckBox chayDoKhocheckBox;
+        private System.Windows.Forms.Button stopveribackupbutton;
+        private System.Windows.Forms.Button startVeribackupbutton;
     }
 }
 

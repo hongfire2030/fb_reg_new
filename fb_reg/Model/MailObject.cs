@@ -8,6 +8,9 @@ namespace fb_reg
 {
     public class MailObject
     {
+        public DateTime createdAt;
+        public string pcName;
+        public string deviceId;
         public int mailCount;
         public string mailWeb;
         public string email;
@@ -29,7 +32,8 @@ namespace fb_reg
         public MailRepository mailRepository;
         public string toString()
         {
-            return email + "|" + password;
+            return email + "|" + password + "|" + refreshToken + "|"
+                + clientId + "|" + key + "|" + type + "|" + pcName + "|" + deviceId + "|" +source ;
         }
         public MailObject()
         {
@@ -40,6 +44,7 @@ namespace fb_reg
             clientId = "";
             string mailWeb = "";
             otpVandong = false;
+            createdAt = DateTime.UtcNow;
         }
     }
 }

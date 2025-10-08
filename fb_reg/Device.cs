@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -308,6 +309,34 @@ namespace fb_reg
             return version;
         }
 
+        public static bool CheckActiveDevice(string deviceID)
+        {
+            string checkfb = Device.GetVersionFB(deviceID);
+
+            if (string.IsNullOrEmpty(checkfb))
+            {
+                Thread.Sleep(2000);
+                checkfb = Device.GetVersionFB(deviceID);
+
+                if (string.IsNullOrEmpty(checkfb))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+        public static bool CheckKeyboardShow(string deviceID)
+        {
+            string cmd = string.Format(CONSOLE_ADB + "shell \"dumpsys input_method | grep mInputShown\"", deviceID);
+            string version = ExecuteCMD(cmd);
+            try
+            {
+                version = Regex.Match(version, "mInputShown=(.*?)\r\n").Groups[1].ToString();
+            }
+            catch { }
+
+            return version == "true";
+        }
         public static string GetVersionFBLite(string deviceID)
         {
             string cmd = string.Format(CONSOLE_ADB + "shell \"dumpsys package com.facebook.lite | grep versionName\"", deviceID);
@@ -522,6 +551,10 @@ namespace fb_reg
 
         public static string GetPublicIpSmartProxy(string deviceID)
         {
+            if (! PublicData.showIP)
+            {
+                return "Không lấy ip";
+            }
             string cmd = string.Format(CONSOLE_ADB + "shell su -c 'curl http://ip.smartproxy.com/json'", deviceID);
             string temp = ExecuteCMD(cmd);
 
@@ -542,8 +575,10 @@ namespace fb_reg
             string cityName = cityNameMatch.Groups[1].ToString();
             var countryNameMatch = cityNameMatch.NextMatch();
             string countryName = countryNameMatch.Groups[1].ToString();
-            return  Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString()+ "|" + cityName + "|" + Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString();
+            string res =  Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString()+ "|" + cityName + "|" + Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString();
+            Utility.LogStatus(deviceID, "smartproxy: " + res);
 
+            return res;
             //if (data != null)
             //{
             //    return data.country.code + "|" + data.country.name + "|" + data.country.continent + "|" + data.isp.isp + "|" + data.isp.asn + "|" + data.isp.domain + "|" + data.city.name + "|" + data.city.code + "|" + data.proxy.ip;
@@ -797,6 +832,7 @@ namespace fb_reg
 
             device.adbStatus = Constant.ADB_DEVICE_NORMAL;
             device.deviceId = DeviceManager.GetRealDeviceId(deviceID);
+
         }
         public static bool WaitForBootComplete(string deviceId = "", int timeoutSeconds = 60)
         {
@@ -1265,31 +1301,115 @@ namespace fb_reg
             }
             return true;
         }
+        public static string GenerateRandomString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            Random random = new Random();
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[random.Next(s.Length)]).ToArray());
+        }
+        public static string ChangeBase64(string base64Input)
+        {
+            try
+            {
+                if (!PublicData.ChangeBase64)
+                {
+                    return base64Input;
+                }
+                // 2. Chuyển base64 thành ảnh
+                byte[] imageBytes = Convert.FromBase64String(base64Input);
+                using (MemoryStream ms = new MemoryStream(imageBytes))
+                using (Bitmap bitmap = new Bitmap(ms))
+                {
+                    string randomText = GenerateRandomString(2) + Utility.FemaleName.OrderBy(x => Guid.NewGuid()).FirstOrDefault() + GenerateRandomString(6);
 
+                    using (Graphics g = Graphics.FromImage(bitmap))
+                    {
+                        Random rand = new Random();
+                        // Kích thước ảnh
+                        int imgW = bitmap.Width;
+                        int imgH = bitmap.Height;
+
+                        // Font kích thước khoảng 5% chiều cao ảnh
+                        float fontSize = imgH * 0.03f;
+                        Font font = new Font("Arial", fontSize, FontStyle.Bold);
+
+                        // Đo kích thước thực tế của chuỗi
+                        SizeF textSize = g.MeasureString(randomText, font);
+
+                        // Tính tọa độ ngẫu nhiên, đảm bảo không bị vượt khỏi ảnh
+                        float maxX = Math.Max(1, imgW - textSize.Width);
+                        float maxY = Math.Max(1, imgH - textSize.Height);
+                        float x = (float)(rand.NextDouble() * maxX);
+                        float y = (float)(rand.NextDouble() * maxY);
+
+                        // Màu chữ ngẫu nhiên
+                        Color randomColor = Color.FromArgb(rand.Next(100, 255), rand.Next(100, 255), rand.Next(100, 255));
+                        using (Brush brush = new SolidBrush(randomColor))
+                        {
+                            g.DrawString(randomText, font, brush, new PointF(x, y));
+                        }
+
+                        // Encode lại ảnh ra base64
+                        using (MemoryStream msOut = new MemoryStream())
+                        {
+                            bitmap.Save(msOut, ImageFormat.Png);
+                            return Convert.ToBase64String(msOut.ToArray());
+
+                        }
+                    }
+                }
+            } catch (Exception e)
+            {
+                throw new Exception("Lỗi khi chuyển đổi base64: " + e.Message);
+            }
+            
+            return "";
+        }
+        
 
         public static bool PushAvatar(string deviceID, OrderObject order)
         {
-
-            if (order.pushAvatar)
+            try
             {
-                return true;
-            }
-            Device.DeleteAllScreenshot(deviceID);
+                if (order.pushAvatar)
+                {
+                    return true;
+                }
+                DeleteAllScreenshot(deviceID);
 
 
-            AvatarObject cacheName = CacheServer.GetAvatarLocalCache( PublicData.CacheServerUri, order.gender, deviceID);
-
-            if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
-            {
-                Thread.Sleep(10000);
+                AvatarObject cacheName = CacheServer.GetAvatarLocalCache(PublicData.CacheServerUri, order.gender, deviceID);
+                for (int i = 0; i < 3; i++)
+                {
+                    string outBase64 = ChangeBase64(cacheName.base64);
+                    if (!string.IsNullOrEmpty(outBase64))
+                    {
+                        cacheName.base64 = outBase64;
+                        break;
+                    }
+                    else
+                    {
+                        cacheName = CacheServer.GetAvatarLocalCache(PublicData.CacheServerUri, order.gender, deviceID);
+                    }
+                }
                 if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
                 {
-                    return false;
+                    Thread.Sleep(10000);
+                    if (!PushBase64ToDeviceAndDecode(deviceID, cacheName.base64, "/sdcard/Download/0avatar.png"))
+                    {
+                        return false;
+                    }
                 }
-            }
 
-            order.pushAvatar = true;
-            return true;
+                order.pushAvatar = true;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Utility.LogStatus(deviceID, "Lỗi khi push avatar: " + e.Message);
+                return false;
+            }
         }
         public static void PushCoverAvatar(string deviceID, OrderObject order)
         {
@@ -1645,7 +1765,7 @@ namespace fb_reg
             Device.PermissionReadContact(deviceID);
             Device.PermissionCallPhone(deviceID);
             Device.PermissionReadPhoneState(deviceID);
-            Device.PermissionCamera(deviceID);
+            //Device.PermissionCamera(deviceID);
             string cmd = string.Format(CONSOLE_ADB + " shell am start -a android.intent.action.VIEW -d fb://requests", deviceID);
             ExecuteCMD(cmd);
 
@@ -1830,6 +1950,7 @@ namespace fb_reg
                 processStartInfo.RedirectStandardInput = true;
                 processStartInfo.RedirectStandardOutput = true;
                 process.StartInfo = processStartInfo;
+                //process.WaitForExit(600000);
                 //process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding(866);
 
                 //if (!string.IsNullOrEmpty(deviceID) && deviceID.Contains("5555"))
@@ -1839,7 +1960,7 @@ namespace fb_reg
                 //process.StandardInput.Flush();
                 //process.StandardInput.Close();
                 //}
-                
+
 
                 process.Start();
                 process.StandardInput.WriteLine(cmdCommand);
@@ -1944,24 +2065,32 @@ namespace fb_reg
         public static List<string> GetDevices()
         {
             List<string> list = new List<string>();
-            string input = ExecuteCMD("adb devices");
-            string pattern = "(?<=List of devices attached)([^\\n]*\\n+)+";
-            MatchCollection matchCollection = Regex.Matches(input, pattern, RegexOptions.Singleline);
-            bool flag = matchCollection.Count > 0;
-            if (flag)
+            try
             {
-                string value = matchCollection[0].Groups[0].Value;
-                string[] array = Regex.Split(value, "\r\n");
-                foreach (string text in array)
+                string input = ExecuteCMD("adb devices");
+                string pattern = "(?<=List of devices attached)([^\\n]*\\n+)+";
+                MatchCollection matchCollection = Regex.Matches(input, pattern, RegexOptions.Singleline);
+                bool flag = matchCollection.Count > 0;
+                if (flag)
                 {
-                    bool flag2 = !string.IsNullOrEmpty(text) && text != " ";
-                    if (flag2)
+                    string value = matchCollection[0].Groups[0].Value;
+                    string[] array = Regex.Split(value, "\r\n");
+                    foreach (string text in array)
                     {
-                        string text2 = text.Trim().Replace("device", "");
-                        list.Add(text2.Trim());
+                        bool flag2 = !string.IsNullOrEmpty(text) && text != " ";
+                        if (flag2)
+                        {
+                            string text2 = text.Trim().Replace("device", "");
+                            list.Add(text2.Trim());
+                        }
                     }
                 }
-            }
+            } catch(Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return list;
+            }   
+            
             return list;
         }
         public static List<string> GetLanDevices(string range)

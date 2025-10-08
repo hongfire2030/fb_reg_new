@@ -4,17 +4,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Web.UI.WebControls;
 using System.Windows.Forms;
 
 namespace fb_reg.RequestApi
 {
     public static class PublicData
     {
+        public static int countSuccessVeribackup = 0;
+        public static bool showIP = false;
+        public static bool ChangeBase64 = false;
         public static bool ForceHotmail = false;
         public static bool ForceGmail = false;
         public static DataGridView dataGridView;
         public static List<DeviceObject> listDeviceObject = new List<DeviceObject>();
         public static string CacheServerUri = "http://hes09ez92az.sn.mynetname.net:8081";
+        public static string LogServerUri = "http://hes09ez92az.sn.mynetname.net:8082";
         public static string AccessTokenSuperGmailVip = "Y10UF406JFC27BEV";
 
         public static string AccessTokenSuperGmailNormal = "GYTR1AOXBYVCGZBX";
@@ -22,8 +27,8 @@ namespace fb_reg.RequestApi
         public static string AccessTokenSuperGmailCurrent = "GYTR1AOXBYVCGZBX";
 
         public static string AccessTokenDvgmVip = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ";
-        public static string AccessTokenDvgmNormal = "aFRHZyHBxFrlRd3vY6V0pV2DPuyKSsDR";
-        public static string AccessTokenDvgmCurrent = "aFRHZyHBxFrlRd3vY6V0pV2DPuyKSsDR";
+        public static string AccessTokenDvgmNormal = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ";
+        public static string AccessTokenDvgmCurrent = "PtcRfCJe0UjBk4iJ2umU98ZnE7rzp0sJ";
 
         public static int maxMail = 1;
 
@@ -36,14 +41,16 @@ namespace fb_reg.RequestApi
 
         public static string AccessTokenOtpCheap = "xjPDwF4LDnnJPquFRToQ";
         public static string AccessTokengmailHvl = "HkGJioJy38Ilxpfw96ax9A2wcZxk3CMY1YeNzTyMxo";
+        public static string AccessTokengmailShopgmailmmo = "he88E0i86xjL8Z27zbGk1nDDDm3vKixK";
         public static bool GetMailThuesim = false;
         public static bool GetMailThuesimVip = false;
-        public static bool GetMailDvgm = false;
-        public static bool GetMailDvgmNormal = false;
-        public static bool GetMailSptLocal = false;
-        public static bool GetMailSptNormal = false;
-        public static bool GetShopgmailLocal = true;
-        public static bool GetHvlMaillocal = true;
+        public static bool GetMailDvgm = true;
+        public static bool GetMailDvgmNormal = true;
+        public static bool GetMailSptLocal = true;
+        public static bool GetMailSptNormal = true;
+        public static bool GetShopgmailLocal = false;
+        public static bool GetHvlMaillocal = false;
+        public static bool GetShopgmailmmoLocal = false;
         public static bool GetGmailUnlimit = false;
         public static string TokenUnlimit = "8vnz9yfkcdsjmp6lnoosuju5990hec3jesfsq7yeiz7xwt1mgyvshouq5dt7g8exttoyan1722140071";
         public static List<string> wifilist = new List<string>();
@@ -55,5 +62,7 @@ namespace fb_reg.RequestApi
         public static System.Windows.Forms.Label PublicmaxMaillabel;
         public static System.Windows.Forms.TextBox PublicmaxThreadMailTextbox;
         public static int MaxThreadGetMail = 1;
+        public static bool ChayChamLai = false;
+        public static int ChayChamlaiDelay = 1000;
     }
 }

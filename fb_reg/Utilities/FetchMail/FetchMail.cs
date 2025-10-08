@@ -21,7 +21,7 @@ namespace fb_reg.Utilities
                     return;
                 }
                 FetchController.SetState(FetchState.Fetching);
-                MailObject mail = Mail.GetTempmail(true, "", Constant.GMAIL_SUPERTEAM, "", false);
+                MailObject mail = Mail.GetTempmail("", true, "", Constant.GMAIL_SUPERTEAM, "", false);
 
                 if (mail != null && !string.IsNullOrEmpty(mail.email))
                 {
@@ -29,7 +29,7 @@ namespace fb_reg.Utilities
                     {
                         PublicData.dataGridView.Rows[device.index].Cells[13].Value = mail.source + "-" + mail.email + "-b:" + mail.balanceAfter;
                         FetchController.SetState(FetchState.WaitingServer);
-                        MailObject resp = CacheServer.AddMailServerCache(mail, PublicData.ServerCacheMail);
+                        MailObject resp = CacheServer.AddMailServerCache(mail);
                         PublicData.PublicmaxMaillabel.Text = mail.email + "-" + mail.source + "-" + mail.balanceAfter + "-" + PublicData.FetchMailLog;
                         if (resp != null)
                         {
@@ -49,6 +49,7 @@ namespace fb_reg.Utilities
                         {
                             FetchController.SetState(FetchState.ServerError);
                         }
+                        Utility.WriteFileLog(mail.toString(), "fetchmail.log");
                     }
                     catch (Exception ex)
                     {
