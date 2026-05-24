@@ -3,6 +3,7 @@ using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
 using fb_reg.RequestApi;
 using fb_reg.Utilities;
+using Microsoft.Graph.AuditLogs;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,12 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using static fb_reg.CacheServer;
 
 namespace fb_reg
 {
-    class Device
+    public class Device
     {
         
         public static string LDCONSOLE_PATH = @"C:/LDPlayer/LDPlayer4.0/dnconsole.exe";
@@ -493,7 +495,17 @@ namespace fb_reg
             return Regex.Match(temp, "org_name\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString() + "|" + Regex.Match(temp, "region_name\":\"(.*?)\"").Groups[1].ToString();
         }
 
-        public class IpInfo
+        public class NewCountryInfo
+        {
+            [JsonProperty("ip")]
+            public string ip { get; set; }
+
+            [JsonProperty("country")]
+            public string country { get; set; }
+            
+        }
+
+        public  class IpInfo
         {
             [JsonProperty("isp")]
             public ispInfo isp { get; set; }
@@ -527,7 +539,20 @@ namespace fb_reg
 
             [JsonProperty("code")]
             public string code { get; set; }
+            [JsonProperty("state")]
+            public string state { get; set; }
 
+            [JsonProperty("time_zone")]
+            public string time_zone { get; set; }
+
+            [JsonProperty("zip_code")]
+            public string zip_code { get; set; }
+
+            [JsonProperty("latitude")]
+            public string latitude { get; set; }
+
+            [JsonProperty("longitude")]
+            public string longitude { get; set; }
         }
 
         public class CountryInfo
@@ -548,42 +573,61 @@ namespace fb_reg
         }
 
 
-
-        public static string GetPublicIpSmartProxy(string deviceID)
+        public static string ExtractJson(string raw)
         {
-            if (! PublicData.showIP)
-            {
-                return "Không lấy ip";
-            }
-            string cmd = string.Format(CONSOLE_ADB + "shell su -c 'curl http://ip.smartproxy.com/json'", deviceID);
-            string temp = ExecuteCMD(cmd);
+            int start = raw.IndexOf('{');
+            int end = raw.LastIndexOf('}');
 
-            temp = Decode_UTF8(temp);
-            //string temp = Regex.Match(temp1, "\\{(.|\\s)*\\}\\n").Groups[1].ToString();
-            //IpInfo data = JsonConvert.DeserializeObject<IpInfo>(temp);
-            if (!string.IsNullOrEmpty(temp) && temp.Length > 250)
-            {
-                temp = temp.Substring(150);
-            } else
-            {
-                return "";
-            }
-            temp = temp.Replace(" ", "").Replace("\\r", "").Replace(System.Environment.NewLine, "").Replace(System.Environment.NewLine, "");
-            //return temp;
-            var brownserMatch = Regex.Match(temp, "name\":\"(.*?)\"");
-            var cityNameMatch = brownserMatch.NextMatch();
-            string cityName = cityNameMatch.Groups[1].ToString();
-            var countryNameMatch = cityNameMatch.NextMatch();
-            string countryName = countryNameMatch.Groups[1].ToString();
-            string res =  Regex.Match(temp, "ip\":\"(.*?)\"").Groups[1].ToString()+ "|" + cityName + "|" + Regex.Match(temp, "organization\":\"(.*?)\"").Groups[1].ToString();
-            Utility.LogStatus(deviceID, "smartproxy: " + res);
+            if (start < 0 || end < 0 || end <= start)
+                throw new Exception("Invalid JSON output");
 
-            return res;
-            //if (data != null)
-            //{
-            //    return data.country.code + "|" + data.country.name + "|" + data.country.continent + "|" + data.isp.isp + "|" + data.isp.asn + "|" + data.isp.domain + "|" + data.city.name + "|" + data.city.code + "|" + data.proxy.ip;
-            //}
-            //return temp;
+            return raw.Substring(start, end - start + 1);
+        }
+
+
+        public static IpInfo GetPublicIpSmartProxy(string deviceID, OrderObject order)
+        {
+            try
+            {
+                Utility.LogStatus(deviceID, "bắt đầu get ip smartproxy");
+                IpInfo data;
+                if (!PublicData.showIP)
+                {
+                    return null;
+                }
+                if (order.ipInfo != null)
+                {
+                    return order.ipInfo;
+                }
+                if (order.proxy == null )
+                {
+                    return null;
+                } else
+                {
+                    if (order.proxy.ipInfo == null)
+                    {
+                        string cmd = string.Format(CONSOLE_ADB + "shell su -c 'curl http://ip.smartproxy.com/json'", deviceID);
+                        string temp = RunCmdAdbSafe(cmd);
+
+                        temp = Decode_UTF8(temp);
+                        temp = ExtractJson(temp);
+                        
+                        data = JsonConvert.DeserializeObject<IpInfo>(temp);
+                    } else
+                    {
+                        data = order.proxy.ipInfo;
+                    }
+                }
+                    
+                string res = data.country.name + "|" + data.country.code + "|" + data.city.name + "|" + data.city.code + "|" + data.isp.isp + "|" + data.isp.asn;
+                order.ipInfo = data;
+                Utility.LogStatus(deviceID, "kết thúc get ip smartproxy");
+                return data;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
         }
         public static void DisableWifi(string deviceID)
         {
@@ -604,7 +648,7 @@ namespace fb_reg
             //string cmd = string.Format(CONSOLE_ADB + "shell settings put global airplane_mode_on 1", deviceID);
             //ExecuteCMD(cmd);
             string cmd = string.Format(CONSOLE_ADB + "shell am broadcast -a android.intent.action.AIRPLANE_MODE --ez state true", deviceID);
-            ExecuteCMD(cmd);
+            //ExecuteCMD(cmd);
         }
         public static void OpenSetting(string deviceID)
         {
@@ -825,11 +869,8 @@ namespace fb_reg
 
             RunAdb(deviceID, "shell su -c reboot");
             WaitForBootComplete(deviceID);
-            if (Utility.isScreenLock(deviceID))
-            {
-                Device.Unlockphone(deviceID);
-            }
-
+            Utility.UnlockScreenPhone(deviceID);
+            
             device.adbStatus = Constant.ADB_DEVICE_NORMAL;
             device.deviceId = DeviceManager.GetRealDeviceId(deviceID);
 
@@ -1117,16 +1158,16 @@ namespace fb_reg
             string result = ExecuteCMD(cmd);
             cmd = string.Format(CONSOLE_ADB + " shell  \" su -c rm -f /sdcard/Pictures/Screenshots/*.png ", deviceID);
             result = ExecuteCMD(cmd);
-            Thread.Sleep(200);
+            //Thread.Sleep(200);
             cmd = string.Format(CONSOLE_ADB + "shell  \" su -c rm -rf  /storage/emulated/0/*.png ", deviceID);
             result = ExecuteCMD(cmd);
             cmd = string.Format(CONSOLE_ADB + " shell  \" su -c rm -rf  /sdcard/Download/*.png ", deviceID);
             result = ExecuteCMD(cmd);
-            Thread.Sleep(1000);
+            //Thread.Sleep(1000);
             //DeleteAllImages(deviceID);
             //Thread.Sleep(1000);
             ClearCache(deviceID, "com.android.gallery3d");
-            Thread.Sleep(1000);
+            //Thread.Sleep(1000);
         }
         public static void DeleteTxtSdcard(string deviceID)
         {
@@ -1289,7 +1330,7 @@ namespace fb_reg
 
                 // Bước 3: Decode base64 trên thiết bị → file thực
                 RunAdb(deviceID, $"shell su -c \" base64 -d {tempBase64Path} > {outputPathOnDevice}\"");
-                Thread.Sleep(1000);
+                //Thread.Sleep(1000);
                 ///RunAdb(deviceID, "shell am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/DCIM/0avatar.jpg");
                 Thread.Sleep(1000);
                 string cmd = string.Format(CONSOLE_ADB + " shell  \" su -c am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file:///sdcard/Download/0avatar.png\"", deviceID);
@@ -1372,10 +1413,10 @@ namespace fb_reg
         {
             try
             {
-                if (order.pushAvatar)
-                {
-                    return true;
-                }
+                //if (order.pushAvatar)
+                //{
+                //    return true;
+                //}
                 DeleteAllScreenshot(deviceID);
 
 
@@ -1747,17 +1788,17 @@ namespace fb_reg
         {
             string cmd = string.Format(CONSOLE_ADB + " shell am start -a android.intent.action.VIEW -d fb://profile_edit", deviceID);
             ExecuteCMD(cmd);
-            string uiXML = Utility.GetUIXml(deviceID);
-            if (Utility.CheckTextExist(deviceID, "mởbằngfacebook", 1, uiXML))
-            {
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 84.7, 78.1);
-                Thread.Sleep(2000);
-            }
-            if (Utility.CheckTextExist(deviceID, "mởbằnglite", 1, uiXML))
-            {
-                Utility.FindImageAndTap(deviceID, Utility.CHOOSE_FB, 1);
-                Thread.Sleep(2000);
-            }
+            //string uiXML = Utility.GetUIXml(deviceID);
+            //if (Utility.CheckTextExist(deviceID, "mởbằngfacebook", 1, uiXML))
+            //{
+            //    KAutoHelper.ADBHelper.TapByPercent(deviceID, 84.7, 78.1);
+            //    Thread.Sleep(2000);
+            //}
+            //if (Utility.CheckTextExist(deviceID, "mởbằnglite", 1, uiXML))
+            //{
+            //    Utility.FindImageAndTap(deviceID, Utility.CHOOSE_FB, 1);
+            //    Thread.Sleep(2000);
+            //}
         }
 
         public static void GotoFbFriendRequests(string deviceID)
@@ -1897,12 +1938,15 @@ namespace fb_reg
             }
 
         }
-            public static string ExecuteCMD1(string cmdCommand)
+        /// <summary>
+        /// Chạy lệnh qua cmd.exe. Đọc stdout trên thread phụ để tránh deadlock pipe;
+        /// không đổi cách gọi adb so với bản cũ (không dùng RunCmdAdbSafe).
+        /// </summary>
+        /// <param name="timeoutMs">-1 = chờ không giới hạn (giống ExecuteCMD cũ).</param>
+        private static string RunCmdViaCmdExe(string cmdCommand, int timeoutMs = -1)
         {
-            string result;
-            try
+            using (var process = new Process())
             {
-                Process process = new Process();
                 process.StartInfo = new ProcessStartInfo
                 {
                     WorkingDirectory = ADB_FOLDER_PATH,
@@ -1913,62 +1957,50 @@ namespace fb_reg
                     RedirectStandardInput = true,
                     RedirectStandardOutput = true
                 };
+
                 process.Start();
+
+                // Phải đọc stdout song song: ReadToEnd() hoặc WaitForExit() một mình đều có thể treo khi output lớn.
+                Task<string> outputTask = Task.Run(() => process.StandardOutput.ReadToEnd());
+
                 process.StandardInput.WriteLine(cmdCommand);
                 process.StandardInput.Flush();
                 process.StandardInput.Close();
-                process.WaitForExit();
-                string text = process.StandardOutput.ReadToEnd();
-                result = text;
+
+                bool exited;
+                if (timeoutMs < 0)
+                {
+                    process.WaitForExit();
+                    exited = true;
+                }
+                else
+                {
+                    exited = process.WaitForExit(timeoutMs);
+                }
+
+                if (!exited)
+                {
+                    try { process.Kill(); } catch { }
+                    try { outputTask.Wait(3000); } catch { }
+                    return "error";
+                }
+
+                try
+                {
+                    return outputTask.GetAwaiter().GetResult();
+                }
+                catch
+                {
+                    return null;
+                }
             }
-            catch
-            {
-                result = null;
-            }
-            return result;
         }
-        public static string ExecuteCMD(string cmdCommand)
+
+        public static string ExecuteCMD1(string cmdCommand)
         {
             try
             {
-                // get DeviceID
-                string deviceID = "";
-                if (cmdCommand.Contains("adb"))
-                {
-                    string check = Regex.Match(cmdCommand, "adb -s (.*?) ").ToString();
-                    deviceID = check.Replace("adb -s ", "").Trim();
-                }
-                
-
-                Process process = new Process();
-                ProcessStartInfo processStartInfo = new ProcessStartInfo();
-                processStartInfo.WorkingDirectory = ADB_FOLDER_PATH;
-                processStartInfo.FileName = "cmd.exe";
-                processStartInfo.CreateNoWindow = true;
-                processStartInfo.UseShellExecute = false;
-                processStartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                processStartInfo.RedirectStandardInput = true;
-                processStartInfo.RedirectStandardOutput = true;
-                process.StartInfo = processStartInfo;
-                //process.WaitForExit(600000);
-                //process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding(866);
-
-                //if (!string.IsNullOrEmpty(deviceID) && deviceID.Contains("5555"))
-                //{
-                //    process.Start();
-                //process.StandardInput.WriteLine("adb connect " + deviceID);
-                //process.StandardInput.Flush();
-                //process.StandardInput.Close();
-                //}
-
-
-                process.Start();
-                process.StandardInput.WriteLine(cmdCommand);
-                process.StandardInput.Flush();
-                process.StandardInput.Close();
-
-                string result = process.StandardOutput.ReadToEnd();
-                return result;
+                return RunCmdViaCmdExe(cmdCommand);
             }
             catch
             {
@@ -1976,34 +2008,75 @@ namespace fb_reg
             }
         }
 
+        public static string ExecuteCMD(string cmdCommand)
+        {
+            try
+            {
+                if (cmdCommand.Contains("adb"))
+                {
+                    string check = Regex.Match(cmdCommand, "adb -s (.*?) ").ToString();
+                    _ = check.Replace("adb -s ", "").Trim();
+                }
+
+                return RunCmdViaCmdExe(cmdCommand);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static string RunCmdAdbSafe(string cmdCommand, int timeoutMs = 5 * 60 * 1000)
+        {
+            cmdCommand = cmdCommand.Trim();
+
+            // ví dụ cmdCommand = "adb -s 123456 shell input keyevent 3"
+            if (!cmdCommand.StartsWith("adb "))
+                throw new Exception("Chỉ hỗ trợ lệnh bắt đầu bằng adb");
+
+            string adbArgs = cmdCommand.Substring(4); // bỏ "adb "
+            return RunAdbWithTimeout(adbArgs, timeoutMs);
+        }
+
+        public static string RunAdbWithTimeout(string args, int timeoutMs = 1 * 60 * 1000)
+        {
+            var p = new Process();
+            p.StartInfo = new ProcessStartInfo
+            {
+                WorkingDirectory = ADB_FOLDER_PATH,
+                FileName = "adb.exe",
+                Arguments = args,
+                UseShellExecute = false,
+                CreateNoWindow = true,
+                WindowStyle = ProcessWindowStyle.Hidden,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true
+            };
+
+            p.Start();
+
+            bool exited = p.WaitForExit(timeoutMs);
+
+            if (!exited)
+            {
+                try { p.Kill(); } catch { }
+                return "[TIMEOUT 5m] adb " + args;
+            }
+
+            string output = p.StandardOutput.ReadToEnd();
+            string err = p.StandardError.ReadToEnd();
+
+            if (!string.IsNullOrWhiteSpace(err))
+                output += "\n[ERR]\n" + err;
+
+            return output;
+        }
+
         public static string ExecuteCMDTimeout(string cmdCommand, int second)
         {
             try
             {
-                Process process = new Process();
-                ProcessStartInfo processStartInfo = new ProcessStartInfo();
-                processStartInfo.WorkingDirectory = ADB_FOLDER_PATH;
-                processStartInfo.FileName = "cmd.exe";
-                processStartInfo.CreateNoWindow = true;
-                processStartInfo.UseShellExecute = false;
-                processStartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                processStartInfo.RedirectStandardInput = true;
-                processStartInfo.RedirectStandardOutput = true;
-                process.StartInfo = processStartInfo;
-                //process.StartInfo.StandardOutputEncoding = Encoding.GetEncoding(866);
-
-                process.Start();
-                process.StandardInput.WriteLine(cmdCommand);
-                process.StandardInput.Flush();
-                process.StandardInput.Close();
-                if (!process.WaitForExit(second * 1000))
-                {
-                    process.Kill();
-
-                    return "error";
-                }
-
-                return process.StandardOutput.ReadToEnd();
+                return RunCmdViaCmdExe(cmdCommand, second * 1000);
             }
             catch
             {
@@ -2037,6 +2110,11 @@ namespace fb_reg
         public static void DeleteAllFileMusic(string deviceID)
         {
             string clearCmd = string.Format(CONSOLE_ADB + " shell rm /sdcard/Music/*", deviceID);
+            ExecuteCMD(clearCmd);
+        }
+        public static void DeleteAllFileTxtSdcard(string deviceID)
+        {
+            string clearCmd = string.Format(CONSOLE_ADB + " shell rm /sdcard/*", deviceID);
             ExecuteCMD(clearCmd);
         }
         public static List<String> GetDeviceLDs()

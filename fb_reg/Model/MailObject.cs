@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Org.BouncyCastle.Asn1.Pkcs;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -8,6 +9,10 @@ namespace fb_reg
 {
     public class MailObject
     {
+
+        public bool isHotmail = false;
+        public bool needReused = true;
+        public int reusedCount = 0;
         public DateTime createdAt;
         public string pcName;
         public string deviceId;
@@ -28,6 +33,7 @@ namespace fb_reg
         public bool otpVandong;
         public int balanceAfter;
         public string unlimitType;
+
         public string key;
         public MailRepository mailRepository;
         public string toString()

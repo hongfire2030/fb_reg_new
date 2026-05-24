@@ -13,6 +13,9 @@ using RestSharp;
 using static fb_reg.Utility;
 using System.Net.Cache;
 using static fb_reg.OutsideServer;
+using fb_reg.RequestApi;
+using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace fb_reg
 {
@@ -333,7 +336,7 @@ namespace fb_reg
         }
 
 
-        public static bool PostData(bool isServer, string data, string status = "checking", string type = "normal")
+        public static bool PostData(string deviceId, bool isServer, string data, string status = "checking", string type = "normal")
         {
             try
             {
@@ -359,7 +362,7 @@ namespace fb_reg
             }
             catch (xNet.HttpException ex)
             {
-                Console.WriteLine(ex.HttpStatusCode);
+                Utility.LogStatus(deviceId, ex.Message);
                 return false;
             }
             
@@ -701,10 +704,13 @@ namespace fb_reg
         {
             try
             {
-                var client = new RestClient(SERVER_HOST);
-                
-                var request = new RestRequest("accounts/resource/" + uid);
+                //var client = new RestClient(SERVER_HOST);
 
+                //var request = new RestRequest("accounts/resource/" + uid);
+
+                var client = new RestClient(PublicData.LogServerUri);
+
+                var request = new RestRequest("api/file/upload");
                 request.AddFile("file", path);
                 var response = client.Post(request);
                 var resString = response.Content; // Raw content as string
@@ -722,40 +728,96 @@ namespace fb_reg
 
             return false;
         }
+        public static async Task DownloadAsync(string url1, string uid)
+        {
+            // 1) URL PHẢI GIỐNG POSTMAN
+            string fileName = uid + ".tar.gz"; // đổi đúng tên
+            string url = $"http://hes09ez92az.sn.mynetname.net:8082/api/file/download?file={Uri.EscapeDataString(fileName)}";
+
+            // 2) PATH TUYỆT ĐỐI, CHẮC CHẮN GHI ĐƯỢC
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string outDir = Path.Combine(baseDir, "Authentication");
+            Directory.CreateDirectory(outDir);
+            string outPath = Path.Combine(outDir, fileName);
+
+            using (var client = new HttpClient())
+            using (var resp = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+            {
+                // 3) IN STATUS & HEADER
+                Console.WriteLine("STATUS = " + (int)resp.StatusCode);
+                Console.WriteLine("CT     = " + resp.Content.Headers.ContentType);
+                Console.WriteLine("LEN    = " + resp.Content.Headers.ContentLength);
+
+                resp.EnsureSuccessStatusCode();
+
+                // 4) COPY STREAM -> FILE
+                using (var net = await resp.Content.ReadAsStreamAsync())
+                using (var fs = new FileStream(outPath, FileMode.Create, FileAccess.Write, FileShare.None))
+                {
+                    await net.CopyToAsync(fs);
+                }
+            }
+
+            // 5) KIỂM TRA FILE
+            var fi = new FileInfo(outPath);
+            Console.WriteLine($"SAVED = {fi.FullName}, SIZE = {fi.Length}");
+
+        }
+        public static string LOG_CACHE = "http://hes09ez92az.sn.mynetname.net:8082";
+        public static bool GetBackupAccAsync(string uid)
+        {
+            try
+            {
+                string url = LOG_CACHE + "/api/file/download?file=" + uid + ".tar.gz";
+                string fileName = "Authentication/" + uid + ".tar.gz";
+
+                Task.Run(async () =>
+                {
+                    await DownloadAsync(url, uid);
+                }).GetAwaiter().GetResult();
+                return true;
+            }
+            catch (xNet.HttpException ex)
+            {
+                Console.WriteLine("ServerApi get Backup acc" + ex.HttpStatusCode);
+                return false;
+            }
+        }
 
         public static bool GetBackupAcc(string uid)
         {
             try
             {
-                var client = new RestClient(SERVER_HOST);
-                
-                var request = new RestRequest("accounts/resource/" + uid);
+                return GetBackupAccAsync(uid);
+                //var client = new RestClient(SERVER_HOST);
 
-                byte [] response = client.DownloadData(request);
-                if (response != null && response.Length > 0)
-                {
-                    File.WriteAllBytes("Authentication/" + uid + ".tar.gz", response);
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-                
-               
+                //var request = new RestRequest("accounts/resource/" + uid);
+
+                //byte [] response = client.DownloadData(request);
+                //if (response != null && response.Length > 0)
+                //{
+                //    File.WriteAllBytes("Authentication/" + uid + ".tar.gz", response);
+                //    return true;
+                //}
+                //else
+                //{
+                //    return false;
+                //}
+
+
 
 
                 //using (var request = new xNet.HttpRequest(SERVER_HOST))
                 //{
                 //    request.UserAgent = xNet.Http.ChromeUserAgent();
-                    
+
                 //    request
                 //        // HTTP-header.
                 //        .AddHeader("X-Apocalypse", "21.12.12");
 
                 //    // These parameters are sent in this request.
                 //    var response = request.Get("accounts/resource/" + uid);
-                    
+
                 //    var stream = response.ToMemoryStream();
                 //    if (stream != null && response.ContentLength > 0)
                 //    {
@@ -768,7 +830,7 @@ namespace fb_reg
                 //    {
                 //        return false;
                 //    }
-                    
+
                 //}
             }
             catch (xNet.HttpException ex)

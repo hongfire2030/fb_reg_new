@@ -154,7 +154,7 @@ namespace fb_reg
             }
             if (isServer)
             {
-                if (!ServerApi.PostData(isServer, data, status))
+                if (!ServerApi.PostData(deviceID, isServer, data, status))
                 {
                     bool checkOk = GoogleSheet.WriteAccount(data, fileName.Substring(10));
                     if (!checkOk)

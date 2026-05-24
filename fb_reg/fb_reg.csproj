@@ -390,11 +390,13 @@
     <Compile Include="bk\Asus.cs" />
     <Compile Include="CommonRequest.cs" />
     <Compile Include="Model\LogEntryDevice.cs" />
+    <Compile Include="Model\Setting.cs" />
     <Compile Include="RequestApi\CacheServer.cs" />
     <Compile Include="RequestApi\NamServer.cs" />
     <Compile Include="RequestApi\OutsideServer.cs" />
     <Compile Include="RequestApi\proxy\WwProxy.cs" />
     <Compile Include="RequestApi\PublicData.cs" />
+    <Compile Include="RequestApi\VerifyApiClient.cs" />
     <Compile Include="Utilities\CanPushRomController.cs" />
     <Compile Include="Utilities\Constant.cs" />
     <Compile Include="Device.cs" />
@@ -424,6 +426,7 @@
     <Compile Include="bk\LDPlayer.cs" />
     <Compile Include="Utilities\GboardTyper.cs" />
     <Compile Include="Utilities\HotmailOtpFetcher.cs" />
+    <Compile Include="Utilities\HotmailReader.cs" />
     <Compile Include="Utilities\Logcat.cs" />
     <Compile Include="Model\LogInfoObject.cs" />
     <Compile Include="Mail.cs" />

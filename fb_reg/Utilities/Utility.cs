@@ -32,6 +32,8 @@ using fb_reg.RequestApi;
 using Exception = System.Exception;
 using fb_reg.Utilities;
 using ActiveUp.Net.Security.OpenPGP.Packets;
+using OtpNet;
+using static fb_reg.Utility;
 
 
 namespace fb_reg
@@ -121,6 +123,7 @@ class Utility
         public static Bitmap FB_2FA1 = (Bitmap)Image.FromFile("img/2fa1.png");
         public static Bitmap FB_2FA1_1 = (Bitmap)Image.FromFile("img/2fa1_1.png");
         public static Bitmap FB_2FA3 = (Bitmap)Image.FromFile("img/2fa3.png");
+        public static Bitmap CHECK_EDIT_AVATAR = (Bitmap)Image.FromFile("img/edit_profile.png");
         public static Bitmap FB_2FA2 = (Bitmap)Image.FromFile("img/2fa2.png");
         public static Bitmap NEXT_CHECK_FB = (Bitmap)Image.FromFile("img/next.png");
         public static Bitmap KHONG_CO_LOI_MOI_NAO = (Bitmap)Image.FromFile("img/khong_co_loi_moi.png");
@@ -133,9 +136,14 @@ class Utility
         //public static Bitmap NOTHANKS = (Bitmap)Image.FromFile("img/nothanks.png");
         //public static Bitmap DANGNHAP_HOTMAIL = (Bitmap)Image.FromFile("img/dangnhap_hotmail.png");
         public static Bitmap TAI_DANH_BA_LEN = (Bitmap)Image.FromFile("img/taidanhbalen.png");
+        public static Bitmap TAI_DANH_BA_LEN2 = (Bitmap)Image.FromFile("img/taidanhbalen2.png");
+        public static Bitmap TAI_DANH_BA_LEN3 = (Bitmap)Image.FromFile("img/taidanhbalen3.png");
         public static Bitmap FA_OK = (Bitmap)Image.FromFile("img/2fa_ok.png");
         public static Bitmap LUC_KHAC = (Bitmap)Image.FromFile("img/luc_khac.png");
         public static Bitmap DANG_CHO_SDT = (Bitmap)Image.FromFile("img/dang_cho_sdt.png");
+
+        public static Bitmap DOISODIDONG = (Bitmap)Image.FromFile("img/doisodidong.png");
+        public static Bitmap BATSUPERUSER = (Bitmap)Image.FromFile("img/batsuperuser.png");
 
         public static Bitmap START_WELCOME11 = (Bitmap)Image.FromFile("img/start_welcome11.png");
         public static Bitmap START_WELCOME13 = (Bitmap)Image.FromFile("img/start_welcome13.png");
@@ -158,7 +166,23 @@ class Utility
 
 
         
-
+        public static bool UnlockScreenPhone(string deviceID)
+        {
+            try
+            {
+                if (isScreenLock(deviceID))
+                {
+                    LogStatus(deviceID, "Screen is locking screen - Opening it");
+                    Device.Unlockphone(deviceID);
+                    Thread.Sleep(1000);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         public static void KiemTraDienThoai(string deviceID, List<DeviceObject> listDeviceObject, DataGridView dataGridView)
         {
             try
@@ -333,7 +357,7 @@ class Utility
                 PublicData.dataGridView.Rows[i].Cells[0].Value = Convert.ToString((i + 1));
                 PublicData.dataGridView.Rows[i].Cells[1].Value = Convert.ToString(device.deviceId);
                 string temp = device.successInHour + "/" + device.totalInHour + " = " + Math.Round(device.percentInHour, 1) + " %";
-                PublicData.dataGridView.Rows[i].Cells[2].Value = temp;
+                //PublicData.dataGridView.Rows[i].Cells[2].Value = temp;
                 string temp2 = device.globalSuccess + "/" + device.globalTotal + " = " + Math.Round(globalPercent, 1) + "%";
                 PublicData.dataGridView.Rows[i].Cells[3].Value = temp2;
                 PublicData.dataGridView.Rows[i].Cells[4].Value = Convert.ToString(device.duration);
@@ -2536,7 +2560,7 @@ class Utility
                 Utility.InputText(deviceID, text, false);
             }
         }
-        public static bool StoreInfo(bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
+        public static int StoreInfo(bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
             string gender, int yearOld, string isVerified, string status = "checking")
         {
             //var watch = Stopwatch.StartNew();
@@ -2560,7 +2584,7 @@ class Utility
 
             if (string.IsNullOrEmpty(uid))
             {
-                return false;
+                return -1;
             }
             if (string.IsNullOrEmpty(Hotmail) || Hotmail == Constant.FAIL)
             {
@@ -2685,6 +2709,28 @@ class Utility
             {
                 status = status + "|cover";
             }
+            if (order.hasAddFriend)
+            {
+                status = status + "|friend";
+            } else
+            {
+                status = status + "|no_friend";
+            }
+                bool checkBackup = false;
+            for (int i = 0; i < 3; i++)
+            {
+                checkBackup = FbUtil.PullBackupFbNew(uid, deviceID);
+                if (checkBackup)
+                {
+                    break;
+                }
+                LogStatus(device, "Pull file backup error --- thử lại:" + i, 2000);
+            }
+            if (!checkBackup)
+            {
+                has2Fa = Constant.TRUE;
+                qrCode = "";
+            }
             string data = rawData + "|" + hasAvatar + "|" + has2Fa
                 + "|" + order.language + "|" + emailType + "|" + isVerified
                 + "|" + Environment.MachineName + "|" + deviceID;
@@ -2715,68 +2761,50 @@ class Utility
                     }
                 }
 
-                if (!order.NAM_SERVER)
+                
+                bool checkOk = false;
+                for (int i = 0; i < 10; i ++)
                 {
-                    bool checkOk = false;
-                    for (int i = 0; i < 5; i ++)
+                    checkOk = ServerApi.PostData(deviceID, isServer, data, status, order.accType);
+                    if (! checkOk)
                     {
-                        checkOk = ServerApi.PostData(isServer, data, status, order.accType);
-                        if (! checkOk)
-                        {
                             
-                            LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 1000);
-                            Device.RebootDevice(deviceID);
-                        } else
+                        LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 1000);
+                        Device.RebootDevice(deviceID);
+                    } else
+                    {
+                        LogStatus(device, "Lưu Acc Thành công ---" + i, 5000);
+                        break;
+                    }
+                }
+                if (!checkOk)
+                {
+                    try
+                    {
+                        LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào file-----", 10000);
+                        DateTime dateTime = DateTime.UtcNow.Date;
+                        using (StreamWriter HDD = new StreamWriter(fileName + "_Missing_" + dateTime.ToString("dd/MM/yyyy") + ".txt", true))
                         {
-                            LogStatus(device, "Lưu Acc Thành công ---" + i, 1000);
-                            break;
+                            HDD.WriteLine(data);
+                            HDD.Close();
                         }
                     }
-                    if (!checkOk)
+                    catch (Exception edeee)
                     {
-                        LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào googlesheet-----" , 30000);
-                        checkOk = GoogleSheet.WriteAccount(data, fileName.Substring(10));
-                        if (!checkOk)
-                        {
-                            try
-                            {
-                                LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào file-----", 10000);
-                                DateTime dateTime = DateTime.UtcNow.Date;
-                                using (StreamWriter HDD = new StreamWriter(fileName + "_Missing_" + dateTime.ToString("dd/MM/yyyy") + ".txt", true))
-                                {
-                                    HDD.WriteLine(data);
-                                    HDD.Close();
-                                }
-                            } catch (Exception edeee)
-                            {
-                                LogStatus(device, "eeee lưu acc file: " + edeee.Message);
-                            }
-                        }
-                        return false;
+                        LogStatus(device, "eeee lưu acc file: " + edeee.Message);
                     }
 
-                    ServerApi.DeleteAccWait2Veri(uid);
+                    return -2;
                 }
             }
             needBackup = true;
             if (!verified || needBackup)
             {
-                FbUtil.PullBackupFbNew(uid, deviceID);
                 Thread.Sleep(1000);
-
-                //if (order.NAM_SERVER)
-                //{
-                //    NamServer.UploadFileAuth("Authentication/" + uid + ".zip", uid);
-                //}
-                //else
-                //{
-                    ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
-                //}
-
+                ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
                 Thread.Sleep(3000);
                 try
                 {
-
                     File.Delete("Authentication/" + uid + ".tar.gz");
                 }
                 catch (IOException ex)
@@ -2784,55 +2812,10 @@ class Utility
                     Console.WriteLine("ex:" + ex.Message);
                 }
             }
-
-            try
-            {
-                Account acc = new Account();
-                acc.uid = uid;
-               
-                acc.data = data;
-                acc.pass = password;
-                if (hasAvatar == Constant.TRUE)
-                {
-                    acc.hasAvatar = true;
-                }
-                order.source = "HUNG";
-                if (!order.NAM_SERVER)
-                {
-                    acc.pass = "";
-                    
-                    acc.data = acc.data.Replace(password, "");
-                } else
-                {
-                    order.source = "NAM";
-                }
-                acc.qrCode = qrCode;
-                
-                acc.email = Hotmail.Split('|')[0];
-
-                acc.emailPass = Hotmail.Split('|')[1];
-                if (order.currentMail != null)
-                {
-                    acc.emailType = order.currentMail.type;
-                }
-                
-                acc.gender = gender;
-                acc.language = order.language;
-                acc.pcName = Environment.MachineName;
-                acc.verified = verified;
-
-                string fbVersion = Device.GetVersionFB(deviceID);
-                string fbLiteVersion = Device.GetVersionFBLite(deviceID);
-                string fbBusinessVersion = Device.GetVersionFBBusiness(deviceID);
-                order.versionFb = fbVersion + "|" + fbLiteVersion + "|" + fbBusinessVersion;
-            } catch(Exception eee)
-            {
-
-            }
             
-            return true;
+            return 1;
         }
-        public static bool storeAccWithThread(bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
+        public static int storeAccWithThread(bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
             string gender, int yearOld, string isVerified, string status)
         {
             if (!order.set2FaSuccess)
@@ -3294,7 +3277,8 @@ class Utility
             {
                 
                 string standardNetwork = StandardNetwork(network);
-                return GetRandomPrefix(standardNetwork) + RandomNumberString(7);
+                //return GetRandomPrefix(standardNetwork) + RandomNumberString(7);
+                return "";
             }
 
             return "+84" + phone.Replace("+84", "0").Remove(0, 1);
@@ -3582,11 +3566,59 @@ class Utility
 
             return code;
         }
+
+        public static string readHotmailLocal(MailObject mail)
+        {
+            string clientId = mail.clientId;
+            string refreshToken = mail.refreshToken;
+            string clientSecret = "";
+
+            var proxy = new ProxyInfo
+            {
+                Host = "niceproxy.io",
+                Port = 17521,
+                Username = "dsgerter_31r6-country-US-ssid-i4VNmPpaQC",
+                Password = "dgsrdfdgt5"
+            };
+
+            try
+            {
+                var inbox = HotmailReader.ReadInboxSubjectsByRefreshToken(
+                    clientId,
+                    refreshToken,
+                    clientSecret,
+                    proxy,
+                    proxy,
+                    10,
+                30000
+                );
+
+                
+
+                foreach (var s in inbox)
+                {
+                    LogStatus(mail.deviceId, "---" + s);
+                    string code = FindCodeInSubject(s);
+                    if (!string.IsNullOrEmpty(code) && code != Constant.FAIL)
+                    {
+                        return code;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                
+                Console.WriteLine("Lỗi: " + ex.Message);
+                return Constant.FAIL;
+            }
+            return "";
+        }
         public static string GetOtp(OrderObject order, string deviceID, string tempmailType, MailObject inMail, int time)
         {
             string code = Constant.FAIL;
             order.getOtp = true;
-
+            time = 4;
+            inMail.deviceId = deviceID;
             if (inMail.password == Constant.TEMP_MAIL || inMail.password == Constant.GMAIL_SELL_GMAIL)
             {
                 if (tempmailType == Constant.TEMP_GENERATOR_EMAIL)
@@ -3643,8 +3675,10 @@ class Utility
             {
                 for (int i = 0; i < time; i++)
                 {
+                    LogStatus(deviceID, "Get otp lần :" + (i + 1));
                     if (!string.IsNullOrEmpty(inMail.refreshToken))
                     {
+                        
                         List<string> otps = OutsideServer.GetOtpByOAuth2(inMail);
                         if (otps != null)
                         {
@@ -3665,7 +3699,7 @@ class Utility
                         ////truy xuất nội dung từng mail
                         foreach (string mail in subjects)
                         {
-                            Console.WriteLine("subject:" + mail);
+                            LogStatus( deviceID, i +  " - subject:" + mail);
                             code = FindCodeInSubject(mail);
                             if (code != Constant.FAIL)
                             {
@@ -3679,13 +3713,22 @@ class Utility
                     {
                         break;
                     }
+
+                    
+
+
                     Thread.Sleep(3000);
                     if (forceStopGetOtp && i > 3)
                     {
                         break;
                     }
                 }
+                LogStatus(deviceID, "Đọc mail vandong lỗi - thử local");
+
+                code = readHotmailLocal(inMail);
+
                 
+
 
                 //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls | SecurityProtocolType.Ssl3;
 
@@ -3756,7 +3799,7 @@ class Utility
             {
                 int time = PublicData.ChayChamlaiDelay;
                 
-                if (time < 1000)
+                if (time < 3000)
                 {
                     time = 1000;
                 }
@@ -3765,8 +3808,8 @@ class Utility
         }
         public static void DelayRandom( int time)
         {
-            int min = (int)(time * 0.8);
-            int max = (int)(time * 1.2);
+            int min = (int)(time * 0.5);
+            int max = (int)(time * 1.5);
             Random random = new Random();
             int delay = random.Next(min, max);
             

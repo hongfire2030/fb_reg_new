@@ -1,6 +1,7 @@
 ﻿using fb_reg.RequestApi;
 using fb_reg.Utilities;
 using HttpRequest;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -9,10 +10,13 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web.SessionState;
 using System.Windows.Forms;
+using static fb_reg.Device;
 using static fb_reg.Utility;
 namespace fb_reg
 {
@@ -513,12 +517,12 @@ namespace fb_reg
             //{
             //    RemoveAccountMessenger(deviceID);
             //}
-            Thread.Sleep(500);
+            //Thread.Sleep(500);
             Device.Back(deviceID);
-            Thread.Sleep(500);
+            //Thread.Sleep(500);
             Device.Back(deviceID);
-            Thread.Sleep(500);
-            Device.Back(deviceID);
+            //Thread.Sleep(500);
+            //Device.Back(deviceID);
         }
         public static void OpenAccountsSetting(string deviceID)
         {
@@ -571,43 +575,199 @@ namespace fb_reg
             Thread.Sleep(500);
             Device.Home(deviceID);
         }
+        public static IpInfo GetCurrentIpSmartproxy(string proxyAddress, string proxyUsername, string proxyPassword)
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create("https://api.country.is/");
+                request.Method = "GET";
+                request.UserAgent = "Mozilla/5.0";
 
-        public static Proxy GetProxyFromServer(DeviceObject device, OrderObject order, bool p1, bool p2, bool p3)
+                var proxy = new WebProxy(proxyAddress)
+                {
+                    Credentials = new NetworkCredential(proxyUsername, proxyPassword)
+                };
+                request.Proxy = proxy;
+
+                using (var response = (HttpWebResponse)request.GetResponse())
+                using (var stream = response.GetResponseStream())
+                using (var reader = new StreamReader(stream))
+                {
+                    var json = reader.ReadToEnd();
+                    var doc = JsonDocument.Parse(json);
+                    NewCountryInfo data = JsonConvert.DeserializeObject<NewCountryInfo>(json);
+                    IpInfo ippp = new IpInfo();
+                    ippp.country = new CountryInfo();
+                    ippp.country.code = data.country;
+                    ippp.country.name = data.country;
+                    return ippp;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Lỗi khi lấy địa chỉ IP: " + ex.Message);
+                return null;
+            }
+        }
+        public class IpApiResponse
+        {
+            [JsonPropertyName("status")]
+            public string Status { get; set; }
+
+            [JsonPropertyName("country")]
+            public string Country { get; set; }
+
+            [JsonPropertyName("countryCode")]
+            public string CountryCode { get; set; }
+
+            [JsonPropertyName("region")]
+            public string Region { get; set; }
+
+            [JsonPropertyName("regionName")]
+            public string RegionName { get; set; }
+
+            [JsonPropertyName("city")]
+            public string City { get; set; }
+
+            [JsonPropertyName("zip")]
+            public string Zip { get; set; }
+
+            [JsonPropertyName("lat")]
+            public double Lat { get; set; }
+
+            [JsonPropertyName("lon")]
+            public double Lon { get; set; }
+
+            [JsonPropertyName("timezone")]
+            public string Timezone { get; set; }
+
+            [JsonPropertyName("isp")]
+            public string Isp { get; set; }
+
+            [JsonPropertyName("org")]
+            public string Org { get; set; }
+
+            // "as" là keyword trong C# nên đổi tên property, map bằng attribute
+            [JsonPropertyName("as")]
+            public string AsName { get; set; }
+
+            [JsonPropertyName("query")]
+            public string Query { get; set; }
+        }
+        public static IpInfo GetCurrentIp(string proxyAddress, string proxyUsername, string proxyPassword)
+        {
+            try
+            {
+                var request = (HttpWebRequest)WebRequest.Create("http://ip-api.com/json/8.8.8.8");
+                request.Method = "GET";
+                request.UserAgent = "Mozilla/5.0";
+
+                var proxy = new WebProxy(proxyAddress)
+                {
+                    Credentials = new NetworkCredential(proxyUsername, proxyPassword)
+                };
+                request.Proxy = proxy;
+
+                using (var response = (HttpWebResponse)request.GetResponse())
+                using (var stream = response.GetResponseStream())
+                using (var reader = new StreamReader(stream))
+                {
+                    var json = reader.ReadToEnd();
+                    //var doc = JsonDocument.Parse(json);
+                    IpApiResponse data = JsonConvert.DeserializeObject<IpApiResponse>(json);
+                    if (data != null && !string.IsNullOrEmpty(data.CountryCode))
+                    {
+                        IpInfo ipn = new IpInfo();
+                        ipn.country = new CountryInfo();
+                        ipn.country.code = data.CountryCode;
+                        ipn.country.name = data.Country;
+                        ipn.city = new CityInfo();
+                        ipn.city.code = data.City;
+                        ipn.isp = new ispInfo();
+                        ipn.isp.isp = data.Isp;
+                        ipn.isp.asn = data.AsName;
+                        return ipn;
+                    }
+                    return null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Lỗi khi lấy địa chỉ IP: " + ex.Message);
+                return null;
+            }
+        }
+        public static Proxy GetProxyFromServer(DeviceObject device, OrderObject order)
         {
             Proxy proxy = new Proxy();
-            for (int i = 0; i < 20; i++)
+            for (int i = 0; i < 30; i++)
             {
-                LogStatus(device, "Get proxy lần :" + (i + 1));
-                proxy = CacheServer.GetProxyFromServer(PublicData.ServerCacheMail, order);
-                if (proxy != null &&
-                    (!string.IsNullOrEmpty(proxy.host)))
-                {
+                LogStatus(device, "Get proxy lần -- :" + (i + 1));
+                //proxy = CacheServer.GetProxyFromServer(device, PublicData.CacheServerUri, order);
+                //proxy = CacheServer.GetProxyFromServer(device, PublicData.ProxyServer, order);
+                //LogStatus(device, "Get proxy xong lần --:" + (i + 1), 1000);
 
-                    bool proxyOk = OutsideServer.TestProxy(proxy.host, Convert.ToInt32(proxy.port), proxy.username, proxy.pass);
-                    if (!proxyOk)
-                    {
-                        LogStatus(device, "❌ Proxy không ổn định, dừng reg clone.");
-                        continue;
-                    }
-                    proxy.hasProxy = true;
-                    return proxy;
+
+                if (PublicData.proxyUbuntu)
+                {
+                    proxy = CacheServer.GetProxyFromServerUbuntu(device, PublicData.CacheServerUri, order);
+                } else
+                {
+                    proxy = CacheServer.GetProxyFromServer(device, PublicData.CacheServerUri, order);
                 }
-                Thread.Sleep(10000);
-            }
-
-            if (p1 || p2 || p3)
-            {
-                for (int i = 0; i < 2; i++)
+                if (proxy != null && !string.IsNullOrEmpty(proxy.host))
                 {
-                    LogStatus(device, "Get Proxy Data ----------");
-                    proxy = CacheServer.GetProxyFromServer(PublicData.ServerCacheMail, order);
-                    if (proxy != null && !string.IsNullOrEmpty(proxy.host))
+                    //LogStatus(device, "Có proxy:" + proxy.username + " " + (i + 1), 1000);
+                    order.proxy = proxy;
+                    if (i == 29)
                     {
+                        LogStatus(device, "Chờ hoài không có proxy phù hợp, lấy random ----");
+                        order.ipInfo = proxy.ipInfo;
                         proxy.hasProxy = true;
                         return proxy;
                     }
-                    Thread.Sleep(10000);
+                    if (PublicData.showIP)
+                    {
+                        
+                        proxy.ipInfo = GetCurrentIpSmartproxy(proxy.host + ":" + proxy.port, proxy.username, proxy.pass);
+                        
+                        
+                    }
+                    if ( proxy.ipInfo != null && proxy.ipInfo.country != null && !string.IsNullOrEmpty(proxy.ipInfo.country.code))
+                    {
+                        string code = proxy.ipInfo.country.code.ToLower();
+                        LogStatus(device, "Có proxy info:  " + code + "   " + (i + 1));
+                        if (!string.IsNullOrEmpty(PublicData.exceptionProxy))
+                        {
+                            if (PublicData.exceptionProxy.ToLower().Contains(code))
+                            {
+                                LogStatus(device, "Trùng proxy xấu - Bỏ qua:" + code, 1000);
+                                continue;
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(PublicData.includeProxy))
+                        {
+                            if (!PublicData.includeProxy.ToLower().Contains(code))
+                            {
+                                LogStatus(device, "Không đúng proxy top code - Bỏ qua: " + code, 1000);
+                                continue; 
+                            } else
+                            {
+                                LogStatus(device, "Đã tìm thấy proxy");
+                            }
+                        }
+                    } else
+                    {
+                        //LogStatus(device, "Không Có proxyInfo:" + proxy.username + "- " + (i + 1), 1000);
+                    }
+
+                   
+                    order.ipInfo = proxy.ipInfo;
+                    proxy.hasProxy = true;
+                    return proxy;
                 }
+                Thread.Sleep(1000);
             }
 
             return null;
@@ -620,7 +780,7 @@ namespace fb_reg
             }
             System.IO.Directory.CreateDirectory("data/proxy");
 
-            string fileName = "data/proxy/" + proxy.port + ".txt";
+            string fileName = "data/proxy/" + proxy.port + proxy.username + ".txt";
             try
             {
                 File.Delete(fileName);
@@ -631,6 +791,7 @@ namespace fb_reg
             }
 
             string _vcf = "socks5://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" + proxy.port + "\" *";
+            //string _vcf = "http://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" + proxy.port + "\" *";
             if (!string.IsNullOrEmpty(proxy.proxyType) && proxy.proxyType == "HTTP")
             {
                 _vcf = "http://" + proxy.username + ":" + proxy.pass + "@" + proxy.host + ":" + proxy.port + " \"" + proxy.port + "\" *";
@@ -652,11 +813,11 @@ namespace fb_reg
         }
         public static bool randomProxy(Proxy proxy, string deviceID)
         {
-            Device.DeleteAllFileMusic(deviceID);
+            Device.DeleteAllFileTxtSdcard(deviceID);
             string randomFilePath = createProxyFile(proxy);
 
             if (string.IsNullOrEmpty(randomFilePath)) return false;
-            Device.PushFile2Sdcard(deviceID, randomFilePath, proxy.port + ".txt");
+            Device.PushFile2Sdcard(deviceID, randomFilePath, proxy.port + proxy.username + ".txt");
             File.Delete(randomFilePath);
 
             return true;
@@ -724,17 +885,20 @@ namespace fb_reg
                     }
                     else
                     {
-                        if (!WaitAndTapXML(deviceID, 2, "cho phép resourceid"))
+                        if (!WaitAndTapXML(deviceID,new string[] { "cho phép resourceid", "allow resourceid" }))
                         {
 
-                            WaitAndTapXML(deviceID, 1, "allow resourceid");
                         }
                     }
                 }
 
                 if (Device.CheckAppInstall(deviceID, "com.estrongs.android.pop"))
                 {
-                    WaitAndTapXML(deviceID, 3, "duyệttậptincheckable");
+                    if (!WaitAndTapXML(deviceID, 3, "duyệttậptincheckable"))
+                    {
+                        Device.TapByPercent(deviceID, 6.4, 7.2, 1000);
+                        WaitAndTapXML(deviceID, 3, "duyệttậptincheckable");
+                    }
 
                     if (!CheckTextExist(deviceID, "chọn đường dẫn", 5))
                     {
@@ -745,9 +909,9 @@ namespace fb_reg
                     //Thread.Sleep(1000);
                     Device.Swipe(deviceID, 88, 1400, 99, 300);
                     //Thread.Sleep(1000);
-                    if (!WaitAndTapXML(deviceID, 3, order.proxy.port))
+                    if (!WaitAndTapXML(deviceID, 3, order.proxy.port + order.proxy.username))
                     {
-                        LogStatus(device, "Root xong- bật explorer", 1000);
+                        LogStatus(device, "Không tìm được file proxy --", 1000);
                         Device.OpenApp(deviceID, "com.estrongs.android.pop");
                         WaitAndTapXML(deviceID, 2, "cho phép re");
                         WaitAndTapXML(deviceID, 5, "internal");
@@ -868,26 +1032,34 @@ namespace fb_reg
                 LogStatus(device, "Wifi:" + ssid);
                 if (string.IsNullOrEmpty(ssid) || ssid.Contains("unknown") || forceChangeWifi)
                 {
-                    string mainWifi = "";
-                    if (PublicData.wifilist.Count > 0)
+                    try
                     {
-                        List<string> wifitemp = new List<string>();
-                        if (randomWifi)
+                        string mainWifi = "";
+                        if (PublicData.wifilist.Count > 0)
                         {
-                            wifitemp = (List<string>)PublicData.wifilist.Shuffle();
-                        }
-                        else
-                        {
-                            wifitemp = PublicData.wifilist;
-                        }
+                            List<string> wifitemp = new List<string>();
+                            if (randomWifi)
+                            {
+                                wifitemp = (List<string>)PublicData.wifilist.Shuffle();
+                            }
+                            else
+                            {
+                                wifitemp = PublicData.wifilist;
+                            }
 
-                        mainWifi = wifitemp[0];
-                        LogStatus(device, "Set wifi: " + mainWifi);
-                        string[] temp = mainWifi.Split('|');
-                        Device.SetWifi(deviceID, temp[0].Trim(), temp[1].Trim());
-                        Thread.Sleep(3000);
+                            mainWifi = wifitemp[0];
+                            LogStatus(device, "Set wifi: " + mainWifi, 1000);
+                            string[] temp = mainWifi.Split('|');
+                            Device.SetWifi(deviceID, temp[0].Trim(), temp[1].Trim());
+                            Thread.Sleep(3000);
 
+                        }
                     }
+                    catch (Exception ex)
+                    {
+                        LogStatus(device, "Lỗi khi thay đổi wifi: " + ex.Message);
+                    }
+                    
 
                 }
 
@@ -940,158 +1112,48 @@ namespace fb_reg
                     return false;
                 }
             }
-
-
-            //if (proxyCMDcheckBox.Checked)
-            //{
-            //    string proxyPort = device.proxyDevice.host + ":" + device.proxyDevice.port;
-            //    Device.SetProxyCmd(deviceID, proxyPort);
-            //    return true;
-            //}
-
             if (order.proxyFromServer)
             {
                 LogStatus(device, "Chay set proxy mới   -tttttttttttttt-----------");
 
                 if (!SetProxySuperProxy(order, device))
                 {
-                    LogStatus(device, "Can not set proxy ---------return ", 6000);
-                    device.loadNewProxy = true;
-
-                    string fbv = Device.GetVersionFB(deviceID);
-                    LogStatus(device, "Không start dc proxy kiem tra fbversion: " + fbv);
-                    if (string.IsNullOrEmpty(fbv))
+                    LogStatus(device, "Can not set proxy ---------thử lại ", 1000);
+                    if (!SetProxySuperProxy(order, device))
                     {
-                        //LogStatus(device, "Máy bị lỗi mất kết nồi - restart máy ------0000");
-                        //Device.RebootByCmd(deviceID);
-                    }
+                        LogStatus(device, "Can not set proxy ---------return ", 6000);
+                        device.loadNewProxy = true;
 
-                    return false;
+                        string fbv = Device.GetVersionFB(deviceID);
+                        LogStatus(device, "Không start dc proxy kiem tra fbversion: " + fbv);
+                        if (string.IsNullOrEmpty(fbv))
+                        {
+                            //LogStatus(device, "Máy bị lỗi mất kết nồi - restart máy ------0000");
+                            //Device.RebootByCmd(deviceID);
+                        }
+
+                        return false;
+                    }
+                    else
+                    {
+                        device.loadNewProxy = false;
+                        return true;
+                    }
                 }
                 else
                 {
-                    
+
                     device.loadNewProxy = false;
                     return true;
                 }
             }
-            if (order.proxyFromLocal)
-            {
-                if (!SetProxySuperProxy(order, device))
-                {
-                    LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
-                    device.loadNewProxy = true;
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
-            }
 
-            string domain = "";
-            //if (tinsoftRadioButton.Checked)
+            //if (device.proxyDevice != null && !device.proxyDevice.hasProxy)
             //{
-            //    domain = ProxyDomain.Tinsoft.ToString();
+            //    LogStatus(device, "error:" + device.proxyDevice.message);
+            //    PublicData.dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DeepPink;
+            //    Thread.Sleep(10000);
             //}
-            //else if (fastProxyRadioButton.Checked)
-            //{
-            //    domain = ProxyDomain.fastProxy.ToString();
-            //}
-            //else if (zuesProxyradioButton.Checked)
-            //{
-            //    domain = ProxyDomain.zuesProxy.ToString();
-            //}
-            //else if (zuesProxy4G.Checked)
-            //{
-            //    domain = ProxyDomain.zuesProxy4G.ToString();
-            //}
-            //else if (tunProxyradioButton.Checked)
-            //{
-            //    domain = ProxyDomain.tunProxy.ToString();
-            //}
-            //else if (impulseradioButton.Checked)
-            //{
-            //    domain = ProxyDomain.impulseProxy.ToString();
-            //}
-            //else if (shopLike1RadioButton.Checked)
-            //{
-            //    domain = ProxyDomain.Softlike.ToString();
-            //}
-            //else if (tinProxyRadioButton.Checked)
-            //{
-            //    device.currentPublicIp = GetPublicIp(device);
-            //    dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
-            //    if (string.IsNullOrEmpty(device.currentPublicIp))
-            //    {
-            //        LogStatus(device, "Gỡ proxy khi không lấy được ip");
-
-            //        RemoveAllProxy(deviceID);
-            //    }
-            //    domain = ProxyDomain.TinProxy.ToString();
-            //}
-            //else if (tmProxyRadioButton.Checked)
-            //{
-            //    domain = ProxyDomain.TmProxy.ToString();
-            //}
-            //else if (dtProxyRadioButton.Checked)
-            //{
-            //    device.currentPublicIp = GetPublicIp(device);
-            //    dataGridView.Rows[device.index].Cells[8].Value = device.currentPublicIp;
-            //    if (string.IsNullOrEmpty(device.currentPublicIp))
-            //    {
-            //        // TODO
-            //    }
-            //    domain = ProxyDomain.dtProxy.ToString();
-            //}
-            //else if (wwProxyradioButton.Checked)
-            //{
-            //    domain = ProxyDomain.wwProxy.ToString();
-
-            //}
-            //int proxyTime = 4;
-            //if (getProyx20timecheckBox.Checked)
-            //{
-            //    proxyTime = 20;
-            //}
-            //for (int i = 0; i < 3; i++)
-            //{
-            //    LogStatus(device, "Getting proxy ... lần : " + (i + 1));
-            //    if (device.proxyDevice != null && device.proxyDevice.hasProxy && !string.IsNullOrEmpty(device.proxyDevice.host))
-            //    {
-            //        break;
-            //    }
-            //    device.proxyDevice = Utility.GetProxy(domain, device.proxyDevice.key, device.currentPublicIp, locationProxyTextBox.Text);
-            //    // Handle timeout
-            //    if (device.proxyDevice != null && device.proxyDevice.isWait)
-            //    {
-            //        LogStatus(device, "Proxy timeout:" + device.proxyDevice.timeout);
-            //        Thread.Sleep(device.proxyDevice.timeout * 1000 + 5000);
-            //        device.proxyDevice = Utility.GetProxy(domain, device.proxyDevice.key, device.currentPublicIp, locationProxyTextBox.Text);
-            //    }
-            //    if (device.proxyDevice != null && device.proxyDevice.hasProxy)
-            //    {
-            //        string proxyPort = device.proxyDevice.host + ":" + device.proxyDevice.port;
-            //        if (!SetProxySuperProxy(order, device))
-            //        {
-            //            LogStatus(device, "Can not set proxy ----ttttttttt-------return ", 6000);
-            //            device.loadNewProxy = true;
-            //            return false;
-            //        }
-            //        return true;
-            //        //break;
-            //    }
-            //    Thread.Sleep(3000);
-            //}
-
-            if (device.proxyDevice != null && !device.proxyDevice.hasProxy)
-            {
-                LogStatus(device, "error:" + device.proxyDevice.message);
-
-
-                PublicData.dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DeepPink;
-                Thread.Sleep(10000);
-            }
 
 
             if (proxy4g)
@@ -1100,12 +1162,12 @@ namespace fb_reg
             }
             return true;
         }
-        public static bool ChangeIp(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare, bool randomProxyData, bool p1, bool p2, bool p3, bool proxy4g, bool forceChangeWifi, bool randomWifi)
+        public static bool ChangeIp(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare, bool randomProxyData, bool proxy4g, bool forceChangeWifi, bool randomWifi)
         {
             Device.AirplaneOff(device.deviceId);
             if (order.proxyFromServer)
             {
-                bool checkStartProxy = FbUtil.SetProxy(order, device, giulaiport, proxyShare, randomProxyData, p1, p2, p3, proxy4g, forceChangeWifi, randomWifi);
+                bool checkStartProxy = FbUtil.SetProxy(order, device, giulaiport, proxyShare, randomProxyData,  proxy4g, forceChangeWifi, randomWifi);
 
                 if (!checkStartProxy)
                 {
@@ -1119,7 +1181,7 @@ namespace fb_reg
             }
             return true;
         }
-        public static bool SetProxy(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare,bool randomProxyData, bool p1, bool p2, bool p3, bool proxy4g,bool forceChangeWifi,bool randomWifi)
+        public static bool SetProxy(OrderObject order, DeviceObject device, bool giulaiport, bool proxyShare,bool randomProxyData, bool proxy4g,bool forceChangeWifi,bool randomWifi)
         {
             string deviceID = device.deviceId;
             for (int i = 0; i < 2; i ++) 
@@ -1153,7 +1215,7 @@ namespace fb_reg
                                 order.proxyType = "2";
                             }
                         }
-                        pp = GetProxyFromServer(device, order, p1, p2, p3);
+                        pp = GetProxyFromServer(device, order);
                         device.currentProxyCount = 0;
                     }
                     if (pp != null)
@@ -1255,7 +1317,7 @@ namespace fb_reg
                             if (!StartProxy(order, device, proxy4g, forceChangeWifi, randomWifi))
                             {
                                 // Device.DisableWifi(deviceID);
-                                CacheServer.deleteKeyProxy(PublicData.ServerCacheMail, order);
+                                CacheServer.deleteKeyProxy(PublicData.CacheServerUri, order);
                                 StopProxySuper(device, order);
                                 device.keyProxy = "";
                                 return false;
@@ -1271,7 +1333,7 @@ namespace fb_reg
                         if (!StartProxy(order, device, proxy4g, forceChangeWifi, randomWifi))
                         {
                             // Device.DisableWifi(deviceID);
-                            CacheServer.deleteKeyProxy(PublicData.ServerCacheMail, order);
+                            CacheServer.deleteKeyProxy(PublicData.CacheServerUri, order);
                             StopProxySuper(device, order);
                             device.keyProxy = "";
                             return false;
@@ -1421,7 +1483,7 @@ namespace fb_reg
                 if (CheckTextExist(deviceID, new string[] { "tạotàikhoảnmớicheckable", "createnewAccountCheckable" }))
                 {
                     LogStatus(device, "Đã vào màn hình chính fb, tiếp tục check mạng : " + i);
-                    break;
+                    return true;
                 }
                 if (CheckTextExist(deviceID, "kếtnốivớibạnbè", 1, dddd))
                 {
@@ -1575,16 +1637,23 @@ namespace fb_reg
 
             string uixml;
             Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-            Thread.Sleep(10000);
-            WaitAndTapXML(deviceID, 1, "cho phép re");
-            KAutoHelper.ADBHelper.TapByPercent(deviceID, 47.3, 88.0);
+            Thread.Sleep(5000);
+            for (int i = 0; i < 5; i ++)
+            {
+                uixml = GetUIXml(deviceID);
+                if (WaitAndTapXML(deviceID, new string[] { "createnewaccountch", "cho phép re"}, uixml))
+                {
+                    break;
+                }
+            }
+            
             if (!moiKatana)
             {
                
                 for (int i = 0; i < 10; i++)
                 {
                     uixml = GetUIXml(deviceID);
-                    WaitAndTapXML(deviceID, new string[] { "thửlạiresourceid", "thử lại" }, uixml);
+                    WaitAndTapXML(deviceID, new string[] {"tạo tài khoản mới", "thửlạiresourceid", "thử lại" }, uixml);
                     if (WaitAndTapXML(deviceID, 1, "facebookresourceid", uixml))
                     {
                         if (WaitAndTapXML(deviceID, 1, "luônchọnresourceid"))
@@ -3477,7 +3546,35 @@ tar -xpf /sdcard/facebook_backup.tar
                 cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /sdcard/Alarms/*' \"", deviceID);
 
                 result = Device.ExecuteCMD(cmd); // delete folder uid
+                string filePath = string.Format("{0}/Authentication/{1}.tar.gz", Application.StartupPath, uid);
+                
+                // Create a FileInfo object for the specified file
+                FileInfo fileInfo = new FileInfo(filePath);
 
+                // Check if the file exists before attempting to get its size
+                if (fileInfo.Exists)
+                {
+                    // Get the file size in bytes
+                    long fileSizeInBytes = fileInfo.Length;
+
+                    Console.WriteLine($"The size of '{filePath}' is {fileSizeInBytes} bytes.");
+
+                    // Optionally, convert to KB, MB, or GB
+                    double fileSizeInKB = (double)fileSizeInBytes / 1024;
+                    double fileSizeInMB = (double)fileSizeInBytes / (1024 * 1024);
+
+                    Console.WriteLine($"The size in KB: {fileSizeInKB:F2} KB");
+                    Console.WriteLine($"The size in MB: {fileSizeInMB:F2} MB");
+                    if (fileSizeInKB < 200)
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Error: The file '{filePath}' does not exist.");
+                    return false;
+                }
                 return true;
             }
             catch (Exception ex)

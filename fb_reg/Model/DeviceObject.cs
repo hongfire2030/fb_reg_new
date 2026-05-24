@@ -5,6 +5,8 @@ namespace fb_reg
 {
     public class DeviceObject
     {
+        public string proxyType = "4";
+        public DateTime startReg = DateTime.UtcNow;
         public int countVeriBackupSuccess = 0;
         public string currentUIxml;
         public string otp1;
@@ -64,6 +66,7 @@ namespace fb_reg
         public int totalInHour;
         public int successInHour;
         public bool isSuccess = false;
+        
         public int noveri;
         public string startTime;
         public int globalTotal;

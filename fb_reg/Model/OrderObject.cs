@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static fb_reg.Device;
 
 namespace fb_reg
 {
     public class OrderObject
     {
+        public IpInfo ipInfo;
         public bool getOtp = false;
         public int countVaoManHinhNhapMaXacNhan = 0;
         public bool updateSuccessfull = false;
@@ -15,7 +17,8 @@ namespace fb_reg
         public string currentIp;
         public string otp1;
         public string otp2;
-        public string proxyType = "3";
+        public string proxyType = "4";
+        public List<string> listProxyType = new List<string>();
         public bool RootRom = false;
         public bool mailEdu = false;
         public bool deleteKeyProxy = false;
@@ -65,7 +68,7 @@ namespace fb_reg
         public bool dauso12;
         public string log;
         public bool hasAddFriend = false;
-        public int numberOfFriendRequest = 5;
+        
         public bool checkAccHasAvatar = false;
         public bool checkAccHasCover = false;
         public bool checkAvatar;
@@ -148,7 +151,7 @@ namespace fb_reg
             isVeriOk = false;
             set2FaSuccess = false;
             checkAccHasAvatar = false;
-            numberOfFriendRequest = 5;
+
             hasAddFriend = false;
             log = "";
         }

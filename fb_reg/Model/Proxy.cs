@@ -3,11 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static fb_reg.Device;
 
 namespace fb_reg
 {
     public class Proxy
     {
+        public IpInfo ipInfo;
         public string proxyType = "";
         public string proxyId;
         public bool hasProxy = false;
