@@ -3,6 +3,7 @@ using EAGetMail;
 using Emgu.CV.Ocl;
 using fb_reg.Model;
 using fb_reg.RequestApi;
+using fb_reg.Utilities;
 using Microsoft.Graph.AuditLogs;
 using Microsoft.Graph.Models;
 using Newtonsoft.Json;
@@ -47,13 +48,17 @@ namespace fb_reg
                     uri = PublicData.LogHotmailServerUri;
 
                 }
+                if (order.currentMail != null && order.currentMail.password == "tempmail")
+                {
+                    return "";
+                }
                 LogEntryDevice log = new LogEntryDevice();
                 log.DeviceId = device.deviceId;
                 log.ProxyIp = order.currentIp;
                 log.Status = status;
                 log.Pcname = Environment.MachineName;
                 log.AndroidVersion = Device.GetAndroidVersion(device.deviceId);
-
+                
                 string submitLog = string.Format("log/submit-log");
                 var client = new RestClient(uri);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
@@ -72,8 +77,8 @@ namespace fb_reg
                 {
                     mode = "scale";
                 }
+                LokiLogger.Log(status, device.deviceId, order.ipInfo?.country?.code, "", order.proxy?.proxyDomain, status);
 
-                
                 if (order.ipInfo == null || order.ipInfo.country == null)
                 {
                     return "";
@@ -705,7 +710,7 @@ namespace fb_reg
             }
             return proxy;
         }
-        public static MailObject GetSuperGmailLocalCache(string server)
+        public static MailObject GetSuperGmailLocalCache(string server, string deviceId)
         {
             MailObject mail = new MailObject();
             try
@@ -714,6 +719,9 @@ namespace fb_reg
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetSuperGmail);
+
+                request.AddParameter("deviceId", deviceId);
+                request.AddParameter("deviceReady", true);
 
                 request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);

@@ -5,6 +5,7 @@ namespace fb_reg
 {
     public class DeviceObject
     {
+        public int countUploadAvatarFail = 0;
         public string proxyType = "4";
         public DateTime startReg = DateTime.UtcNow;
         public int countVeriBackupSuccess = 0;

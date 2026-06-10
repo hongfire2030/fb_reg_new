@@ -109,16 +109,12 @@ namespace fb_reg
 
     public static class Mail
     {
-        public static MailObject GetMail(DeviceObject device, OrderObject order, bool getTrustMail, bool getDecision, DataGridView dataGridView, bool forceGmail)
+        public static MailObject GetHotmail(DeviceObject device, OrderObject order)
         {
-            if (!IsMailEmpty(order.currentMail))
-            {
-                return order.currentMail;
-            }
-            if (order.isHotmail)
+            try
             {
                 MailObject mail = new MailObject();
-                for (int i = 0; i < 100; i ++)
+                for (int i = 0; i < 100; i++)
                 {
                     mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
                     if (!IsMailEmpty(mail))
@@ -134,150 +130,164 @@ namespace fb_reg
                         }
                         else
                         {
-                             Utility.LogStatus(device, i + " - Get hotmail từ server cache - mail đã tồn tại---", 500); 
+                            Utility.LogStatus(device, i + " - Get hotmail từ server cache - mail đã tồn tại---", 500);
                         }
                     }
                 }
-                
+
 
                 if (IsMailEmpty(mail))
                 {
-                    return GetHotmail(device, order, getTrustMail);
-                } else
+                    return GetHotmailOutsite(device, order);
+                }
+                else
                 {
                     Utility.LogStatus(device, "Get mail từ server cache---", 1000);
                     return mail;
                 }
-            } else // get gmail 
+            } catch (Exception ee)
             {
-                try
+                Utility.LogStatus(device, "Lỗi get hotmail từ cache server: " + ee.Message);
+            }
+            return null;
+        }
+
+        public static MailObject getOtherMail(DeviceObject device, OrderObject order, bool getDecision, DataGridView dataGridView, bool forceGmail)
+        {
+            try
+            {
+                string deviceID = device.deviceId;
+
+
+                Utility.LogStatus(device, "Kiểm tra mạng ổn định mới get mail:");
+                if (!order.proxyWfi && order.hasproxy && order.proxy != null)
                 {
-                    string deviceID = device.deviceId;
-                    
+                    Proxy proxy = order.proxy;
+                    OutsideServer.WaitUntilProxyStable(order.proxy);
+                }
+                else
+                {
+                    OutsideServer.WaitUntilNetworkStable();
+                }
 
-                    Utility.LogStatus(device, "Kiểm tra mạng ổn định mới get mail:");
-                    if (!order.proxyWfi && order.hasproxy && order.proxy != null)
+                for (int i = 0; i < PublicData.soLanChoMail; i++)
+                {
+                    if (getDecision)
                     {
-                        Proxy proxy = order.proxy;
-                        OutsideServer.WaitUntilProxyStable(order.proxy);
-                    }
-                    else
-                    {
-                        OutsideServer.WaitUntilNetworkStable();
-                    }
-
-                    for (int i = 0; i < PublicData.soLanChoMail; i++)
-                    {
-                        if (getDecision)
+                        Decision shouldStop = CacheServer.CheckDecision(device.deviceId);
+                        if (shouldStop != null && shouldStop.stop)
                         {
-                            Decision shouldStop = CacheServer.CheckDecision(device.deviceId);
-                            if (shouldStop != null && shouldStop.stop)
-                            {
 
-                                order.isSuccess = true;
-                                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkSeaGreen;
-                                return null;
-                            }
-                        }
-                        Utility.LogStatus(device, "Get mail lần:" + i);
-
-                        Utility.UnlockScreenPhone(deviceID);
-                        
-                        
-                        string xmmnmm = Utility.GetUIXml(deviceID);
-                        if (!Utility.CheckTextExist(deviceID, "nhậpemail", 1, xmmnmm)
-                            && !Utility.CheckTextExist(deviceID, "email mới", 1, xmmnmm))
-                        {
-                            Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                            Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                            Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 20000);
-                                
+                            order.isSuccess = true;
+                            dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkSeaGreen;
                             return null;
                         }
-                        
-
-                        bool cache = false;
-                        bool vip = false;
-                        if (i % 2 == 0)
-                        {
-                            cache = true;
-                        }
-                        if (i % 2 == 0)
-                        {
-                            vip = true;
-                        }
-                        order.currentMail = GetTempmail(deviceID, vip, "", order.tempmailType, PublicData.CacheServerUri, cache);
-
-                        if (!IsMailEmpty(order.currentMail))
-                        {
-                            return order.currentMail;
-                        }
-
-                        if (i > 15)
-                        {
-                            if (Utility.isScreenLock(deviceID))
-                            {
-                                Utility.LogStatus(device, "Screen is locking screen - Opening it");
-                                Device.Unlockphone(deviceID);
-                                Thread.Sleep(1000);
-                            }
-                        }
-                        if (PublicData.ThoatGmail && i > 50)
-                        {
-                            break;
-                        }
                     }
-                    
+                    Utility.LogStatus(device, "Get gmail lần:" + i);
+                    Utility.UnlockScreenPhone(deviceID);
 
-                    if (IsMailEmpty(order.currentMail) && forceGmail)
+                    string xmmnmm = Utility.GetUIXml(deviceID);
+                    if (!Utility.CheckTextExist(deviceID, "nhậpemail", 1, xmmnmm) && !Utility.CheckTextExist(deviceID, "email mới", 1, xmmnmm))
                     {
-                        Utility.LogStatus(device, "Không thể lấy gmail -> store nvr - color: DarkSeaGreen");
-                        return null;
-                    }
-
-                    if (IsMailEmpty(order.currentMail)) // get hotmail
-                    {
-                        order.isHotmail = true;
-                        MailObject mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
-
-                        if (IsMailEmpty(mail))
+                        Device.Unlockphone(deviceID);
+                        Thread.Sleep(5000);
+                        Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                        Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                        Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 20000);
+                        if (order.currentMail == null)
                         {
-                            order.currentMail = Mail.GetHotmail(device, order, getTrustMail);
-                            Utility.LogStatus(device, "Get hotmail");
+                            order.currentMail = new MailObject();
+                            order.currentMail.message = "mất màn hình nhập mail";
                         }
-                        else
-                        {
-                            Utility.LogStatus(device, "Get mail từ server cache---", 1000);
-                            order.currentMail = mail;
-                        }
+                        return order.currentMail;
                     }
-                    if (IsMailEmpty(order.currentMail)) // get tempmail
+
+
+                    bool cache = false;
+                    bool vip = false;
+                    if (i % 2 == 0)
                     {
-                        order.isHotmail = false;
-
-                        Utility.LogStatus(device, " tempmail generator");
-                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
-
-                        order.tempmailType = Constant.TEMP_GENERATOR_EMAIL;
-                        order.currentMail = Mail.GetTempmail(deviceID, true, "", order.tempmailType, PublicData.CacheServerUri);
-                        Thread.Sleep(2000);
+                        cache = true;
                     }
+                    if (i % 2 == 0)
+                    {
+                        vip = true;
+                    }
+                    order.currentMail = GetTempmail(deviceID, vip, "", order.tempmailType, PublicData.CacheServerUri, cache);
+
                     if (!IsMailEmpty(order.currentMail))
                     {
                         return order.currentMail;
-                        Thread.Sleep(3000);
                     }
-                    
+
+                    if (PublicData.ThoatGmail && i > 20)
+                    {
+                        Utility.LogStatus(device, "Thoát get mail sớm vì đã thử nhiều lần nhưng chưa có mail", 5000);
+                        break;
+                    }
                 }
-                catch (Exception ex)
+                Utility.LogStatus(device, "Kết thúc vòng lặp lấy mail mà chưa có mail:" + PublicData.soLanChoMail, 10000);
+
+                if (IsMailEmpty(order.currentMail) && forceGmail)
                 {
-                    Utility.LogStatus(device, "Lỗi trang mail exception");
-                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkMagenta;
+                    Utility.LogStatus(device, "Không thể lấy gmail -> store nvr - color: DarkSeaGreen");
                     return null;
                 }
+
+                if (IsMailEmpty(order.currentMail)) // get hotmail
+                {
+                    order.isHotmail = true;
+                    MailObject mail = GetHotmail(device, order);
+
+                    if (IsMailEmpty(mail))
+                    {
+                        order.currentMail = Mail.GetHotmailOutsite(device, order);
+                        Utility.LogStatus(device, "Get hotmail");
+                    }
+                    else
+                    {
+                        Utility.LogStatus(device, "Get mail từ server cache---", 1000);
+                        order.currentMail = mail;
+                    }
+                }
+                if (IsMailEmpty(order.currentMail)) // get tempmail
+                {
+                    order.isHotmail = false;
+
+                    Utility.LogStatus(device, " tempmail generator");
+                    dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
+
+                    order.tempmailType = Constant.TEMP_GENERATOR_EMAIL;
+                    order.currentMail = Mail.GetTempmail(deviceID, true, "", order.tempmailType, PublicData.CacheServerUri);
+                    Thread.Sleep(2000);
+                }
+                if (!IsMailEmpty(order.currentMail))
+                {
+                    Thread.Sleep(3000);
+                    return order.currentMail;
+                }
             }
-                
+            catch (Exception ex)
+            {
+                Utility.LogStatus(device, "Lỗi trang mail exception");
+                dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkMagenta;
+                return null;
+            }
             return null;
+        }
+        public static MailObject GetMail(DeviceObject device, OrderObject order, bool getDecision, DataGridView dataGridView, bool forceGmail)
+        {
+            if (!IsMailEmpty(order.currentMail))
+            {
+                return order.currentMail;
+            }
+            if (order.isHotmail)
+            {
+                return GetHotmail(device, order);
+            } else // get gmail 
+            {
+                return getOtherMail(device, order, getDecision, dataGridView, forceGmail);
+            }
         }
 
         public static bool IsMailEmpty(MailObject currentMail)
@@ -309,10 +319,10 @@ namespace fb_reg
             }
             return listmail;
         }
-        public static MailObject GetHotmail(DeviceObject device, OrderObject order, bool getTrustMail)
+        public static MailObject GetHotmailOutsite(DeviceObject device, OrderObject order)
         {
             int count = 50;
-            if (getTrustMail)
+            if (order.getTrustmail)
             {
                 count = 2;
             }
@@ -348,7 +358,7 @@ namespace fb_reg
 
             if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
             {
-                if (getTrustMail)
+                if (order.getTrustmail)
                 {
                     order.currentMail = Mail.GetHotmailUnlimited(1, "5");
                     if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
@@ -970,7 +980,7 @@ namespace fb_reg
             MailObject mail = new MailObject();
             if (cache)
             {
-                mail = CacheServer.GetSuperGmailLocalCache(server);
+                mail = CacheServer.GetSuperGmailLocalCache(server, deviceId);
             }
              
             if (IsMailEmpty(mail))
@@ -983,8 +993,7 @@ namespace fb_reg
                     if (string.IsNullOrEmpty(mail.message))
                     {
                         mail.message = "gmail trực tiếp từ tool";
-                    }
-                    
+                    }   
                 }
             }
             else

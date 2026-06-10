@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-
 using Newtonsoft.Json;
 using System.IO;
 
-using System.Text.RegularExpressions;
 using System.Web.Script.Serialization;
 using System.Net;
 using HttpRequest;
@@ -16,6 +13,7 @@ using static fb_reg.OutsideServer;
 using fb_reg.RequestApi;
 using System.Net.Http;
 using System.Threading.Tasks;
+using System.Text;
 
 namespace fb_reg
 {
@@ -25,7 +23,46 @@ namespace fb_reg
 
         public static string SERVER_HOST = "http://192.168.1.32";
 
+        public async Task PushLog(string message, string deviceId)
+        {
+            using var client = new HttpClient();
 
+            var timestamp =
+                DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                * 1000000;
+
+            var payload = new
+            {
+                streams = new[]
+                {
+            new
+            {
+                stream = new
+                {
+                    app = "fbtool",
+                    machine = Environment.MachineName,
+                    deviceId = deviceId
+                },
+                values = new[]
+                {
+                    new[]
+                    {
+                        timestamp.ToString(),
+                        message
+                    }
+                }
+            }
+        }
+            };
+
+            var json = JsonConvert.SerializeObject(payload);
+
+            await client.PostAsync(
+                "http://148.113.207.13:3100/loki/api/v1/push",
+                new StringContent(json,
+                                  Encoding.UTF8,
+                                  "application/json"));
+        }
         public class DataSettings
         {
             [JsonProperty("code")]

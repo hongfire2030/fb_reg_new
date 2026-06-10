@@ -1594,7 +1594,7 @@ namespace fb_reg
                         for (int i = 0; i < data.messages.Length; i++)
                         {
                             string subject = data.messages[i].subject;
-                            Utility.LogStatus(mail.deviceId, "subject:" + subject);
+                            Utility.LogStatus(mail.deviceId,i + "/" + data.messages.Length + "-subject:" + subject, 1000);
                             //if (subject.Contains("connected to your Microsoft account"))
                             //{
                             //    otps.Add("connected to");

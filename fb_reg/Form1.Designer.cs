@@ -2763,7 +2763,7 @@ namespace fb_reg
             this.MaxRatetextBox.Name = "MaxRatetextBox";
             this.MaxRatetextBox.Size = new System.Drawing.Size(44, 26);
             this.MaxRatetextBox.TabIndex = 360;
-            this.MaxRatetextBox.Text = "90";
+            this.MaxRatetextBox.Text = "85";
             this.MaxRatetextBox.TextChanged += new System.EventHandler(this.MaxRatetextBox_TextChanged);
             // 
             // chogetmailtextBox
@@ -2840,7 +2840,7 @@ namespace fb_reg
             this.solanchomailtextBox.Name = "solanchomailtextBox";
             this.solanchomailtextBox.Size = new System.Drawing.Size(71, 26);
             this.solanchomailtextBox.TabIndex = 352;
-            this.solanchomailtextBox.Text = "40";
+            this.solanchomailtextBox.Text = "150";
             this.solanchomailtextBox.TextChanged += new System.EventHandler(this.solanchomailtextBox_TextChanged);
             // 
             // ChomailcheckBox
@@ -3840,6 +3840,8 @@ namespace fb_reg
             // tramailcheckBox
             // 
             this.tramailcheckBox.AutoSize = true;
+            this.tramailcheckBox.Checked = true;
+            this.tramailcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.tramailcheckBox.Location = new System.Drawing.Point(283, 25);
             this.tramailcheckBox.Name = "tramailcheckBox";
             this.tramailcheckBox.Size = new System.Drawing.Size(90, 24);
@@ -3851,8 +3853,6 @@ namespace fb_reg
             // clonenhacheckBox
             // 
             this.clonenhacheckBox.AutoSize = true;
-            this.clonenhacheckBox.Checked = true;
-            this.clonenhacheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.clonenhacheckBox.Location = new System.Drawing.Point(202, 44);
             this.clonenhacheckBox.Name = "clonenhacheckBox";
             this.clonenhacheckBox.Size = new System.Drawing.Size(103, 24);
@@ -3922,8 +3922,6 @@ namespace fb_reg
             // sptVipcheckBox
             // 
             this.sptVipcheckBox.AutoSize = true;
-            this.sptVipcheckBox.Checked = true;
-            this.sptVipcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.sptVipcheckBox.Location = new System.Drawing.Point(202, 79);
             this.sptVipcheckBox.Name = "sptVipcheckBox";
             this.sptVipcheckBox.Size = new System.Drawing.Size(83, 24);
@@ -3935,8 +3933,6 @@ namespace fb_reg
             // sptNormalcheckBox
             // 
             this.sptNormalcheckBox.AutoSize = true;
-            this.sptNormalcheckBox.Checked = true;
-            this.sptNormalcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.sptNormalcheckBox.Location = new System.Drawing.Point(202, 98);
             this.sptNormalcheckBox.Name = "sptNormalcheckBox";
             this.sptNormalcheckBox.Size = new System.Drawing.Size(114, 24);
@@ -4014,8 +4010,6 @@ namespace fb_reg
             // thuesimcheckBox
             // 
             this.thuesimcheckBox.AutoSize = true;
-            this.thuesimcheckBox.Checked = true;
-            this.thuesimcheckBox.CheckState = System.Windows.Forms.CheckState.Checked;
             this.thuesimcheckBox.Location = new System.Drawing.Point(103, 96);
             this.thuesimcheckBox.Name = "thuesimcheckBox";
             this.thuesimcheckBox.Size = new System.Drawing.Size(98, 24);
@@ -4381,7 +4375,7 @@ namespace fb_reg
             this.releaseNoteLabel.Name = "releaseNoteLabel";
             this.releaseNoteLabel.Size = new System.Drawing.Size(166, 69);
             this.releaseNoteLabel.TabIndex = 226;
-            this.releaseNoteLabel.Text = "2355";
+            this.releaseNoteLabel.Text = "2366";
             this.releaseNoteLabel.Click += new System.EventHandler(this.releaseNoteLabel_Click);
             // 
             // forceDungMayCheckBox

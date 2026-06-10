@@ -1828,52 +1828,6 @@ namespace fb_reg
             string cmd = string.Format(CONSOLE_ADB + " shell svc data disable", deviceID);
             ExecuteCMD(cmd);
         }
-        public static string RunAdbAsRoot(string deviceId, string shellCommand, int timeoutMs = 10000)
-        {
-            try
-            {
-                string fullCommand = $"shell su -c \"{shellCommand}\"";
-                string adbArgs = (string.IsNullOrEmpty(deviceId) ? "" : $"-s {deviceId} ") + fullCommand;
-
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "adb",
-                    Arguments = adbArgs,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    CreateNoWindow = true
-                };
-
-                var process = new Process { StartInfo = startInfo };
-                var outputBuilder = new StringBuilder();
-                var errorBuilder = new StringBuilder();
-
-                process.OutputDataReceived += (s, e) => { if (e.Data != null) outputBuilder.AppendLine(e.Data); };
-                process.ErrorDataReceived += (s, e) => { if (e.Data != null) errorBuilder.AppendLine(e.Data); };
-
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-
-                if (!process.WaitForExit(timeoutMs))
-                {
-                    process.Kill();
-                    throw new TimeoutException("⏰ ADB (su) command timed out.");
-                }
-
-                string error = errorBuilder.ToString().Trim();
-                if (!string.IsNullOrWhiteSpace(error))
-                    Console.WriteLine("⚠️ ADB su stderr: " + error);
-
-                return outputBuilder.ToString().Trim();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("❌ RunAdbAsRoot exception: " + ex.Message);
-                return "";
-            }
-        }
 
         public static string RunAdb(string deviceId, string args, int timeoutMs = 15000)
         {

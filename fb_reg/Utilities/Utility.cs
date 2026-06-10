@@ -294,13 +294,30 @@ class Utility
             LogStatus(device, status, sleep);
         }
 
+        public static void LogError(string deviceId, string status, int sleep = 0)
+        {
+            DeviceObject device = DeviceManager.GetDevice(deviceId);
+            if (device == null)
+            {
+                return;
+            }
+            LogError(device, status, sleep);
+        }
+
+        public static void LogStatus (string text)
+        {
+            LokiLogger.Log(
+                status: "LOG_STATUS",
+                deviceId: "SYSTEM",
+                country: "",
+                email: "",
+                proxy: "",
+                message: text);
+        }
         public static void LogStatus(DeviceObject device, string text, int sleep = 0)
         {
             string key = device.keyProxy;
-            //if (!string.IsNullOrEmpty(device.keyProxy) && device.keyProxy.Length > 6)
-            //{
-            //    key = " : " + device.keyProxy.Substring(device.keyProxy.Length - 6, 6);
-            //}
+
             device.status = text + "-block:" + device.blockCount + " - " + key;
 
             UpdateStatus2(device);
@@ -308,6 +325,35 @@ class Utility
             {
                 Thread.Sleep(sleep);
             }
+
+            LokiLogger.Log(
+                status: "LOG_STATUS",
+                deviceId: device.deviceId,
+                country: "",
+                email: "",
+                proxy: "",
+                message: device.status);
+        }
+
+        public static void LogError(DeviceObject device, string text, int sleep = 0)
+        {
+            string key = device.keyProxy;
+
+            device.status = text + "-block:" + device.blockCount + " - " + key;
+
+            UpdateStatus2(device);
+            if (sleep > 0)
+            {
+                Thread.Sleep(sleep);
+            }
+
+            LokiLogger.Log(
+                status: "LOG_ERROR",
+                deviceId: device.deviceId,
+                country: "",
+                email: "",
+                proxy: "",
+                message: device.status);
         }
         public static Account GetAccMoi()
         {
@@ -496,7 +542,7 @@ class Utility
                 };
             foreach (var pkg in packages)
             {
-                LogStatus(device, $"[+] Checking: {pkg}");
+                LogStatus(device, $"[+] Checking: {pkg}", 1000);
 
                 string rawInfo = RunAdb(deviceId, $"shell dumpsys package {pkg}");
 
@@ -504,7 +550,7 @@ class Utility
 
                 if (!isEnabled)
                 {
-                    LogStatus(device, $"[-] {pkg} is DISABLED → Enabling...");
+                    LogStatus(device, $"[-] {pkg} is DISABLED → Enabling...", 1000);
 
                     RunAdb(deviceId, $"shell pm enable {pkg}");
                     RunAdb(deviceId, $"shell monkey -p {pkg} -c android.intent.category.LAUNCHER 1");
@@ -2564,7 +2610,23 @@ class Utility
             string gender, int yearOld, string isVerified, string status = "checking")
         {
             //var watch = Stopwatch.StartNew();
-            order.isSuccess = true;
+            try
+            {
+                if (isVerified == Constant.TRUE)
+                {
+                     LogCheckpoint(device, order, Constant.VERI_SUCCESS);   
+                }
+                //else
+                //{
+                //     LogCheckpoint(device, order, Constant.CHECKPOINT);
+                //}
+            } catch (Exception ex)
+            {
+
+            }
+            
+
+                order.isSuccess = true;
             string deviceID = device.deviceId;
             string cookies = FbUtil.GetCookieFromPhone(deviceID);
             if ((order.isReverify || order.reupFullInfoAcc) && cookies.Length < 178)
@@ -2739,17 +2801,7 @@ class Utility
             {
                 needBackup = false;
             }
-            if (verified)
-            {
-                try
-                {
-                    CacheServer.LogCheckpoint(device, order, Constant.VERI_SUCCESS);
-                }
-                catch (Exception ex)
-                {
-
-                }
-            }
+            
 
             if (isServer)
             {
@@ -2791,7 +2843,7 @@ class Utility
                     }
                     catch (Exception edeee)
                     {
-                        LogStatus(device, "eeee lưu acc file: " + edeee.Message);
+                        LogStatus(device, "eeee lưu acc file: " + edeee.Message, 1000);
                     }
 
                     return -2;
@@ -3697,10 +3749,10 @@ class Utility
                         List<string> subjects = GetAllSubjectMail(inMail);
 
                         ////truy xuất nội dung từng mail
-                        foreach (string mail in subjects)
+                        foreach (string subject in subjects)
                         {
-                            LogStatus( deviceID, i +  " - subject:" + mail);
-                            code = FindCodeInSubject(mail);
+                            LogStatus( deviceID, i + "/" + subjects.Count +  " - subject:" + subject, 1000);
+                            code = FindCodeInSubject(subject);
                             if (code != Constant.FAIL)
                             {
                                 break;

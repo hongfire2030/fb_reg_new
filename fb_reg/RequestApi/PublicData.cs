@@ -18,7 +18,7 @@ namespace fb_reg.RequestApi
     public static class PublicData
     {
         public static DateTime nextCheckTime = DateTime.MinValue;
-        public static int maxRate = 90;
+        public static int maxRate = 85;
         public static RunningStatus RunStatus = RunningStatus.RunningNormal; //Idle, Running, Paused, Stopped
         public static int numberOfFriend = 0;
         public static bool proxyUbuntu = false;
@@ -28,11 +28,11 @@ namespace fb_reg.RequestApi
         public static string includeProxy = "";
         public static string exceptionProxy = "us,vn";
         public static bool exceptionusvn = false;
-        public static bool vandong = false;
+        public static bool vandong = true;
         public static bool unlimit = true;
         public static bool global = false;
         public static bool stopAll = false;
-        public static bool needReuseMail = false;
+        public static bool needReuseMail = true;
         public static bool isSuccess = false;
         public static bool getMailCache = false;
         public static int countSuccessVeribackup = 0;
@@ -74,19 +74,19 @@ namespace fb_reg.RequestApi
         public static string AccessTokengmailShopgmailmmo = "he88E0i86xjL8Z27zbGk1nDDDm3vKixK";
         public static string AccessTokengmailClonenha = "83a87da6eda428457ad9e8b72dccce37GlpWHeVrTkfvUR710XY4nQoyP6zs2wLF";
 
-        public static int soLanChoMail = 40;
+        public static int soLanChoMail = 150;
         public static bool cho_mail = false;
         public static string SourceClonenha = "clonenha";   
         public static bool GetMailThuesim = false;
         public static bool GetMailThuesimVip = false;
         public static bool GetMailDvgm = false;
         public static bool GetMailDvgmNormal = false;
-        public static bool GetMailSptNormal = true;
-        public static bool GetMailSptVip = true;
+        public static bool GetMailSptNormal = false;
+        public static bool GetMailSptVip = false;
         public static bool GetShopgmailLocal = true;
         public static bool GetHvlMaillocal = false;
         public static bool GetShopgmailmmoLocal = true;
-        public static bool GetClonenhaLocal = true;
+        public static bool GetClonenhaLocal = false;
         public static bool GetGmailUnlimit = false;
         public static string TokenUnlimit = "8vnz9yfkcdsjmp6lnoosuju5990hec3jesfsq7yeiz7xwt1mgyvshouq5dt7g8exttoyan1722140071";
         public static List<string> wifilist = new List<string>();

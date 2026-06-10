@@ -10,6 +10,7 @@ namespace fb_reg
     public class OrderObject
     {
         public IpInfo ipInfo;
+        public bool getTrustmail = false;
         public bool getOtp = false;
         public int countVaoManHinhNhapMaXacNhan = 0;
         public bool updateSuccessfull = false;
