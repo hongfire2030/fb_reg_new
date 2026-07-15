@@ -9,6 +9,13 @@ namespace fb_reg
 {
     public class OrderObject
     {
+        public MailObject hotmailReplace = new MailObject();
+        public MailObject gmail;
+        public int addHotmailStatus = 0;
+        public int ommitMailStatus = 0;
+        public int ommitPhoneStatus = 0;
+        public int totalSuccess;
+        public int otp;
         public IpInfo ipInfo;
         public bool getTrustmail = false;
         public bool getOtp = false;
@@ -77,7 +84,7 @@ namespace fb_reg
         public bool isRun = false;
         public bool isVeriOk = false;
         public bool hasOtp = false;
-        public string otp = "";
+        
         public bool nvrUpAvatar;
         public string qrCode;
         public bool isReverify;

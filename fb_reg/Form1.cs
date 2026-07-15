@@ -44,7 +44,7 @@ namespace fb_reg
         int accDieCaptcha = 0;
         double percent = 0;
         int regNvrOk = 0;
-        int totalSucc = 0;
+        
         string statusSim = "";
         int openFacebookFailCount = 0;
         int noVerified = 0;
@@ -65,7 +65,7 @@ namespace fb_reg
         int WaitAddContactCount = 80;
         int numberContact = 90;
         string activeDuoiMail = "";
-        int otp = 0;
+        
 
 
         public Form1()
@@ -83,6 +83,8 @@ namespace fb_reg
             statusTextBox.Text = Properties.Settings.Default.statusTextbox;
             statusSim = Properties.Settings.Default.statusTextbox;
             wifiListtextBox.Text = Properties.Settings.Default.wifilist;
+            idUnlimittextBox.Text = Properties.Settings.Default.idUnlimit;
+            IdTrustUnlimittextBox.Text = Properties.Settings.Default.idTrustUnlimit;
 
             if (!string.IsNullOrEmpty(Properties.Settings.Default.serverapi))
             {
@@ -101,6 +103,8 @@ namespace fb_reg
             Device.ExecuteCMD("adb devices");
             PublicData.dataGridView = dataGridView;
 
+            //CacheServer.GetHotmailLocalCache("", "");
+
         }
     
     
@@ -110,10 +114,21 @@ namespace fb_reg
 
 
 
-            MailObject mm = new MailObject();
-            mm.refreshToken = "M.C515_BAY.0.U.-CoVqsSNmg*!Py8YHl1523Uc!a9J55xdggC8qh*KpVDgicGLLBLg7RxkTQrTMSqAGvWKKQ2HYvONe!XBKHa7k!b6DYhjNY3npfRHJba0mdGmZZeI2fYAL!hDXyK1soXK9GBuQc!juqJSsF3pb1CjUmUJ*xvz0omHMIbzxQHwsA2cZX9JzBln7kBuvFk8lccr4Vdei07PG3LhBhyKTgeUNdk0Sx!I79!TUxdhM8!vApUBVcWFwCikmFtY*IZgrXoz!7t6YMLBhiqJAACTEEAyV5rq7UNXmI!wCRqLAJF4ze7kYW9GQTf6LIHoH2eoSFZX52JTXjtnB3hgtKpgSfuVelECLT6*tccJXEmYieHdja95a*4qy!AuflaYY125A6z0OM04UFumVtjxVQJoaRKPDsZ0$";
-            mm.clientId = "8b4ba9dd-3ea5-4e5f-86f1-ddba2230dcf2";
+            //MailObject mm = new MailObject();
+            //mm.refreshToken = "M.C515_BAY.0.U.MsaArtifacts.-Cg4YpYfCaTVwEIAvhw2ni*h7oZHcRIjOCDfibZRcsBhWva2Bfv0!AR045Yq8qaqKZ*WqzdaGYlZwIJx*n6JENObfJy5gUb9dAH3hm5msabD79f3BVBkV5Q24*EkE3BHSMaKYnuyGwmT4iQ2fTNUQh6V9YGxu9310JjuUXnTLhJ5Bt6t*IbsPP1nfd2wreSDbu9ho6RnAGyH5NWiigdz!xX2TED8rnYRwiwI!aRDha6!TptRxKqD2tp4R9hZ1lD*wKnuRJll6LArkAP2BxtBM9yKAmGUftSpsQbNeCX4kpFgiqksdOwhUwhwJA!jo4ZvMzjaxk6mYZ3auqK4UjMRAOMHMUpUiQUG0n3c5wUuGPwgXkuJjBsaCLpNbcVI!bdCe3Q$$";
+            //mm.clientId = "9e5f94bc-e8a4-4e73-b8be-63364c29d753";
 
+            //ReadMailResponse json = ReadHotmail(
+            //                PublicData.CacheMailUbuntu,
+            //                mm.email,
+            //                mm.password,
+            //                mm.refreshToken,
+            //                mm.clientId,
+            //                true);
+
+            //bool alive = IsHotmailAlive(json);
+
+            //string ddd = GetFacebookOtp(json);
             //readHotmailLocal(mm);
 
             TimeoutRegtimer.Start();
@@ -315,6 +330,29 @@ namespace fb_reg
         {
             try
             {
+                PublicData.omitphone = OmitPhonecheckBox.Checked;
+                PublicData.omitgmail = OmitMailcheckBox.Checked;
+                PublicData.doiHotmail = doihotmailcheckBox.Checked;
+                PublicData.khonglaymailtrave = khonglaymailtravecheckBox.Checked;
+                PublicData.tramaildie = tramailDiecheckBox.Checked;
+                //List<MailObject> mailtemp = Mail.GetMultiHotmailUnlimited(1, "5");
+                PublicData.checkMail = checkMailcheckBox.Checked;
+                PublicData.listIdUnlimit = idUnlimittextBox.Text
+                                            .Split(',')
+                                            .Select(x => x.Trim())
+                                            .Where(x => !string.IsNullOrEmpty(x))
+                                            .ToList();
+
+                PublicData.listIdTrustUnlimit = IdTrustUnlimittextBox.Text
+                                            .Split(',')
+                                            .Select(x => x.Trim())
+                                            .Where(x => !string.IsNullOrEmpty(x))
+                                            .ToList();
+                PublicData.delay = Convert.ToInt32(delayTimetextBox1.Text);
+                PublicData.soLanChoMail = Convert.ToInt32(solanchomailtextBox.Text);
+                PublicData.delayAfterDie = Convert.ToInt32(delayAfterDieTextBox.Text);
+                PublicData.delayAfterReg = Convert.ToInt32(delayAfterRegTextBox.Text);
+
                 PublicData.numberOfFriend = Convert.ToInt32(numberOfFriendRequestTextBox.Text);
                 PublicData.GetMailSptVip = sptVipcheckBox.Checked;
                 PublicData.GetMailSptNormal = sptNormalcheckBox.Checked;
@@ -365,6 +403,8 @@ namespace fb_reg
         {
 
             string deviceID = device.deviceId;
+
+
             if (device.deviceId.Contains("recov"))
             {
                 RootRom(device);
@@ -2188,23 +2228,6 @@ if (order.reupFullInfoAcc)
                                 }
                             }
                         }
-                        
-                        //for (int i = 0; i < 5; i++)
-                        //{
-                        //    if (!CheckTextExist(deviceID, "sốdiđộnghoặcemail", 1))
-                        //    {
-                        //        Device.Back(deviceID);
-                        //    }
-                        //    else
-                        //    {
-                        //        break;
-                        //    }
-                        //}
-                        //if (!CheckTextExist(deviceID, "sốdiđộnghoặcemail", 1))
-                        //{
-                        //    LogStatus(device, "Không thể vào màn hình login facebook ----", 20000);
-                        //    return;
-                        //}
                     }
                     
                     Account acc = FbUtil.GetAccWaitInfo(true, deviceID, order.language);
@@ -2260,6 +2283,15 @@ if (order.reupFullInfoAcc)
                         Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
 
                         Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                        if (WaitAndTapXML(deviceID, 20, "dùng tiếng anh mỹ") )
+                        {
+                            Thread.Sleep(10000);
+                        }
+                        string xmmm = GetUIXml(deviceID);
+                        if (WaitAndTapXML(deviceID, new[] { "dùng tiếng anh mỹ", "close", "đóng", "cho phép" }, xmmm))
+                        {
+                            Thread.Sleep(10000);
+                        }
                     }  // login by username/ password
                     else
                     {
@@ -2273,19 +2305,7 @@ if (order.reupFullInfoAcc)
                         }
                         LogStatus(device, "Login bằng usename/pass - Check acc:" + acc.uid + " pass:" + acc.pass);
                         string xxxml = "" ;
-                        //for (int i = 0; i < 5; i ++)
-                        //{
-                        //    xxxml = GetUIXml(deviceID);
-                        //    if (!CheckTextExist(deviceID, "sốdiđộnghoặcemail", 1, xxxml))
-                        //    {
-                        //        Device.Back(deviceID);
-                        //    }
-                        //    else
-                        //    {
-                        //        break;
-                        //    }
-                        //}
-                        
+                  
                         if (!WaitAndTapXML(deviceID, 1, "descsốdiđộnghoặcemailchec", xxxml))
                         {
                             if (WaitAndTapXML(deviceID, 1, "đăngnhậpbằngtàikhoảnkháccheckable", xxxml))
@@ -2302,8 +2322,7 @@ if (order.reupFullInfoAcc)
                                 Thread.Sleep(2000);
                                 if (!FbUtil.OpenFacebookApp2Login(device, device.clearCacheLite))
                                 {
-                                    LogStatus(device, "Không thể mở facebook");
-                                    Thread.Sleep(10000);
+                                    LogStatus(device, "Không thể mở facebook", 10000);
                                     return ;
                                 }
                                 else
@@ -2353,14 +2372,6 @@ if (order.reupFullInfoAcc)
                         LogStatus(device, "Check login - " + i);
                         string xmlCheck = GetUIXml(deviceID);
 
-                        //if (CheckTextExist(deviceID, "hãy chờ"))
-                        //{
-                        //    Thread.Sleep(30000);
-                        //    WaitAndTapXML(deviceID, 3, "tiếng anh mỹ");
-                        //    Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                        //    Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                        //    Thread.Sleep(4000);
-                        //}
                         if (CheckTextExist(deviceID, "thêm ảnh", 1, xmlCheck))
                         {
                             goto LOGIN_ACC_THANH_CONG;
@@ -2407,11 +2418,6 @@ if (order.reupFullInfoAcc)
                             }
                             else
                             {
-                                //if (moiKatanaNhanhcheckBox.Checked)
-                                //{
-                                //    LogStatus(device, "Mồi Katana Nhanh -----");
-                                //    return ;
-                                //}
                                 Thread.Sleep(3000);
                                 goto LOGIN_ACC_THANH_CONG;
                             }
@@ -2500,6 +2506,10 @@ if (order.reupFullInfoAcc)
                         if (mail.password == Constant.TEMPMAIL || mail.password == Constant.GMAIL_SELL_GMAIL)
                         {
                             order.isHotmail = false;
+                            mail.isHotmail = false;
+                            order.gmail = new MailObject();
+                            order.gmail.email = mail.email;
+                            order.otp1 = "12345";
                         }
                         order.currentMail = mail;
                     }
@@ -2534,6 +2544,7 @@ if (order.reupFullInfoAcc)
                         int checkHasAvatar = UploadAvatarProfile(device, order, false, false);
                         if (checkHasAvatar == -3)
                         {
+                            LogAvatarFail(device, "UploadavatarProfile err -3");
                             fail++;
                             device.blockCount++;
                             device.isBlocking = true;
@@ -2563,6 +2574,7 @@ if (order.reupFullInfoAcc)
                              checkHasAvatar = UploadAvatarProfile(device, order, false, false);
                             if (checkHasAvatar == -3)
                             {
+                                LogAvatarFail(device, "UploadavatarProfile err -3  --22");
                                 return;
                             }
                             if (order.checkAccHasAvatar)
@@ -2589,18 +2601,18 @@ goto STORE_INFO;
                     }
                     else
                     {
-                        if (!string.IsNullOrEmpty(uidFromCookie) && !order.loginByUserPassword)
-                        {
-                            if (order.NAM_SERVER)
-                            {
-                                NamServer.GetBackupAcc(acc.uid);
-                            } else
-                            {
-                                ServerApi.GetBackupAcc(acc.uid);
-                            }
+                        //if (!string.IsNullOrEmpty(uidFromCookie) && !order.loginByUserPassword)
+                        //{
+                        //    if (order.NAM_SERVER)
+                        //    {
+                        //        NamServer.GetBackupAcc(acc.uid);
+                        //    } else
+                        //    {
+                        //        ServerApi.GetBackupAcc(acc.uid);
+                        //    }
                             
-                            Thread.Sleep(1000);
-                        }
+                        //    Thread.Sleep(1000);
+                        //}
                     }
                    
 
@@ -2815,8 +2827,15 @@ goto STORE_INFO;
                         dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.Green;
                         goto STORE_INFO;
                     }
-
-                    goto UPLOAD_AVATAR;
+                if (!acc.hasAvatar)
+                    {
+                        goto UPLOAD_AVATAR;
+                    }
+                else
+                    {
+                        goto SET_2FA;
+                    }
+                    
                 }
 
                 if (order.checkLogin) CheckLogin(device, order);
@@ -4716,7 +4735,7 @@ VERIFY_BY_EMAIL:
                         order.isSuccess = false;
                         if (order.currentMail != null)
                         {
-                            order.currentMail.message = "mail tra ve";
+                            order.currentMail.message = Constant.MAILTRAVE;
                             //ForceAddMailServerCache(order.currentMail);
                         }
                         
@@ -5045,7 +5064,7 @@ PUT_MAIL:
                         return;
                     }
                     order.currentMail = Mail.GetMail(device, order, getDecisioncheckBox.Checked, dataGridView, forceGmailcheckBox.Checked);
-
+                    
                     if (Mail.IsMailEmpty(order.currentMail))
                     {
                         
@@ -5072,6 +5091,7 @@ PUT_MAIL:
                             password, "noveri|tempmail", "", order.gender, yearOld, Constant.FALSE, device.log);
                         return;
                     }
+                    LogStatus(device, "Đã getmail thành công" + order.currentMail.toString());
                 }
                 if (order.currentMail.createdAt != null)
                 {
@@ -5101,16 +5121,20 @@ PUT_MAIL:
                     Device.TapByPercent(deviceID, 81.3, 56.8, 1000);
                 }
                 order.otp1 = "";
-
+                if (!order.currentMail.isHotmail)
+                {
+                    order.gmail = new MailObject();
+                    order.gmail.email = order.currentMail.email;
+                }
                 InputMail(deviceID, order.currentMail.email, inputStringMailCheckBox.Checked);
                 
                 
                 LogStatus(device, "Nhập mail xonggggggggggggggg", 1000);
-                KAutoHelper.ADBHelper.TapByPercent(deviceID, 92.7, 95.2); // xong
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 92.7, 95.2); // hạ bàn phím
 
                 Thread.Sleep(1000);
                 string xxmmm = GetUIXml(deviceID);
-                if (!CheckTextExist(deviceID, order.currentMail.email.Replace(".", ""), 1, xxmmm))
+                if (!CheckTextExist(deviceID, order.currentMail.email, 1, xxmmm))
                 {
                     dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.LightPink;
                    
@@ -5132,20 +5156,39 @@ PUT_MAIL:
                     LogStatus(device, "Nhập mail xong  22222  gggggggggggggg", 5000);
                 }
                 Utility.Log("Tap button continue", status);
-                uiXML = GetUIXml(deviceID);
-                if (!WaitAndTapXML(deviceID, 1, "tiếp", uiXML))
+                for (int i = 0;i < 3; i ++)
                 {
-                    WaitAndTapXML(deviceID, 2, Language.UpdateEmailVeri(), uiXML);
-                    WaitAndTapXML(deviceID, 2, "cập nhật", uiXML);
-
-                    Utility.WaitAndTapXML(deviceID, 10, Language.Continue(), uiXML);
-
-                    if (CheckTextExist(deviceID, "nhập email", 2))
+                    LogStatus(device, "Bấm 'tiep' lần :" + i);
+                    uiXML = GetUIXml(deviceID);
+                    if (CheckTextExist(deviceID, new string[] { "gửi đến địa chỉ" }, uiXML))
                     {
-                        LogStatus(device, "Bấm next thất bại - nhập email", 2000);
-                        KAutoHelper.ADBHelper.TapByPercent(deviceID, 61, 47.2); 
+                        goto PUT_OTP;
+                    }
+                    if (CheckTextExist(deviceID, xmlformat(order.currentMail.email), 1, uiXML))
+                    {
+                        if (!WaitAndTapXML(deviceID, 1, "tiếp", uiXML))
+                        {
+                            WaitAndTapXML(deviceID, 2, Language.UpdateEmailVeri(), uiXML);
+                            WaitAndTapXML(deviceID, 2, "cập nhật", uiXML);
+
+                            Utility.WaitAndTapXML(deviceID, 10, Language.Continue(), uiXML);
+
+                            if (CheckTextExist(deviceID, "nhập email", 2))
+                            {
+                                LogStatus(device, "Bấm next thất bại - nhập email", 2000);
+                                KAutoHelper.ADBHelper.TapByPercent(deviceID, 61, 47.2);
+                            }
+                        }
+                        Thread.Sleep(5000);
+                        uiXML = GetUIXml(deviceID);
+                        if (CheckTextExist(deviceID, new string[] { "nhập email" }, uiXML))
+                        {
+                            Device.TapByPercent(deviceID, 82.1, 41.4);
+                            LogStatus(device, "bắt text không được, bấm vị trí", 5000);
+                        }
                     }
                 }
+                
 
                 for (int i = 0; i < 7; i++)
                 {
@@ -5355,6 +5398,7 @@ PUT_MAIL:
                     order.otp1 = GetOtp(order, deviceID, order.tempmailType, order.currentMail, 20);
                     if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
                     {
+                        // TODO return mai
                         return;
                     }
                     goto VERIFY_BY_EMAIL;
@@ -5543,7 +5587,9 @@ PUT_MAIL:
                     {
                          if (order.mailEdu || thoatOtpcheckBox.Checked)
                         {
-                            LogStatus(device, "Thoat get otp ---------------------------: " + order.otp1);
+                            LogStatus(device, "Thoat get otp ---------------------------: " + order.otp1 + " mail:" + order.currentMail.email);
+                            // todo
+
                             return;
                         }
                         LogStatus(device, "Get otp mail again - gửi lại otp");
@@ -5571,7 +5617,7 @@ PUT_MAIL:
 
                         order.otp1 = GetOtp(order, deviceID, order.tempmailType, order.currentMail, 20);
                         
-                        if (order.otp1 == Constant.FAIL || string.IsNullOrEmpty(order.otp1))
+                        if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
                         {
                             SetRowColor(device.index, Color.DeepPink);
                             LogStatus(device, "Get OTP fail: bỏ acc-trả mail DeepPink: " + order.currentMail.email, 60000);
@@ -5678,7 +5724,7 @@ PUT_MAIL:
                 if (order.hasOtp)
                 {
                     device.totalInHour++;
-                    this.otp++;
+                    //this.otp++;
                 }
                 if (CheckTextExist(deviceID, new string[] { "không đúng", "sự cố", "gửi lại" }))
                 {
@@ -5836,9 +5882,12 @@ PUT_MAIL:
                             order.hasAvatar = false;
 
                             goto STORE_INFO;
+                        } else
+                        {
+                            LogError(device, "UploadavatarProfile faile -  44444");
                         }
 
-                        goto SET_2FA;
+                            goto SET_2FA;
                     }
                 }
                 bool checklive = true;
@@ -5907,9 +5956,10 @@ PUT_MAIL:
                         LogStatus(device, "Update ip checkpoint:" + currentIp);
 
                         CacheServer.LogCheckpoint(device, order, Constant.CHECKPOINT);
-                        double percent = 100f * totalSucc / this.otp;
+                        
+                        double percent = 100f * PublicData.totalSuccess / PublicData.totalRun;
                         percent = Math.Round(percent, 1);
-                        otplabel.Text = totalSucc + "/" + this.otp + "=" + percent + " %";
+                        otplabel.Text = PublicData.totalSuccess + "/" + PublicData.totalRun + "=" + percent + " %";
                         if (chaydocheckBox.Checked)
                         {
                             LogStatus(device, "Dung veri backup");
@@ -6063,6 +6113,10 @@ PUT_MAIL:
                     {
                         try
                         {
+                            
+                            LogAvatarFail(device, "UploadavatarProfile err -3 -- 33333" + order.currentMail.email);
+                            
+                            
                             LogStatus(device, "Acc die sau up avatar --- Update ip checkpoint:" + currentIp);
                             fail++;
                             device.blockCount++;
@@ -6072,9 +6126,9 @@ PUT_MAIL:
                             order.error_code = 102;
                             
                             CacheServer.LogCheckpoint(device, order, Constant.CHECKPOINT);
-                            double percent = 100f * totalSucc / this.otp;
+                            double percent = 100f * PublicData.totalSuccess / PublicData.totalRun;
                             percent = Math.Round(percent, 1);
-                            otplabel.Text = totalSucc + "/" + this.otp + "=" + percent + " %";
+                            otplabel.Text = PublicData.totalSuccess + "/" + PublicData.totalRun + "=" + percent + " %";
                             if (chaydocheckBox.Checked)
                             {
                                 LogStatus(device, "Dung veri backup");
@@ -6111,9 +6165,9 @@ PUT_MAIL:
 
                     try
                     {
-                        double percent = 100f * totalSucc / this.otp;
+                        double percent = 100f * PublicData.totalSuccess / PublicData.totalRun;
                         percent = Math.Round(percent, 1);
-                        otplabel.Text = totalSucc + "/" + this.otp + "=" + percent + " %";
+                        otplabel.Text = PublicData.totalSuccess + "/" + PublicData.totalRun + "=" + percent + " %";
                     }
                     catch (Exception ex)
                     {
@@ -6137,6 +6191,9 @@ PUT_MAIL:
                         if (order.checkAccHasAvatar)
                         {
                             LogStatus(device, "Upload avatar --- -- -  thành công ----------2222---------- ");
+                        } else
+                        {
+                            LogError(device, "UploadavatarProfile err -3 -" + check);
                         }
                     }
                 }
@@ -6146,7 +6203,7 @@ PUT_MAIL:
                 device.VeriOk = true;
                 //if (!order.isHotmail)
                 //{
-                    totalSucc++;
+                    //totalSucc++;
                 //}
                  
                 device.blockCountOtp = 0;
@@ -6176,9 +6233,9 @@ PUT_MAIL:
 
                 try
                 {
-                    double percent = 100f * totalSucc / this.otp;
+                    double percent = 100f * PublicData.totalSuccess / PublicData.totalRun;
                     percent = Math.Round(percent, 1);
-                    otplabel.Text = totalSucc + "/" + this.otp + "=" + percent + " %";
+                    otplabel.Text = PublicData.totalSuccess + "/" + PublicData.totalRun + "=" + percent + " %";
                 }
                 catch (Exception ex)
                 {
@@ -7202,7 +7259,7 @@ PUT_MAIL:
                             if (UploadAvatarProfile(device, order, false) == -1)
                             {
                                 order.hasAvatar = false;
-
+                                LogError(device, "UploadavatarProfile fail ----------");
                                 goto STORE_INFO;
                             }
                         }
@@ -7378,6 +7435,7 @@ PUT_MAIL:
             SET_2FA:
 
                 
+                
                 if (CheckTextExist(deviceID, "xác nhận"))
                 {
 
@@ -7443,7 +7501,7 @@ PUT_MAIL:
                     if (UploadAvatarProfile(device, order, coverCheckBox.Checked) == -1)
                     {
                         order.hasAvatar = false;
-
+                        LogError(device, "UploadavatarProfile fail ---4--4-4-4");
                         goto STORE_INFO;
                     }
                     LogStatus(device, "Ket thuc Recheck - Avatar");
@@ -7528,14 +7586,49 @@ PUT_MAIL:
                     }
                     
                 }
+                if (!order.currentMail.isHotmail)
+                {
+                    if (chodoihotmailcheckBox.Checked)
+                    {
+                        LogStatus(device, "Chờ Add hotmail", 35 * 60 * 1000);
+                    } else
+                    {
+                        LogStatus(device, "Chờ Add hotmail", 6 * 1000);
+                    }
+                    
+                    Unlockphone(deviceID);
+                    string ssid = Device.GetWifiStatus(deviceID);
+                    if (!ssid.Contains("unknown"))
+                    {
+                        Device.DisableWifi(deviceID);
+                        Device.EnableWifi(deviceID);
+                        Thread.Sleep(3000);
+                    }
+                    
 
+                    for (int i = 0;i < 3; i ++)
+                    {
+                        LogStatus(device, "Add hotmail lần:" + i);
+                        AddHotmail(order, device);
+                        if (order.addHotmailStatus > 0 || order.addHotmailStatus == -2)
+                        {
+                            break;
+                        }
+                    }
+                }
+
+                OmmitPhone(order, device);
+                //if (order.addHotmailStatus > 0)
+                //{
+                //    OmmitGmail(order, device, dataGridView);
+                //}
                 if (order.has2Fa)
                 {
                     LogStatus(device, "Bật 2fa");
                     device.status = "Set 2fa";
                     if (set2faWebCheckBox.Checked)
                     {
-                        order.qrCode = Set2faWeb(deviceID, password);
+                        order.qrCode = Set2faSettings(order, device, password);
                         if (CheckTextExist(deviceID, "textnhậpmậtkhẩuresourcei"))
                         {
                             LogStatus(device, "Nhâp mật khẩu set2fa web");
@@ -7552,7 +7645,7 @@ PUT_MAIL:
                         if (set2faLoai2checkBox.Checked)
                         {
                             //order.accType = Constant.ACC_TYPE_2FA_SECURITY_SETTING;
-                            order.qrCode = Set2faSecuritySettings(order, device, password);
+                            order.qrCode = Set2faSettings(order, device, password);
                             if (!string.IsNullOrEmpty(order.qrCode))
                             {
                                 order.set2FaSuccess = true;
@@ -7787,8 +7880,9 @@ PUT_MAIL:
                         }
 
                         dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Constant.green5;
-                        if (!order.set2FaSuccess)
+                        if (!order.set2FaSuccess && order.addHotmailStatus != -2)
                         {
+                            
                             LogStatus(device, "Can not set 2fa -> Set 2fa lần 3 - set bằng web");
 
              
@@ -7837,7 +7931,7 @@ PUT_MAIL:
                             {
                                 device.status = "Set 2fa";
 
-                                order.qrCode = Set2faWeb(deviceID, password);
+                                order.qrCode = Set2faSettingNew(order, device, password);
                                 //order.accType = Constant.ACC_TYPE_SET_2FA_WEB;
                             }
                             if (WaitAndTapXML(deviceID, 2, "textmậtkhẩuresourceid"))
@@ -7932,6 +8026,19 @@ PUT_MAIL:
                 LogStatus(device, "2fa:--" + order.qrCode);
 
             STORE_INFO:
+
+                if (order.addHotmailStatus < 0 && order.addHotmailStatus != -2)
+                {
+                    AddHotmail(order, device);
+                }
+                if (order.ommitPhoneStatus < 0 && order.addHotmailStatus != -2)
+                {
+                    OmmitPhone(order, device);
+                }
+                if (order.addHotmailStatus > 0 && order.addHotmailStatus != -2)
+                {
+                    OmmitGmail(order, device);
+                }
                 watchAll.Stop();
                 if (!string.IsNullOrEmpty(order.oldType) && order.oldType.Contains("friend"))
                 {
@@ -7942,7 +8049,9 @@ PUT_MAIL:
 
                     if (!order.account.hasAvatar)
                     {
-                        UploadAvatarProfile(device, order, false);
+                        int ttt = UploadAvatarProfile(device, order, false);
+
+                        LogError(device, "UploadavatarProfile err -3 ---" + ttt);
 
                     }
                     if (!string.IsNullOrEmpty(order.oldType) && order.oldType.Contains("friend"))
@@ -7983,17 +8092,18 @@ PUT_MAIL:
                 {
                     if (UploadAvatarProfile(device, order, false) != 1)
                     {
-                        totalSucc--;
-                        try
-                        {
-                            double percent = 100f * totalSucc / this.otp;
-                            percent = Math.Round(percent, 1);
-                            otplabel.Text = totalSucc + "/" + this.otp + "=" + percent + " %";
-                        }
-                        catch (Exception ex)
-                        {
+                        LogError(device, "UploadavatarProfile err -3 --dd-d-d-");
+                        //totalSucc--;
+                        //try
+                        //{
+                        //    double percent = 100f * totalSucc / this.otp;
+                        //    percent = Math.Round(percent, 1);
+                        //    otplabel.Text = totalSucc + "/" + this.otp + "=" + percent + " %";
+                        //}
+                        //catch (Exception ex)
+                        //{
 
-                        }
+                        //}
                     }
                     
                     LogStatus(device, "Recheck - Avatar trước khi lưu - kiểm tra veri");
@@ -8070,20 +8180,48 @@ PUT_MAIL:
                 if (!order.checkAccHasAvatar)
                 {
                     device.countUploadAvatarFail++;
-                    LogStatus(device, "Acc có thể bị lỗi up avatar", 10000);
+                    LogStatus(device, "Acc có thể bị lỗi up avatar--------------------------", 10000);
                     SetRowColor(device.index, Color.DarkGoldenrod);
-                    if (device.countUploadAvatarFail >= 2)
+                    //if (device.countUploadAvatarFail >= 1)
+                    //{
+                        LogAvatarFail(device, "Máy có thể bị lỗi up avatar - kiểm tra super root---return-");
+
+                    LogStatus(device, "Open magisk");
+                    Device.KillApp(deviceID, "com.topjohnwu.magisk");
+                    Thread.Sleep(2000);
+                    Device.OpenApp(deviceID, "com.topjohnwu.magisk");
+                    Thread.Sleep(15000);
+                    
+                    WaitAndTapXML(deviceID, 2, "superuser");
+                    Thread.Sleep(4000);
+                    if (CheckTextExist(deviceID, "nodenaftrueindex3textresourceidcomtopjohnwumagiskidpolicyindicatorclassandroidwidgetswitchpackagecomtopjohnwumagiskcontentdesccheckabletruecheckedfalse", 1))
                     {
-                        LogStatus(device, "Máy có thể bị lỗi up avatar - Reboot");
-                        SetRowColor(device.index, Color.LightPink);
-                        Device.RebootByCmd(deviceID);
-                        device.countUploadAvatarFail = 0;
+                        LogAvatarFail(device, "Máy mất quyền super");
                     }
+                    WaitAndTapXML(deviceID, 2, "nodenaftrueindex3textresourceidcomtopjohnwumagiskidpolicyindicatorclassandroidwidgetswitchpackagecomtopjohnwumagiskcontentdesccheckabletruecheckedfalse");
+                    if (CheckTextExist(deviceID, "nodenaftrueindex3textresourceidcomtopjohnwumagiskidpolicyindicatorclassandroidwidgetswitchpackagecomtopjohnwumagiskcontentdesccheckabletruecheckedtrue", 1))
+                    {
+                        LogAvatarFail(device, "Máy Đã bật lại quyền super");
+                    } else
+                    {
+                        LogAvatarFail(device, "Không bật được quyền super");
+                    }
+                        SetRowColor(device.index, Color.LightPink);
+                    int checkHasAvatar = UploadAvatarProfile(device, order, false, false);
+                    if (!order.checkAccHasAvatar)
+                    {
+                        LogAvatarFail(device, "Vẫn lỗi up avatar sau khi đã bật lại quyền super - kiểm tra lại máy", 60000);
+                    }
+                    //    Device.RebootByCmd(deviceID);
+                    //    device.countUploadAvatarFail = 0;
+                    //return;
+                    //}
                 } else
                 {
                     device.countUploadAvatarFail = 0;
                 }
-                    int checkStoreOK = storeAccWithThread(isServer, order, device,
+                    
+                int checkStoreOK = storeAccWithThread(isServer, order, device,
                         password, order.currentMail.toString(), order.qrCode, order.gender, yearOld, Constant.TRUE, device.log);
                 LogStatus(device, "Stored information");
 
@@ -8098,9 +8236,11 @@ PUT_MAIL:
                     }
                     
                 }
-                else
+                else if (checkStoreOK == -3)
                 {
-
+                    LogStatus(device, "Có exception trong lúc lưu acc", 20000);
+                } else
+                {
                     if (chaydocheckBox.Checked && !order.updateSuccessfull)
                     {
                         PublicData.countSuccessVeribackup++;
@@ -8425,7 +8565,13 @@ PUT_MAIL:
             {
                 try
                 {
-                    LogStatus(device, "Start reg");
+
+                    //FbUtil.PullBackupFbNew("dddddd", deviceID);
+
+                    LogSession.RefreshLogKey(deviceID);
+                    LogStatus(device, "Start session");
+
+
                     Device.AirplaneOn(deviceID);
                     if (device.adbStatus == Constant.ADB_DEVICE_RECOVERY || device.adbStatus == Constant.ADB_DEVICE_OFFLINE || device.adbStatus == Constant.ADB_DEVICE_DISCONNECT)
                     {
@@ -8445,7 +8591,7 @@ PUT_MAIL:
                             continue;
                         }
                         int maxMail = PublicData.maxMail;
-                        FetchAllMail.FetchGmail(device, TempMailcheckBox.Checked);
+                        FetchAllMail.FetchGmail(device, TempMailcheckBox.Checked, getTrustMailcheckBox.Checked);
 
                         Thread.Sleep(2000);
                         continue;
@@ -8534,7 +8680,7 @@ PUT_MAIL:
                     DateTime local = device.startReg.ToLocalTime();
 
                     string text = local.ToString("HH:mm:ss dd/MM/yyyy");
-                    
+
                     dataGridView.Rows[device.index].Cells[2].Value = text;
                     //if (device.totalInHour > 3)
                     //{
@@ -8575,7 +8721,7 @@ PUT_MAIL:
                                 device.action = Constant.ACTION_CHANGE2IP4;
                                 Change2Ip(device, device.action); // force change ip
                                 Thread.Sleep(5000);
-                                ss = Device.GetIpSimProtocol(deviceID); 
+                                ss = Device.GetIpSimProtocol(deviceID);
                                 dataGridView.Rows[device.index].Cells[8].Value = order.proxyType + "-" + ss;
                                 if (ss == Constant.NO_INTERNET)
                                 {
@@ -8739,7 +8885,7 @@ PUT_MAIL:
                             if (data != null && data.country != null)
                             {
                                 string res = data.country.name + "|" + data.country.code;
-                                    //+ "|" + data.city.name + "|" + data.city.code + "|" + data.isp.isp + "|" + data.isp.asn;
+                                //+ "|" + data.city.name + "|" + data.city.code + "|" + data.isp.isp + "|" + data.isp.asn;
                                 device.currentPublicIp = order.proxyType + "-" + res;
                             }
 
@@ -8748,10 +8894,10 @@ PUT_MAIL:
                         {
 
                         }
-                        
+
                     }
-                    
-                    
+
+
                     if (string.IsNullOrEmpty(device.currentPublicIp))
                     {
                         device.currentPublicIp = order.currentIp;
@@ -8765,50 +8911,96 @@ PUT_MAIL:
                         continue;
                     }
 
-                    LogStatus(device, "pre process:" + watch.ElapsedMilliseconds);
+                    LogStatus(device, "pre process:" + watch.ElapsedMilliseconds + " - global total:" + device.globalTotal);
+                    device.globalTotal++;
+                    if (device.globalTotal > 1 && device.globalTotal % 50 == 0)
+                    {
+                        LogStatus(device, "Device chạy 50 vòng, restart");
+                        Device.RebootDevice(deviceID);
+                        continue;
+                    }
 
                     Autoclone(device, order);
                     LogStatus(device, "End auto");
                     device.isSuccess = order.isSuccess;
-                    if (!IsMailEmpty(order.currentMail) 
-                        && order.currentMail.password == Constant.GMAIL_SELL_GMAIL)
+                    if (!IsMailEmpty(order.currentMail))
                     {
-                        LogStatus(device, "Kiem tra otp lần nữa :" + order.currentMail.message + " count used: " + order.currentMail.reusedCount, 2000);
-                        order.otp1 = GetOtp(order, deviceID, order.tempmailType, order.currentMail, 1);
                         if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
                         {
-
-                            if (!string.IsNullOrEmpty(order.currentMail.message) && order.currentMail.message.Contains("mail tra ve"))
-                            {
-                                LogStatus(device, "Mail dùng 1 lan roi, ko dung them --", 10000);
-                            }
-                            else
-                            {
-                                if (!order.getOtp)
-                                {
-                                    
-                                    if (PublicData.needReuseMail)
-                                    {
-                                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
-                                        order.currentMail.message = "mail tra ve";
-                                        AddMailServerCache(order.currentMail);
-                                        LogStatus(device, "DarkGoldenrod - Lỗi không vào màn hình otp--: Trả mail về server" + order.currentMail.email, 3000);
-                                    }
-                                }
-                                else
-                                {
-                                    if (PublicData.needReuseMail)
-                                    {
-                                        dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
-                                        order.currentMail.message = "mail tra ve";
-                                        AddMailServerCache(order.currentMail);
-                                        LogStatus(device, "DarkGoldenrod - Không get dc otp--: Trả mail về server" + order.currentMail.email, 3000);
-                                    }
-                                        
-                                }
-                            }
+                            CacheServer.AddMailReused(order.currentMail, device);
                         }
                     }
+                    //        if (order.currentMail.password == Constant.GMAIL_SELL_GMAIL)
+                    //    {
+                    //        LogStatus(device, "mai:" + order.currentMail.email + " otp:" + order.otp1);
+                    //        if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
+                    //        {
+                    //            LogStatus(device, "Kiem tra otp lần nữa :" + order.currentMail.message + " count used: " + order.currentMail.reusedCount, 2000);
+                    //            order.otp1 = GetOtp(order, deviceID, order.tempmailType, order.currentMail, 1);
+                    //            if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
+                    //            {
+
+                    //                if (!string.IsNullOrEmpty(order.currentMail.message) && order.currentMail.message.Contains(Constant.MAILTRAVE))
+                    //                {
+                    //                    LogStatus(device, "Mail dùng 1 lan roi, ko dung them --", 10000);
+                    //                }
+                    //                else
+                    //                {
+                    //                    if (!order.getOtp)
+                    //                    {
+
+                    //                        if (PublicData.needReuseMail)
+                    //                        {
+                    //                            dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
+                    //                            order.currentMail.message = Constant.MAILTRAVE;
+                    //                            order.currentMail.pcName = Environment.MachineName;
+                    //                            AddMailServerCache(order.currentMail);
+                    //                            LogStatus(device, "DarkGoldenrod - Lỗi không vào màn hình otp--: Trả mail về server" + order.currentMail.email, 3000);
+                    //                        }
+                    //                    }
+                    //                    else
+                    //                    {
+                    //                        if (PublicData.needReuseMail)
+                    //                        {
+                    //                            order.currentMail.pcName = Environment.MachineName;
+                    //                            dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.DarkGoldenrod;
+                    //                            order.currentMail.message = Constant.MAILTRAVE;
+                    //                            AddMailServerCache(order.currentMail);
+                    //                            LogStatus(device, "DarkGoldenrod - Không get dc otp--: Trả mail về server" + order.currentMail.email, 3000);
+                    //                        }
+
+                    //                    }
+                    //                }
+                    //            }
+                    //        }
+                    //    } else
+                    //    {
+                    //        if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
+                    //        {
+                    //            CacheServer.ForceAddMailServerCache(order.currentMail, device);
+                    //            //if (!string.IsNullOrEmpty(order.currentMail.message) && order.currentMail.message.Contains(Constant.MAILTRAVE))
+                    //            //{
+                    //            //    LogStatus(deviceID, "mail đã dùng 1 lần, bỏ đi");
+                    //            //}
+                    //            //else
+                    //            //{
+                    //            //    if (PublicData.needReuseMail)
+                    //            //    {
+                    //            //        if (!string.IsNullOrEmpty(order.currentMail.message) && order.currentMail.message.Contains(Constant.MAILTRAVE))
+                    //            //        {
+                    //            //            LogStatus(device, "Mail dùng 1 lan roi, ko dung them --", 10000);
+                    //            //        } else
+                    //            //        {
+                    //            //            //order.currentMail.isHotmail = true;
+                    //            //            order.currentMail.message = Constant.MAILTRAVE;
+                    //            //            CacheServer.ForceAddMailServerCache(order.currentMail);
+                    //            //            Utility.LogStatus(deviceID, "Trả hotmail server: " + order.currentMail.toString());
+                    //            //        }
+                    //            //    }
+                    //            //}
+                    //        }
+                    //    }
+                    //}
                     var analyzer = new FacebookLogcatAnalyzer(deviceID);
                     var statusList = analyzer.Analyze();
                     foreach (var line in statusList)
@@ -8937,12 +9129,12 @@ PUT_MAIL:
                             LogStatus(device, "Xử lý error code 102 ----");
                             try
                             {
-                                if (!order.isHotmail)
-                                {
-                                    int rannum = Convert.ToInt32(delayAfterDieTextBox.Text);
-                                    Random rr = new Random(); 
-                                    timeSleep = rr.Next(300, rannum) * 1000;
-                                }
+                                //if (!order.isHotmail)
+                                //{
+                                    
+                                    //Random rr = new Random(); 
+                                    //timeSleep = rr.Next(300, PublicData.delayAfterDie) * 1000;
+                                //}
                                 
                                 
                             }
@@ -9090,9 +9282,9 @@ PUT_MAIL:
                     }
                     try
                     {
-                        double percent = 100f * totalSucc / this.otp;
+                        double percent = 100f * PublicData.totalSuccess / PublicData.totalRun;
                         percent = Math.Round(percent, 1);
-                        otplabel.Text = totalSucc + "/" + this.otp + "=" + percent;
+                        otplabel.Text = PublicData.totalSuccess + "/" + PublicData.totalRun + "=" + percent;
                     }
                     catch (Exception ex)
                     {
@@ -9100,24 +9292,24 @@ PUT_MAIL:
                     }
                     // Delay after reg
                     int timeDelayAfterReg = 5;
-                    if (order.isSuccess)
-                    {
-                        try
-                        {
-                             timeDelayAfterReg = Convert.ToInt32(delayAfterRegTextBox.Text);
-                            if (!order.isHotmail)
-                            {
-                                Random rr = new Random();
-                                timeDelayAfterReg = rr.Next(2, timeDelayAfterReg);
-                            }
+                    //if (order.isSuccess)
+                    //{
+                    //    try
+                    //    {
+                    //         timeDelayAfterReg = Convert.ToInt32(delayAfterRegTextBox.Text);
+                    //        if (!order.isHotmail)
+                    //        {
+                    //            Random rr = new Random();
+                    //            timeDelayAfterReg = rr.Next(2, timeDelayAfterReg);
+                    //        }
                             
-                            LogStatus(device, "Delay sau khi reg acc --:" + timeDelayAfterReg, timeDelayAfterReg *1000);
-                        }
-                        catch (Exception ex)
-                        {
+                    //        LogStatus(device, "Delay sau khi reg acc --:" + timeDelayAfterReg, timeDelayAfterReg *1000);
+                    //    }
+                    //    catch (Exception ex)
+                    //    {
 
-                        }
-                    }
+                    //    }
+                    //}
                     
                     
                         
@@ -9133,9 +9325,9 @@ PUT_MAIL:
                     }
                     try
                     {
-                        double percent = 100f * totalSucc / otp;
+                        double percent = 100f * PublicData.totalSuccess / PublicData.totalRun;
                         percent = Math.Round(percent, 1);
-                        otplabel.Text = totalSucc + "/" + otp + "=" + percent;
+                        otplabel.Text = PublicData.totalSuccess + "/" + PublicData.totalRun + "=" + percent;
                     }
                     catch (Exception ex)
                     {
@@ -9146,9 +9338,9 @@ PUT_MAIL:
                         percent = 0;
                         try
                         {
-                            if (totalSucc > 0)
+                            if (PublicData.totalSuccess > 0)
                             {
-                                percent = 100f * totalSucc / regNvrOk;
+                                percent = 100f * PublicData.totalSuccess / regNvrOk;
                                 percent = Math.Round(percent, 1);
                             }
 
@@ -9157,9 +9349,9 @@ PUT_MAIL:
                         {
                             percent = 0;
                         }
-                        totalLabel.Text = totalSucc + " / " + regNvrOk + " - " + percent;
+                        totalLabel.Text = PublicData.totalSuccess + " / " + regNvrOk + " - " + percent;
                     }));
-                    if (totalSucc % 100 == 0)
+                    if (PublicData.totalSuccess % 100 == 0)
                     {
                         checkMail.Clear();
                     }
@@ -10447,9 +10639,11 @@ PUT_MAIL:
                 LogStatus(device, "Số mail lấy: " + (i + 1) + " mail:" + mail.email + " pass: " + mail.password + "|" + mail.source, 2000);
 
                 mail.otpVandong = otpVandong;
+                string email = mail.email;
                 mail = CheckLiveHotmailByOAuth2(mail);
                 if (mail != null && mail.status != Constant.FAIL)
                 {
+                    LogStatus(device, "Checklivemail by oauth fail, bỏ mail:" + email );
                     return mail;
                 }
                 //else
@@ -12781,14 +12975,431 @@ PUT_MAIL:
                 LogStatus(device, "Đổi tên thành công");
                 return true;
             }
-
+            LogStatus(device, "Không thể vào màn hình: thông tin liên hệ - Cài đặt quyền riêng tư", 60000);
             return false;
         }
+        public bool VaoManHinhCaiDatQuyenRiengTu(DeviceObject device)
+        {
+            string deviceID = device.deviceId;
+            string xmmm = GetUIXml(deviceID);
+           
+            if (WaitAndTapXML(deviceID, new[] { "dùng tiếng anh mỹ", "close", "đóng", "cho phép" }, xmmm))
+            {
+                Thread.Sleep(10000);
+            }
+            Device.GotoFbSettings(deviceID);
 
+            if (CheckTextExist(deviceID, "càiđặtvàquyềnriêngtư", 25))
+            {
+                return true;
+            }
+            LogStatus(device, "không thể vào màn hình: cài đặt quyền riêng tư", 60000);
+            return false;
+        }
+        public bool VaoManHinhThongtinlienhe(DeviceObject device)
+        {
+            string deviceID = device.deviceId;
+            string xmmm = GetUIXml(deviceID);
+            if (WaitAndTapXML(deviceID, new[] { "dùng tiếng anh mỹ", "close", "đóng", "cho phép" }, xmmm))
+            {
+                Thread.Sleep(10000);
+            }
+            if (CheckTextExist(deviceID, "thông tin liên hệ", 1, xmmm))
+            {
+                LogStatus(device, "Đang ở màn hình thông tin liên hệ rồi - return");
+                return true;
+            }
+            if (!VaoManHinhCaiDatQuyenRiengTu(device))
+            {
+                LogStatus(device, "Vào màn hình cài đặt quyền rieng tư thất bại, làm lại");
+                if (!VaoManHinhCaiDatQuyenRiengTu(device))
+                {
+                    return false;
+                }
+            }
+
+            LogStatus(device, "đã vào màn hình cài đặt và quyền riêng tư");
+            if (!WaitAndTapXML(deviceID, 5, "xácminhcheckable"))
+            {
+                LogStatus(device, "Không tìm thấy trung tâm tài khoản");
+                Device.TapByPercent(deviceID, 56.4, 28.0, 3000);
+            }
+            if (!WaitAndTapXML(deviceID, 4, "trangcánhânvàthôngtincánhâncheck"))
+            {
+                LogStatus(device, "Không tìm thấy trangcánhânvàthôngtincánhâncheck");
+                Device.TapByPercent(deviceID, 45.0, 34.7);
+            }
+            if (!WaitAndTapXML(deviceID, 4, "thôngtinliênhệcheck"))
+            {
+                LogStatus(device, "Không tìm thấy thôngtinliênhệcheck");
+                Device.TapByPercent(deviceID, 47.6, 71.5);
+            }
+
+            if (!CheckTextExist(deviceID, "thông tin liên hệ", 5))
+            {
+                LogStatus(device, "Không thể vào màn hình: thông tin liên hệ - kiểm tra giao diện mới", 60000);
+                return false;
+            } else
+            {
+                return true;
+            }
+        }
+        public MailObject AddHotmail(OrderObject order, DeviceObject device)
+        {
+            try
+            {
+                if (!PublicData.doiHotmail)
+                {
+                    return null;
+                }
+                LogStatus(device, "Bắt đầu Add hotmail");
+                string deviceID = device.deviceId;
+
+                if (!VaoManHinhThongtinlienhe(device))
+                {
+                    order.addHotmailStatus = -1;
+                    return null;
+                }
+
+                if (CheckTextExist(deviceID, new string[] { "outlook", "hotmail" }))
+                {
+                    order.addHotmailStatus = 1;
+                    if (CheckTextExist(deviceID, new string[] { "hotmailcom,đangchờxácnhận", "outlookcom,đangchờxácnhận" }))
+                    {
+                        order.addHotmailStatus = -1;
+                        LogStatus(device, "Đang chờ xác nhận mail - xóa mail đó");
+                        for (int i = 0;i < 5; i ++)
+                        {
+                            LogStatus(device, "Đang chờ xác nhận mail - xóa mail đó:" + i);
+                            WaitAndTapXML(deviceID, new string[] { "hotmailcom,đangchờxácnhận", "outlookcom,đangchờxácnhận" });
+                            WaitAndTapXML(deviceID, 5, "xóaemailchec");
+                            WaitAndTapXML(deviceID, 5, "xóaresource");
+                            WaitAndTapXML(deviceID, 5, "đóng");
+                            Thread.Sleep(10000);
+                            
+                            if ( CheckTextExist(deviceID, "thông tin liên hệ",3) 
+                                && !CheckTextExist(deviceID, new string[] { "hotmailcom,đangchờxácnhận", "outlookcom,đangchờxácnhận" }))
+                            {
+                                LogStatus(device, "Đã xóa hết mail đang chờ xác nhận");
+                                break;
+                            }
+                        }
+                    } else
+                    {
+                        if (IsMailEmpty(order.hotmailReplace))
+                        {
+                            return order.currentMail;
+                        } else
+                        {
+                            order.currentMail = order.hotmailReplace;
+                            return order.hotmailReplace;
+                        }
+                    }
+                }
+                if (!WaitAndTapXML(deviceID, 4, "thêm email"))
+                {
+                    LogStatus(device, "Không tìm thấy thêm email");
+                    if (WaitAndTapXML(deviceID, 1, "thêm thông tin liên hệ mới"))
+                    {
+                        WaitAndTapXML(deviceID, 4, "thêm email c");
+                    }
+                    else
+                    {
+                        Device.TapByPercent(deviceID, 74.3, 94.7);
+                    }
+                }
+                if (!CheckTextExist(deviceID, "thêm địa chỉ email", 5))
+                {
+                    order.addHotmailStatus = -1;
+                    return null;
+                }
+                Thread.Sleep(1000);
+                Device.TapByPercent(deviceID, 81.3, 39.0);
+                if (!order.currentMail.isHotmail)
+                {
+                    if (order.gmail == null)
+                        order.gmail = new MailObject();
+                    order.gmail.email = order.currentMail.email;
+                }
+                
+                // get mail
+                order.isHotmail = true;
+                order.hotmailReplace = Mail.GetHotmail(device, order.getTrustmail);
+                if (order.hotmailReplace == null || string.IsNullOrEmpty(order.hotmailReplace.email))
+                {
+                    LogStatus(device, "khong get duoc mail");
+                    order.ommitMailStatus = -1;
+                    return null;
+                }
+                LogStatus(device, "Get hotmail replace:" + order.hotmailReplace.toString());
+                Device.TapByPercent(deviceID, 52.0, 40.2, 1000);
+                InputMail(deviceID, order.hotmailReplace.email, false);
+
+                LogStatus(device, "hạ bàn phím");
+                Device.TapByPercent(deviceID, 92.9, 94.9, 2000);
+                Device.TapByPercent(deviceID, 60.2, 87.3, 5000); // tiếp
+
+                
+                if (CheckTextExist(deviceID, "gmail", 5))
+                {
+                    LogStatus(device, "Không add được hotmail, vì cần otp gmail - 2", 10000);
+                    order.addHotmailStatus = -2;
+                    return null;
+                }
+                if (!CheckTextExist(deviceID, "mã xác nhận", 5))
+                {
+                    LogStatus(device, "không thể vào màn hinh nhap mã xac nhận add homail again");
+                }
+                Device.TapByPercent(deviceID, 72.7, 31.4, 1000); //nhập otp
+                order.otp1 = GetOtp(order, deviceID, "", order.hotmailReplace, 10);
+
+                if (string.IsNullOrEmpty(order.otp1) || order.otp1 == Constant.FAIL)
+                {
+                    LogStatus(device, "khong get duoc otp");
+                    order.addHotmailStatus = -1;
+                    return null;
+                }
+                
+                InputMail(deviceID, order.otp1);
+                Device.TapByPercent(deviceID, 89.1, 94.2, 3000); // hạ bàn phím
+                Device.TapByPercent(deviceID, 60.2, 94.3, 8000); // tiếp
+                Device.TapByPercent(deviceID, 60.2, 94.3, 8000); // đóng
+
+                if (CheckTextExist(deviceID, order.currentMail.email, 6))
+                {
+                    LogStatus(device, "Đã thêm mail thành công");
+                    order.addHotmailStatus = 1;
+                    order.currentMail = order.hotmailReplace;
+                    return order.hotmailReplace;
+                }
+                else
+                {
+                    if (CheckTextExist(deviceID, "đã thêm email"))
+                    {
+                        order.addHotmailStatus = 1;
+                        order.currentMail = order.hotmailReplace;
+                        return order.hotmailReplace;
+                    } else
+                    {
+                        order.addHotmailStatus = -1;
+                        LogStatus(device, "Thêm mail thất bại");
+                        return null;
+                    }
+                }
+            } catch (Exception e)
+            {
+                return null;
+            }
+        }
+        public string OmmitGmail(OrderObject order, DeviceObject device)
+        {
+            try
+            {
+                if (!PublicData.omitgmail)
+                {
+                    return "";
+                }
+                LogStatus(device, "Bắt đầu ommit mail");
+                if (order.gmail == null || string.IsNullOrEmpty(order.gmail.email))
+                {
+                    LogStatus(device, "Không có gmail để ommit");
+                    return Constant.FAIL;
+                }
+                string deviceID = device.deviceId;
+                if (!VaoManHinhThongtinlienhe(device))
+                {
+                    order.ommitMailStatus = -1;
+                    return Constant.FAIL;
+                }
+
+                if (!CheckTextExist(deviceID, "gmail"))
+                {
+                    LogStatus(device, "Không tìm thấy gmail để ommit");
+                    order.ommitMailStatus = 1;
+                    return "";
+                }
+                LogStatus(device, "Ommit gmail");
+                if (WaitAndTapXML(deviceID, 3, xmlformat( order.gmail.email))) // tap gmail
+                {
+                    WaitAndTapXML(deviceID, 5, "xóaemailchec");
+                    WaitAndTapXML(deviceID, 5, "xóaresource");
+                    
+                    if (CheckTextExist(deviceID, "đã xóa", 4))
+                    {
+                        LogStatus(device, "Đã xóa mail thành công");
+                        if (!WaitAndTapXML(deviceID, 5, "đóng"))
+                        {
+                            Device.TapByPercent(deviceID, 59.0, 94.8);
+                        }
+                        
+                        order.ommitMailStatus = 1;
+                    }
+                    else
+                    {
+                        order.ommitMailStatus = -2;
+                        LogStatus(device, "Xóa mail thất bại");
+                    }
+
+                }
+                
+            } catch(Exception e)
+            {
+                return Constant.FAIL;
+            }
+            
+            return "OK";
+        }
+        public string OmmitPhone(OrderObject order, DeviceObject device)
+        {
+            try
+            {
+                if (!PublicData.omitphone)
+                {
+                    return "";
+                }
+                LogStatus(device, "Bắt đầu ommit Phoneeeeee");
+                string deviceID = device.deviceId;
+                if (!VaoManHinhThongtinlienhe(device))
+                {
+                    order.ommitMailStatus = -1;
+                    return Constant.FAIL;
+                }
+
+                if (WaitAndTapXML(deviceID, 4, "đang chờ xác nhận")) // tap phone
+                {
+                    WaitAndTapXML(deviceID, 5, "xóasốchec");
+                    WaitAndTapXML(deviceID, 5, "xóaresource");
+                   
+                    Thread.Sleep(10000);
+                    if (CheckTextExist(deviceID, "đã xóa", 4))
+                    {
+                        LogStatus(device, "Đã xóa phone thành công");
+                        WaitAndTapXML(deviceID, 5, "đóng");
+                        order.ommitPhoneStatus = 1;
+                    }
+                    else
+                    {
+                        order.ommitPhoneStatus = -3;
+                        LogStatus(device, "Xóa phone thất bại");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                return Constant.FAIL;
+            }
+            
+            return "OK";
+        }
+        public string Set2faSettingNew(OrderObject order, DeviceObject device, string password, bool tryAgain = false)
+        {
+            if (order.addHotmailStatus == -2)
+            {
+                LogStatus(device, "Không bật 2fa do gmail ", 10000);
+                return "";
+            }
+            string deviceID = device.deviceId;
+            if (!VaoManHinhCaiDatQuyenRiengTu(device))
+            {
+                return Constant.FAIL;
+            }
+            LogStatus(device, "đã vào màn hình cài đặt và quyền riêng tư");
+
+            if (!WaitAndTapXML(deviceID, 5, "xácminhcheckable"))
+            {
+                LogStatus(device, "Không tìm thấy trung tâm tài khoản");
+                Device.TapByPercent(deviceID, 56.4, 28.0, 3000);
+            }
+            //WaitAndTapXML(deviceID, 2, "trangcánhânvàthôngtincánhânc");
+            if (!WaitAndTapXML(deviceID, 2, "mật khẩu và bảo mật"))
+            {
+                LogStatus(device, "Không tìm thấy mật khẩu và bảo mật");
+                Device.TapByPercent(deviceID, 35.4, 45.6);
+            }
+
+            if (!WaitAndTapXML(deviceID, 2, "Xác thực 2 yếu tố"))
+            {
+                LogStatus(device, "Không tìm thấy Xác thực 2 yếu tố");
+                Device.TapByPercent(deviceID, 40.2, 42.5);
+            }
+            if (!CheckTextExist(deviceID, "chọntàikhoảnđểthiếtlậptínhnăng", 4))
+            {
+                LogStatus(device, "Không tìm thấy chọntàikhoảnđểthiếtlậptínhnăng");
+
+            }
+            Device.TapByPercent(deviceID, 42.0, 34.0);
+            if (!CheckTextExist(deviceID, "vìlýdobảomật", 4))
+            {
+                LogStatus(device, "Không tìm thấy chọntàikhoảnđểthiếtlậptínhnăng");
+            }
+            Device.TapByPercent(deviceID, 61.6, 47.6);
+
+            Device.InputText(deviceID, password);
+            Thread.Sleep(1000);
+            Device.TapByPercent(deviceID, 52.4, 60.0);
+
+            if (!CheckTextExist(deviceID, "giúpbảovệtàikhoảncủabạn", 4))
+            {
+                LogStatus(device, "Không tìm thấy giúpbảovệtàikhoảncủabạn");
+            }
+            Device.TapByPercent(deviceID, 71.2, 95.0);
+            if (!CheckTextExist(deviceID, "hướngdẫnthiếtlập", 4))
+            {
+                LogStatus(device, "Không tìm thấy hướngdẫnthiếtlập");
+            }
+
+            Device.TapByPercent(deviceID, 49.2, 65.9, 1000); // tap 2fa code
+            string qrCode = Device.ReadClipboardAndroid(deviceID, fbLiteCheckbox.Checked);
+            if (string.IsNullOrEmpty(qrCode))
+            {
+                LogStatus(device, "set2fa2 - Can not copy QR code ----------");
+                KAutoHelper.ADBHelper.TapByPercent(deviceID, 55.5, 66.1);
+                Thread.Sleep(1000);
+                qrCode = Device.ReadClipboardAndroid(deviceID, fbLiteCheckbox.Checked);
+                if (string.IsNullOrEmpty(qrCode))
+                {
+                    Thread.Sleep(2000);
+                    return "";
+                }
+            }
+            var base32Bytes11 = Base32Encoding.ToBytes(qrCode);
+
+            var otp11 = new Totp(base32Bytes11);
+            string token11 = otp11.ComputeTotp();
+            if (string.IsNullOrWhiteSpace(token11))
+            {
+                return "";
+            }
+            LogStatus(device, "vào màn hình nhập otp 2fa", 3000);
+            Device.TapByPercent(deviceID, 64.8, 95.3); // bấm nut nhập mã
+
+            if (!CheckTextExist(deviceID, "nhập mã", 5))
+            {
+                LogStatus(device, "khong vao man hinh nhập mã");
+                return "";
+            }
+            Device.TapByPercent(deviceID, 52.2, 35.2, 1000);
+            Device.InputText(deviceID, token11);
+
+            Thread.Sleep(1500);
+            Device.TapByPercent(deviceID, 64.8, 95.3); // bấm nut tiếp
+
+            if (CheckTextExist(deviceID, "tínhnăngxácthực2yếutốđangbật", 6))
+            {
+                LogStatus(device, "Set 2fa thành công");
+                return qrCode;
+            }
+            else
+            {
+                LogStatus(device, "Set 2fa thất bại");
+            }
+            return "";
+        }
         public string Set2faSettings(OrderObject order, DeviceObject device, string password, bool tryAgain = false)
         {
             try
             {
+                return Set2faSettingNew(order, device, password, tryAgain);
                 string deviceID = device.deviceId;
             START_2FA:
                 string uiXML = GetUIXml(deviceID);
@@ -14845,7 +15456,7 @@ PUT_MAIL:
                 device.successInHour = 0;
                 device.totalInHour = 0;
                 reportLabel.Text = "";
-                totalSucc = 0;
+                PublicData.totalSuccess = 0;
                 regNvrOk = 0;
                 percent = 0;
             }
@@ -17148,10 +17759,10 @@ PUT_MAIL:
         }
         public void ResetCount()
         {
-            otp = 0;
+            PublicData.totalRun = 0;
             accDieCaptcha = 0;
             veriOk = 0;
-            totalSucc = 0;
+            PublicData.totalSuccess = 0;
             regNvrOk = 0;
             for (int i = 0; i < PublicData.listDeviceObject.Count; i++)
             {
@@ -17174,7 +17785,7 @@ PUT_MAIL:
 
             totalLabel.Invoke(new MethodInvoker(() =>
             {
-                totalLabel.Text = totalSucc + " / " + regNvrOk + " - " + percent;
+                totalLabel.Text = PublicData.totalSuccess + " / " + regNvrOk + " - " + percent;
                 Text = "Fb Reg - start" + " - " + startTime;
             }));
         }
@@ -17481,12 +18092,12 @@ PUT_MAIL:
                 randomNewContactCheckBox.Checked = false;
                 //moiKatanacheckBox.Checked = false;
                 //moiBusinesscheckBox.Checked = false;
-                loginByUserPassCheckBox.Checked = true;
+                //loginByUserPassCheckBox.Checked = true;
                 miniProfileCheckBox.Checked = false;
-                otp = 0;
+                PublicData.totalSuccess = 0;
                 accDieCaptcha = 0;
                 veriOk = 0;
-                totalSucc = 0;
+                PublicData.totalRun = 0;
                 regNvrOk = 0;
                 for (int i = 0; i < PublicData.listDeviceObject.Count; i++)
                 {
@@ -17509,7 +18120,7 @@ PUT_MAIL:
 
                 totalLabel.Invoke(new MethodInvoker(() =>
                 {
-                    totalLabel.Text = totalSucc + " / " + regNvrOk + " - " + percent;
+                    totalLabel.Text = PublicData.totalSuccess + " / " + regNvrOk + " - " + percent;
                     Text = "Fb Reg - start" + " - " + startTime;
                 }));
             }
@@ -17722,10 +18333,10 @@ PUT_MAIL:
                 //sleep1MinuteCheckBox.Checked = verifiedCheckbox.Checked;
                 reupFullCheckBox.Checked = false;
                 randomNewContactCheckBox.Checked = true;
-                otp = 0;
+                PublicData.totalRun = 0;
                 accDieCaptcha = 0;
                 veriOk = 0;
-                totalSucc = 0;
+                PublicData.totalSuccess = 0;
                 regNvrOk = 0;
                 for (int i = 0; i < PublicData.listDeviceObject.Count; i++)
                 {
@@ -17750,7 +18361,7 @@ PUT_MAIL:
 
                 totalLabel.Invoke(new MethodInvoker(() =>
                 {
-                    totalLabel.Text = totalSucc + " / " + regNvrOk + " - " + percent;
+                    totalLabel.Text = PublicData.totalSuccess + " / " + regNvrOk + " - " + percent;
                     Text = "Fb Reg - start" + " - " + startTime;
                 }));
 
@@ -19752,12 +20363,19 @@ PUT_MAIL:
                 Setting rateT = SettingLogServer(-1, -1, -1, -1, -1, -1, -1, -1, -1);
                 if (rateT != null )
                 {
+                    //if (FetchController.IsError())
+                    //{
+                    //    FetchController.SetState(FetchState.Idle);
+                    //}
+
+
                     tempResp = rateT.ToString();
 
-                    statusSpeedlabel.Text = tempResp.ToString() + "|mail cache:" + GetMailCacheCount();
+                    statusSpeedlabel.Text = tempResp.ToString() + "|gmail cache:" + GetMailCacheCount(false) + "|hotmail cache:" + GetMailCacheCount(true);
                 }
                 DeviceStat deviceStat = CacheServer.GetDeviceStats();
-                if (deviceStat != null && deviceStat.total == 0)
+                
+                if (deviceStat != null && deviceStat.total == 0 && AutoCheckRatecheckBox.Checked)
                 {
                     holdingCheckBox.Checked = false;
                 }
@@ -19779,13 +20397,14 @@ PUT_MAIL:
                             PublicData.nextCheckTime = now.AddMinutes(30);
                         }
 
-                        return;
+                        //return;
                     }
 
                     if (PublicData.RunStatus == RunningStatus.Paused)
                     {
                         if (now >= PublicData.nextCheckTime)
                         {
+
                             holdingCheckBox.Checked = true;
                             RunStatuslabel.Text = "Chuyển qua Probing";
 
@@ -19793,7 +20412,7 @@ PUT_MAIL:
                             PublicData.nextCheckTime = now.AddMinutes(30);
                         }
 
-                        return;
+                        //return;
                     }
 
                     if (PublicData.RunStatus == RunningStatus.Probing)
@@ -19809,21 +20428,18 @@ PUT_MAIL:
                             PublicData.RunStatus = RunningStatus.RunningNormal;
                         }
 
-                        return;
+                        //return;
                     }
                 }
 
                 if (PublicData.listDeviceObject.Count > 0 && PublicData.listDeviceObject[0].deviceId.Contains("Virtual"))
                 {
-                    MailObject mail = new MailObject();
-                    mail.isHotmail = !TempMailcheckBox.Checked;
                     FetchController.SetState(FetchState.WaitingServer);
-                    MailObject resp = ForceAddMailServerCache(mail);
-                    if (resp != null)
+                    int count = GetMailCacheCount(!TempMailcheckBox.Checked);
+                    if (count >= 0)
                     {
-                        int cacheMail = resp.mailCount;
-                        statusSpeedlabel.Text = statusSpeedlabel.Text + "|mail:" + cacheMail;
-                        if (cacheMail >= PublicData.maxMail)
+                        statusSpeedlabel.Text = statusSpeedlabel.Text + "|mail:" + count;
+                        if (count >= PublicData.maxMail)
                         {
                             FetchController.Pause();
                             PublicData.MaxThreadGetMail = 1;
@@ -20119,7 +20735,7 @@ PUT_MAIL:
             }
             catch (Exception ex)
             {
-                PublicData.soLanChoMail = 150;
+                PublicData.soLanChoMail = 9;
             }
         }
 
@@ -20140,7 +20756,12 @@ PUT_MAIL:
 
         private void TempMailcheckBox_CheckedChanged(object sender, EventArgs e)
         {
-
+            if (!TempMailcheckBox.Checked)
+            {
+                doihotmailcheckBox.Checked = false;
+                OmitMailcheckBox.Checked = false;
+                OmitPhonecheckBox.Checked = false;
+            }
         }
 
         private void includeProxytextBox_TextChanged(object sender, EventArgs e)
@@ -20194,6 +20815,107 @@ PUT_MAIL:
             {
 
             }
+        }
+
+        private void chogetmailtextBox_TextChanged(object sender, EventArgs e)
+        {
+
+        }
+
+        private void button18_Click(object sender, EventArgs e)
+        {
+            FetchController.SetState(FetchState.Idle);
+        }
+
+        private void delayTimetextBox1_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                PublicData.delay = Convert.ToInt32(delayTimetextBox1.Text);
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+        private void delayAfterDieTextBox_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                PublicData.delayAfterDie = Convert.ToInt32(delayAfterDieTextBox.Text);
+            }
+            catch (Exception ex)
+            {
+
+            }
+        }
+
+        private void delayAfterRegTextBox_TextChanged(object sender, EventArgs e)
+        {
+            try
+            {
+                PublicData.delayAfterReg = Convert.ToInt32(delayAfterRegTextBox.Text);
+            }
+            catch (Exception ex)
+            {
+
+            } 
+        }
+
+        private void button19_Click(object sender, EventArgs e)
+        {
+            PublicData.listIdUnlimit = idUnlimittextBox.Text
+                                            .Split(',')
+                                            .Select(x => x.Trim())
+                                            .Where(x => !string.IsNullOrEmpty(x))
+                                            .ToList();
+
+            PublicData.listIdTrustUnlimit = IdTrustUnlimittextBox.Text
+                                        .Split(',')
+                                        .Select(x => x.Trim())
+                                        .Where(x => !string.IsNullOrEmpty(x))
+                                        .ToList();
+
+
+            Properties.Settings.Default.idUnlimit = idUnlimittextBox.Text;
+            Properties.Settings.Default.idTrustUnlimit = IdTrustUnlimittextBox.Text;
+            Properties.Settings.Default.Save();
+        }
+
+        private void button20_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void checkMailcheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            PublicData.checkMail = checkMailcheckBox.Checked;
+        }
+
+        private void tramailDiecheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            PublicData.tramaildie = tramailDiecheckBox.Checked;
+        }
+
+        private void checkBox3_CheckedChanged(object sender, EventArgs e)
+        {
+            PublicData.khonglaymailtrave = khonglaymailtravecheckBox.Checked;
+        }
+
+        private void doihotmailcheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            PublicData.doiHotmail = doihotmailcheckBox.Checked;
+        }
+
+        private void ommitMailcheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            PublicData.omitgmail = OmitMailcheckBox.Checked;
+        }
+
+        private void OmitPhonecheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            PublicData.omitphone = OmitPhonecheckBox.Checked;
         }
     }
 }

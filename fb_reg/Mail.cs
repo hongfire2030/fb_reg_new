@@ -21,6 +21,7 @@ using Chilkat;
 using Microsoft.Graph.AuditLogs;
 using Microsoft.Graph.Groups.Item.Team.Schedule.TimeCards.Item.EndBreak;
 using Google.Apis.Util;
+using static fb_reg.Utility;
 
 namespace fb_reg
 {
@@ -109,28 +110,75 @@ namespace fb_reg
 
     public static class Mail
     {
-        public static MailObject GetHotmail(DeviceObject device, OrderObject order)
+        public static bool CheckLiveHotmail(DeviceObject device, MailObject mail)
+        {
+            List<string> subjects = OutsideServer.GetSubjectMailpByOAuth2Vandong(mail);
+
+            if (subjects != null )
+            {
+                //if (subjects.Count > 0)
+                //{
+                //    return true;
+                //} else
+                //{
+                //    return false;
+                //}
+                return true;
+            } else
+            {
+                Utility.LogStatus(device, "Hotmail die read vandong - : " + mail.toString(), 5000);
+                ReadMailResponse json = ReadHotmail(
+                            
+                            mail.email,
+                            mail.password,
+                            mail.refreshToken,
+                            mail.clientId,
+                            true);
+                if (!Utility.IsHotmailAlive(json))
+                {
+                    if (PublicData.tramaildie)
+                    {
+                        mail.isHotmail = true;
+                        mail.reusedCount++;
+                        mail.message = "mail tra ve die";
+                        CacheServer.AddMailReused(mail, device);
+                    }
+                    return false;
+                } else
+                {
+                    Utility.LogStatus(device, "Hotmail vẫn sống check local", 5000);
+                    return true;
+                }
+            }
+        }
+        public static MailObject GetHotmail(DeviceObject device, bool getTrustmail, int timeGet = 100)
         {
             try
             {
                 MailObject mail = new MailObject();
-                for (int i = 0; i < 100; i++)
+                for (int i = 0; i < timeGet; i++)
                 {
                     mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
                     if (!IsMailEmpty(mail))
-                    {
-                        if (!PublicData.last100Mails.Contains(mail.email))
+                    {   
+                        if (PublicData.khonglaymailtrave)
                         {
-                            PublicData.last100Mails.Enqueue(mail.email);
-                            if (PublicData.last100Mails.Count > 100)
+                            if (mail.message.Contains(Constant.MAILTRAVE))
                             {
-                                PublicData.last100Mails.Dequeue(); // xóa mail cũ nhất
-                            }
-                            break;
+                                Utility.LogStatus(device, i + " - Get hotmail từ server cache - mail đã reuse---", 500);
+                                continue;
+                            }   
                         }
-                        else
+                        if (PublicData.checkMail)
                         {
-                            Utility.LogStatus(device, i + " - Get hotmail từ server cache - mail đã tồn tại---", 500);
+                            if (CheckLiveHotmail(device, mail))
+                            {
+                                return mail;
+                            }
+                            else
+                            {
+                                continue;
+                            }
                         }
                     }
                 }
@@ -138,7 +186,7 @@ namespace fb_reg
 
                 if (IsMailEmpty(mail))
                 {
-                    return GetHotmailOutsite(device, order);
+                    return GetHotmailOutsite(device, getTrustmail);
                 }
                 else
                 {
@@ -193,7 +241,16 @@ namespace fb_reg
                         Thread.Sleep(5000);
                         Device.KillApp(deviceID, Constant.FACEBOOK_PACKAGE);
                         Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
-                        Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 20000);
+                        Thread.Sleep(10000);
+                        if (Utility.WaitAndTapXML(deviceID, 2, "không nhận được mã"))
+                        {
+                            Utility.WaitAndTapXML(deviceID, 4, "email");
+                            Thread.Sleep(5000);
+                            KAutoHelper.ADBHelper.TapByPercent(deviceID, 39.8, 29.3);
+                            continue;
+                        }
+
+                        Utility.LogStatus(device, "Mất màn hình nhập mail - return ", 2000);
                         if (order.currentMail == null)
                         {
                             order.currentMail = new MailObject();
@@ -237,18 +294,18 @@ namespace fb_reg
                 if (IsMailEmpty(order.currentMail)) // get hotmail
                 {
                     order.isHotmail = true;
-                    MailObject mail = GetHotmail(device, order);
+                    order.currentMail = GetHotmail(device, order.getTrustmail, 10);
 
-                    if (IsMailEmpty(mail))
-                    {
-                        order.currentMail = Mail.GetHotmailOutsite(device, order);
-                        Utility.LogStatus(device, "Get hotmail");
-                    }
-                    else
-                    {
-                        Utility.LogStatus(device, "Get mail từ server cache---", 1000);
-                        order.currentMail = mail;
-                    }
+                    //if (IsMailEmpty(mail))
+                    //{
+                    //    order.currentMail = Mail.GetHotmailOutsite(device, order);
+                    //    Utility.LogStatus(device, "Get hotmail");
+                    //}
+                    //else
+                    //{
+                    //    Utility.LogStatus(device, "Get mail từ server cache---", 1000);
+                    //    order.currentMail = mail;
+                    //}
                 }
                 if (IsMailEmpty(order.currentMail)) // get tempmail
                 {
@@ -283,10 +340,21 @@ namespace fb_reg
             }
             if (order.isHotmail)
             {
-                return GetHotmail(device, order);
+                return GetHotmail(device, order.getTrustmail);
             } else // get gmail 
             {
-                return getOtherMail(device, order, getDecision, dataGridView, forceGmail);
+                MailObject mm = getOtherMail(device, order, getDecision, dataGridView, forceGmail);
+                if (!IsMailEmpty(mm))
+                {
+                    if (order.gmail == null)
+                        order.gmail = new MailObject();
+                    order.gmail.email = mm.email;
+                    return mm;
+                }
+                else
+                {
+                    return null;
+                }
             }
         }
 
@@ -296,114 +364,94 @@ namespace fb_reg
             return false;
         }
 
-        public static List<MailObject> GetHotmailTool()
+        public static List<MailObject> GetHotmailTool(bool trustMail)
         {
             List<MailObject> listmail = new List<MailObject>();
                 
             int rand = new Random().Next(1, 7);
-            listmail = GetMultiMailVandong(1, rand);
+
+            //rand = 1; // debug
+            listmail = GetMultiHotmailFetchTool(rand, Constant.VANDONG, trustMail);
             if (listmail != null && listmail.Count > 0)
             {
                 return listmail;
             }
-            listmail = GetMultiMailVandong(2, rand);
+            listmail = GetMultiHotmailFetchTool(rand, Constant.UNLIMIT, trustMail);
             if (listmail != null && listmail.Count > 0)
             {
                 return listmail;
             }
-            List<MailObject> mailUnli = GetMultiHotmailUnlimitTime(rand);
-            if (mailUnli != null && mailUnli.Count > 0)
-            {
-                listmail.AddRange(mailUnli);
-                return listmail;
-            }
+            
             return listmail;
         }
-        public static MailObject GetHotmailOutsite(DeviceObject device, OrderObject order)
+        public static MailObject GetHotmailOutsite(DeviceObject device, bool getTrustmail)
         {
+            MailObject mail = new MailObject();
             int count = 50;
-            if (order.getTrustmail)
-            {
-                count = 2;
-            }
+
             for (int i = 0; i < count; i ++)
             {
-                order.currentMail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
-                if (IsMailEmpty(order.currentMail))
+                mail = CacheServer.GetHotmailLocalCache(PublicData.CacheServerUri, "");
+                if (IsMailEmpty(mail))
                 {
-                    order.currentMail = GetMailVandong(1);
-                    if (IsMailEmpty(order.currentMail))
+                    mail = GetMailVandong(1);
+                    if (IsMailEmpty(mail))
                     {
-                        order.currentMail = GetMailVandong(2);
-                        if (IsMailEmpty(order.currentMail))
+                        mail = GetMailVandong(2);
+                        if (IsMailEmpty(mail))
                         {
-                            order.currentMail = GetHotmailUnlimitTime();
-                            if (IsMailEmpty(order.currentMail))
+                            mail = GetHotmailNormalUnlimit();
+                            if (IsMailEmpty(mail))
                             {
-                                order.currentMail = GetHotmailClonenha();
+                                mail = GetHotmailClonenha();
                             }
                         }
                     }
-                    if (!IsMailEmpty(order.currentMail))
+
+                    if (!IsMailEmpty(mail))
                     {
-                        //List<string> otps = OutsideServer.GetOtpByOAuth2(order.currentMail);
-                        
-                        return order.currentMail;
+                        // Check mail live
+                        List<string> otps = OutsideServer.GetSubjectMailpByOAuth2Vandong(mail);
+
+                        if (otps != null && otps.Count > 0)
+                        {
+                            return mail;
+                        } else
+                        {
+                            Utility.LogStatus(device, "Hotmail die: " + mail.toString(), 10000);
+                            continue;
+                        }
                     }
                 }
+
                 Utility.LogStatus(device, "Get hotmail từ tool lần: " + i);
             }
             
             
 
-            if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
+            if (mail == null || mail.status == Constant.FAIL)
             {
-                if (order.getTrustmail)
+                if (getTrustmail)
                 {
-                    order.currentMail = Mail.GetHotmailUnlimited(1, "5");
-                    if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
+                    mail = Mail.GetHotmailTrustUnlimit();
+                    if (mail == null || mail.status == Constant.FAIL)
                     {
-                        order.currentMail = Mail.GetTrustMailVandong(5);
-                        if (IsMailEmpty(order.currentMail))
+                        mail = Mail.GetTrustMailVandong(5);
+                        if (IsMailEmpty(mail))
                         {
                             Utility.LogStatus(device, "Không thể lấy mail từ vandong 5, thử lấy từ vandong 59");
-                            order.currentMail = Mail.GetTrustMailVandong(59);
-                            if (IsMailEmpty(order.currentMail))
+                            mail = Mail.GetTrustMailVandong(59);
+                            if (IsMailEmpty(mail))
                             {
                                 Utility.LogStatus(device, "Không thể lấy mail từ vandong 5, thử lấy từ vandong 60");
-                                order.currentMail = Mail.GetTrustMailVandong(60);
+                                mail = Mail.GetTrustMailVandong(60);
                             }
                         }
                     }
 
                 }
-                //if (PublicData.ForceHotmail)
-                //{
-                    return order.currentMail;
-                //}
-                if ( order.currentMail == null || order.currentMail.status == Constant.FAIL)
-                {
-                    Utility.LogStatus(device, "Hotmail error: ------------get gmail", 2000);
-                    order.isHotmail = false;
-                    order.tempmailType = Constant.GMAIL_SUPERTEAM;
-                    Utility.LogStatus(device, "Get super gmail ");
-                    order.currentMail = Mail.GetTempmail(device.deviceId, true, "", order.tempmailType, PublicData.CacheServerUri);
-
-                    if (order.currentMail == null || order.currentMail.status == Constant.FAIL)
-                    {
-                        order.tempmailType = Constant.TEMP_GENERATOR_1_SEC_EMAIL;
-                        Utility.LogStatus(device, "Get tempmail 1 sec   ", 2000);
-                        order.currentMail = Mail.GetTempmail(device.deviceId, true, "", order.tempmailType, PublicData.CacheServerUri);
-
-                    }
-
-                    if (order.currentMail != null)
-                    {
-                        Utility.LogStatus(device, "Gmail ok kkkkkkkk: " + order.currentMail.message);
-                    }
-                }
             }
-            return order.currentMail;
+            return mail;
         }
         public static MailObject GetHotmailClonenha()
         {
@@ -420,7 +468,17 @@ namespace fb_reg
 
             return mail;
         }
-        public static MailObject GetHotmailUnlimitTime()
+
+        public static MailObject GetHotmailNormalUnlimit()
+        {
+            return GetHotmailUnlimit(PublicData.listIdUnlimit);
+        }
+        public static MailObject GetHotmailTrustUnlimit()
+        {
+            return GetHotmailUnlimit(PublicData.listIdTrustUnlimit);
+        }
+
+        public static MailObject GetHotmailUnlimit(List<string> ids)
         {
             MailObject mail = new MailObject();
             if (!PublicData.unlimit)
@@ -428,9 +486,7 @@ namespace fb_reg
                 return null;
             }
             
-            List<string> types = new List<string> { "5", "6", "14", "15", "16", "45", "46" };
-
-            foreach (string type in types)
+            foreach (string type in ids)
             {
                 mail = Mail.GetHotmailUnlimited(1, type);
                 if (mail != null && mail.status != Constant.FAIL && !string.IsNullOrEmpty(mail.email))
@@ -441,7 +497,69 @@ namespace fb_reg
             
             return mail;
         }
-        public static List<MailObject> GetMultiHotmailUnlimitTime(int count)
+
+        public static List<MailObject> GetMultiHotmailFetchTool(int count, string source, bool trust)
+        {
+            try
+            {
+                List<MailObject> mail = new List<MailObject>();
+                List<string> ids = new List<string>();
+                if (trust)
+                {
+                    if (source == Constant.VANDONG)
+                    {
+                        ids = PublicData.listIdTrustVandong;
+                    }
+                    else if (source == Constant.UNLIMIT)
+                    {
+                        ids = PublicData.listIdTrustUnlimit;
+                    }
+                }
+                else
+                {
+                    if (source == Constant.VANDONG)
+                    {
+                        ids = PublicData.listIdVandong;
+                    }
+                    else if (source == Constant.UNLIMIT)
+                    {
+                        ids = PublicData.listIdUnlimit;
+                    }
+                }
+                
+
+
+                foreach (string type in ids)
+                {
+                    List<MailObject> mailtemp = new List<MailObject>();
+                    if (source == Constant.VANDONG)
+                    {
+                        mailtemp = GetMultiMailVandong(int.Parse(type), count);
+                    }
+                    else if (source == Constant.UNLIMIT)
+                    {
+                        mailtemp = Mail.GetMultiHotmailUnlimited(type, count);
+                    }
+
+                    if (mailtemp != null && mailtemp.Count > 0)
+                    {
+                        mail.AddRange(mailtemp);
+                    }
+                    if (mail.Count >= count)
+                    {
+                        break;
+                    }
+                    Thread.Sleep(1000);
+                }
+
+                return mail;
+            } catch (Exception ee)
+            {
+                return null;
+            }
+            
+        }
+        public static List<MailObject> GetMultiHotmailTrustUnlimitTime(int count)
         {
             List<MailObject> mail = new List<MailObject>();
             if (!PublicData.unlimit)
@@ -449,11 +567,9 @@ namespace fb_reg
                 return mail;
             }
 
-            List<string> types = new List<string> { "5", "6", "14", "15", "16", "45", "46" };
-
-            foreach (string type in types)
+            foreach (string type in PublicData.listIdTrustUnlimit)
             {
-                List<MailObject> mailtemp = Mail.GetMultiHotmailUnlimited(count, type);
+                List<MailObject> mailtemp = Mail.GetMultiHotmailUnlimited(type, count);
                 if (mailtemp != null && mailtemp.Count > 0)
                 {
                     mail.AddRange(mailtemp);
@@ -492,7 +608,7 @@ namespace fb_reg
             }
             return null;
         }
-        public static List<MailObject> GetMultiHotmailUnlimited(int amount, string type)
+        public static List<MailObject> GetMultiHotmailUnlimited(string type , int amount)
         {
             if (!PublicData.unlimit)
             {
@@ -518,6 +634,10 @@ namespace fb_reg
                         mailObj.source = "unlimit";
                         mailObj.unlimitType = type;
                         mailObj.isHotmail = true;
+                        if (PublicData.listIdTrustUnlimit.Contains(type))
+                        {
+                            mailObj.type = Constant.HOTMAIL_TRUSTED;
+                        }
                         mail.Add(mailObj);
                     }
                 }
@@ -978,7 +1098,7 @@ namespace fb_reg
         {
             
             MailObject mail = new MailObject();
-            if (cache)
+            if (cache && (PublicData.GetShopgmailmmoLocal || PublicData.GetShopgmailLocal))
             {
                 mail = CacheServer.GetSuperGmailLocalCache(server, deviceId);
             }
@@ -1681,6 +1801,13 @@ namespace fb_reg
                         mm.clientId = temp[3];
                         mm.source = "vandong";
                         mm.isHotmail = true;
+
+                        string typeString = typeId + "";
+                        if (PublicData.listIdTrustVandong.Contains(typeString))
+                        {
+                            mm.type = Constant.HOTMAIL_TRUSTED;
+                        }
+
                         mailObj.Add(mm);
                     }
                 }

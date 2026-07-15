@@ -24,7 +24,7 @@ namespace fb_reg.Model
         Dictionary<string, JToken> RecentStatsByPc;
         public string ToString()
         {
-            string temp = stop + "|Total:" + totalAcc + "| Speed:" + speed + "| Tỉ lệ:" + rate + "|rLong:" + (rLong * 100) + "|rShort:" + (rShort * 100) + "|spike:" + (spike * 100) + "|" + recentRate + "| Mail:" + mailCacheCount;
+            string temp = stop + "|Total:" + totalAcc + "| Speed:" + speed + "| Tỉ lệ:" + rate + "|rLong:" + (rLong * 100) + "|rShort:" + (rShort * 100) + "|spike:" + (spike * 100) + "|" + recentRate;
             return temp.Replace("\"", "").Replace("{", "").Replace("}","");
         }
     }

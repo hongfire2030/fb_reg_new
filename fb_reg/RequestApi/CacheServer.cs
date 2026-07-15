@@ -16,6 +16,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Cache;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace fb_reg
@@ -42,11 +43,14 @@ namespace fb_reg
             try
             {
                 string uri = PublicData.LogServerUri;
-
+                PublicData.totalRun++;
+                if (status != Constant.CHECKPOINT)
+                {
+                    PublicData.totalSuccess++;
+                }
                 if (order.isHotmail)
                 {
                     uri = PublicData.LogHotmailServerUri;
-
                 }
                 if (order.currentMail != null && order.currentMail.password == "tempmail")
                 {
@@ -79,12 +83,31 @@ namespace fb_reg
                 }
                 LokiLogger.Log(status, device.deviceId, order.ipInfo?.country?.code, "", order.proxy?.proxyDomain, status);
 
+                if (status == Constant.CHECKPOINT)
+                {
+                    Utility.SetRowCheckpointColor(device);
+                    Random rr = new Random();
+                    int a = 200;
+                    int b = PublicData.delayAfterDie;
+
+                    int min = Math.Min(a, b);   // 5
+                    int max = Math.Max(a, b);   // 10
+                    int timeSleep = rr.Next(min, max) * 1000;
+                    Utility.LogStatus(device, "Sleep after die: " + timeSleep / 1000 + "s", timeSleep);
+                } else
+                {
+                    Random rr = new Random();
+                    int timeSleep = rr.Next(10, PublicData.delayAfterReg) * 1000;
+                    Utility.LogStatus(device, "Sleep after success: " + timeSleep / 1000 + "s", timeSleep);
+                }
+                
                 if (order.ipInfo == null || order.ipInfo.country == null)
                 {
                     return "";
                 }
                 if (status == Constant.CHECKPOINT)
                 {
+                    //PublicData.totalFailure++;
                     VerifyApiClient.SendVerify(
                         PublicData.LogProxyCountry,
                         order.ipInfo.country.code,
@@ -95,6 +118,7 @@ namespace fb_reg
                 }
                 else
                 {
+                    
                     VerifyApiClient.SendVerify(
                         PublicData.LogProxyCountry,
                         order.ipInfo.country.code,
@@ -103,7 +127,7 @@ namespace fb_reg
                         mode
                     );
                 }
-
+                
                 return "";
             }
             catch (Exception ex)
@@ -215,20 +239,14 @@ namespace fb_reg
 
             return "";
         }
-        public static int GetMailCacheCount()
-        {
-            int cacheMail = 0;
-            MailObject mail = new MailObject();
-            mail.isHotmail = true;
+        //public static int GetMailCacheCount(bool isHotmail)
+        //{
+        //    int cacheMail = 0;
+        //    MailObject mail = new MailObject();
+        //    mail.isHotmail = true;
 
-            MailObject resp = ForceAddMailServerCache(mail);
-            
-            if (resp != null)
-            {
-                cacheMail = resp.mailCount;
-            }
-            return cacheMail;
-        }
+        //    return GetMailCacheCount(isHotmail);
+        //}
 
         public class DeviceStat
         {
@@ -569,32 +587,114 @@ namespace fb_reg
 
             return mail;
         }
-        public static MailObject ForceAddMailServerCache(MailObject mail)
+        public class MailDataResponse
         {
-            
+            [JsonProperty("success")]
+            public bool success { get; set; }
+            [JsonProperty("mailType")]
+            public string mailType { get; set; }
+
+            [JsonProperty("total")]
+            public int total { get; set; }
+
+            [JsonProperty("mail")]
+            public MailObject mail { get; set; }
+
+        }
+        public static int GetMailCacheCount(bool isHotmail)
+        {
+            try
+            {
+                //mail.reusedCount++;
+                //string server = PublicData.CacheServerUri;
+
+                //string apiGetSellGmail = "api/supergmail/count";
+                //if (mail.isHotmail)
+                //{
+                //    apiGetSellGmail = "api/hotmail/count";
+                //}
+
+                string server = PublicData.CacheMailUbuntu;
+
+                string apiGetSellGmail = "api/count/gmail";
+                if (isHotmail)
+                {
+                    apiGetSellGmail = "api/count/hotmail";
+                }
+
+
+
+                var client = new RestClient(server);
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest(apiGetSellGmail);
+                
+                request.Timeout = 10000; // 20 seconds timeout
+                var response = client.Get(request);
+                var content = response.Content; // Raw content as string
+                MailDataResponse data = JsonConvert.DeserializeObject<MailDataResponse>(content);
+                if (data != null)
+                {
+                    return data.total;
+                }
+                return -1;
+            }
+            catch (Exception ex)
+            {
+                return -1;
+            }
+        }
+
+        public static  MailObject AddMailReused(MailObject mail, DeviceObject device)
+        {
+            if (!PublicData.needReuseMail)
+            {
+                return null;
+            }
+            if (!string.IsNullOrEmpty(mail.message) && mail.message.Contains(Constant.MAILTRAVE))
+            {
+                Utility.LogStatus(device, "Mail dùng 1 lan roi, ko dung them --", 10000);
+            }
+            mail.message = Constant.MAILTRAVE;
+            mail.pcName = Environment.MachineName;
+            Utility.LogStatus(device, "Mail trả về:" + mail.toString());
+            return ForceAddMailServerCache(mail, device);
+        }
+
+        public static MailObject ForceAddMailServerCache(MailObject mail, DeviceObject device)
+        {
             try
             {
                 mail.reusedCount++;
+                //string server = PublicData.CacheServerUri;
 
-                string server = PublicData.CacheServerUri;
+                //string apiGetSellGmail = "api/supergmail";
+                //if (mail.isHotmail)
+                //{
+                //    apiGetSellGmail = "api/hotmail";
+                //}
 
+                string server = PublicData.CacheMailUbuntu;
 
-
-                string apiGetSellGmail = "api/supergmail";
+                string apiGetSellGmail = "api/mail";
                 if (mail.isHotmail)
                 {
-                    apiGetSellGmail = "api/hotmail";
+                    mail.mailType = "hotmail";
                 }
+                else
+                {
+                    mail.mailType = "gmail";
+                }
+
                 var client = new RestClient(server);
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetSellGmail);
                 request.AddHeader("Content-Type", "application/json");
                 request.RequestFormat = DataFormat.Json;
                 request.AddJsonBody(mail);
-                request.Timeout = 2000; // 20 seconds timeout
+                request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Post(request);
                 var content = response.Content; // Raw content as string
-
+                Utility.LogStatus("ForceAddMailServerCache: " + mail.toString() + " - Response: " + content);
                 Console.WriteLine("AddMailServerCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
                 MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
@@ -934,10 +1034,17 @@ namespace fb_reg
             MailObject mail = new MailObject();
             try
             {
-                string apiGetHotmail = "api/hotmail";
-                var client = new RestClient(server);
+                //string apiGetHotmail = "api/hotmail";
+                //var client = new RestClient(server);
+
+                string apiGetHotmail = "api/mail";
+                var client = new RestClient(PublicData.CacheMailUbuntu);
+                //mail.mailType = "hotmail";
+
+
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
                 var request = new RestRequest(apiGetHotmail);
+                request.AddParameter("mailType", "hotmail"); 
 
                 request.Timeout = 20000; // 20 seconds timeout
                 var response = client.Get(request);
@@ -945,11 +1052,11 @@ namespace fb_reg
 
                 Console.WriteLine("GetHotmailLocalCache:" + content);
                 string decode = Utility.Decode_UTF8(content);
-                MailObject data = JsonConvert.DeserializeObject<MailObject>(decode);
+                MailDataResponse data = JsonConvert.DeserializeObject<MailDataResponse>(decode);
 
-                if (data != null && !string.IsNullOrEmpty(data.email))
+                if (data != null && data.mail != null && !string.IsNullOrEmpty(data.mail.email))
                 {
-                    return data;
+                    return data.mail;
                 }
             }
             catch (Exception ex)

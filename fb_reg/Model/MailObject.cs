@@ -9,7 +9,7 @@ namespace fb_reg
 {
     public class MailObject
     {
-
+        public string mailType;   // hotmail/gmail/outlook
         public bool isHotmail = false;
         public bool needReused = true;
         public int reusedCount = 0;
@@ -39,7 +39,7 @@ namespace fb_reg
         public string toString()
         {
             return email + "|" + password + "|" + refreshToken + "|"
-                + clientId + "|" + key + "|" + type + "|" + pcName + "|" + deviceId + "|" +source ;
+                + clientId + "|" + key + "|" + pcName + "|" + deviceId + "|" + source + "|" + type;
         }
         public MailObject()
         {

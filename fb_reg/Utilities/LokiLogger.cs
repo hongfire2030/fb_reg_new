@@ -34,6 +34,14 @@ namespace fb_reg.Utilities
             string proxy = "",
             string message = "")
         {
+            string fullMess = message;
+            try
+            {
+                fullMess = LogSession.GetLogKey(deviceId) + "-" + Environment.MachineName + "-" + message;
+            } catch (Exception ex)
+            {
+
+            }
             Queue.Enqueue(new LokiLogItem
             {
                 Status = status,
@@ -41,7 +49,7 @@ namespace fb_reg.Utilities
                 Country = country,
                 Email = email,
                 Proxy = proxy,
-                Message = message,
+                Message = fullMess,
                 Time = DateTime.Now
             });
         }
@@ -136,8 +144,9 @@ namespace fb_reg.Utilities
                           .GetResult();
                 }
             }
-            catch
+            catch (Exception ex) 
             {
+                Console.WriteLine($"LokiLogger error: {ex.Message}");
                 // Không để lỗi Loki làm ảnh hưởng tool chính
             }
             finally

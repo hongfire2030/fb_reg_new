@@ -1,10 +1,15 @@
-﻿using System.Collections.Generic;
+﻿using Microsoft.Graph.Models;
+using System.Collections.Generic;
 using System.Drawing;
 
 namespace fb_reg
 {
     class Constant
     {
+        public static string VANDONG = "VANDONG";
+        public static string UNLIMIT = "UNLIMIT";
+        public static string MAILTRAVE = "mail tra ve";
+
         public static string ADB_DEVICE_OFFLINE = "\toffline";
         public static string ADB_DEVICE_RECOVERY = "\trecovery";
         public static string ADB_DEVICE_DISCONNECT = "disconnect";

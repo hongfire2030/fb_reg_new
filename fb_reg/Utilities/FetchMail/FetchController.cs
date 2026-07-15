@@ -47,6 +47,8 @@ namespace fb_reg.Utilities.FetchMail
             return _currentState == FetchState.ServerError || _currentState == FetchState.Critical;
         }
 
+        
+
         public static void Pause() => SetState(FetchState.Paused);
         public static void Resume() => SetState(FetchState.Fetching);
     }

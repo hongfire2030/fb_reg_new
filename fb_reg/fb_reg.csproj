@@ -444,6 +444,7 @@
     <Compile Include="RequestApi\RequestXNet.cs" />
     <Compile Include="bk\s7.cs" />
     <Compile Include="RequestApi\ServerApi.cs" />
+    <Compile Include="Utilities\LogSession.cs" />
     <Compile Include="Utilities\LokiLogger.cs" />
     <Compile Include="Utilities\MagiskHider.cs" />
     <Compile Include="Utilities\ProxyHelper.cs" />

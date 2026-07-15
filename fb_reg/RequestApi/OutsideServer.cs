@@ -333,7 +333,7 @@ namespace fb_reg
                     respmail.key = key;
                     respmail.source = "shopmailmmo";
                     respmail.createdAt = DateTime.UtcNow;
-
+                    respmail.isHotmail = false;
                     return respmail;
                 }
             }
@@ -385,7 +385,7 @@ namespace fb_reg
             return new MailObject();
         }
 
-        public static MailObject GetClonenha()
+        public static MailObject GetGmailClonenha()
         {
             try
             {
@@ -428,7 +428,7 @@ namespace fb_reg
                         respmail.key = key;
                         respmail.source = PublicData.SourceClonenha;
                         respmail.createdAt = DateTime.UtcNow;
-
+                        respmail.isHotmail = false;
                         return respmail;
                     }
                     
@@ -737,6 +737,7 @@ namespace fb_reg
                         mail.source = "super_gmail";
                         mail.accessToken = key;
                         mail.createdAt = DateTime.UtcNow;
+                        mail.isHotmail = false;
                         return mail;
                     }
                     else
@@ -808,6 +809,7 @@ namespace fb_reg
                         mail.source = "thuesim_gmail";
                         mail.token = PublicData.AccessTokenThueSimGmail;
                         mail.accessToken = PublicData.AccessTokenThueSimGmail;
+                        mail.isHotmail = false;
                         return mail;
                     }
                     else
@@ -1002,6 +1004,7 @@ namespace fb_reg
                         mail.source = "shopgmail_gmail";
                         mail.accessToken = key;
                         mail.createdAt = DateTime.UtcNow;
+                        mail.isHotmail = false;
                         return mail;
                     }
                     else
@@ -1071,7 +1074,7 @@ namespace fb_reg
             {
                 return gmail;
             }
-            gmail = GetClonenha();
+            gmail = GetGmailClonenha();
             if (gmail != null && !string.IsNullOrEmpty(gmail.email))
             {
                 return gmail;
@@ -1312,6 +1315,8 @@ namespace fb_reg
 
         public class HotmailDataRequest
         {
+            [JsonProperty("token")]
+            public string token { get; set; }
             [JsonProperty("email")]
             public string email { get; set; }
 
@@ -1368,6 +1373,13 @@ namespace fb_reg
             //{
             //    return otp;
             //}
+            otps = GetHotmailOtpByOAuth2Unlimit(inMmail);
+            //}
+            if (otps != null && otps.Count > 0)
+            {
+                return otps;
+            }
+
             otps = GetHotmailOtpByOAuth2Vandong(inMmail);
             if (otps != null && otps.Count > 0)
             {
@@ -1507,6 +1519,7 @@ namespace fb_reg
                 {
                     return mail;
                 }
+                
                 HotmailDataRequest dataRequest = new HotmailDataRequest();
                 dataRequest.email = mail.email;
                 dataRequest.refresh_token = mail.refreshToken;
@@ -1561,6 +1574,59 @@ namespace fb_reg
             }
             mail.status = Constant.FAIL;
             return mail;
+        }
+        public static List<string> GetSubjectMailpByOAuth2Vandong(MailObject mail)
+        {
+            try
+            {
+                List<string> subjects = new List<string>();
+
+                HotmailDataRequest dataRequest = new HotmailDataRequest();
+                dataRequest.email = mail.email;
+                dataRequest.refresh_token = mail.refreshToken;
+                dataRequest.client_id = mail.clientId;
+                //dataRequest.type = "facebook";
+                var client = new RestClient("https://tools.dongvanfb.net/api");
+                client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
+                var request = new RestRequest("get_messages_oauth2", Method.POST);
+                //request.AddHeader("X-API-TOKEN", "WVkyQkhBR0lQVzRJMElYOE5QUVM=");
+
+                request.AddJsonBody(dataRequest);
+
+                var response = client.Execute(request);
+                var content = response.Content; // Raw content as string
+                Console.WriteLine("all mail:" + content);
+                try
+                {
+                    HotmailDataResponse data = JsonConvert.DeserializeObject<HotmailDataResponse>(content);
+
+
+                    if (data != null && data.status && data.messages != null )
+                    {
+                        for (int i = 0; i < data.messages.Length; i++)
+                        {
+                            string subject = data.messages[i].subject;
+                            Utility.LogStatus(mail.deviceId, i + "/" + data.messages.Length + "-subject:" + subject, 1000);
+                            subjects.Add(subject);
+                        }
+                        return subjects;
+                    }
+                    else
+                    {
+                        return null;
+                    }
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+            catch (Exception eee)
+            {
+                LogStatus(mail.deviceId, "Lỗi lấy mã otp hotmail vd:" + eee.Message);
+                return null;
+            }
+            return null;
         }
 
         public static List<string> GetHotmailOtpByOAuth2Vandong(MailObject mail)
@@ -1634,16 +1700,15 @@ namespace fb_reg
         {
             try
             {
-               
                 List<string> otps = new List<string>();
                 HotmailDataRequest dataRequest = new HotmailDataRequest();
                 dataRequest.email = mail.email;
                 dataRequest.refresh_token = mail.refreshToken;
                 dataRequest.client_id = mail.clientId;
                 //dataRequest.type = "facebook";
-                var client = new RestClient("https://tool.unlimitmail.com/api/");
+                var client = new RestClient("https://tool.unlimitmail.com/api/v1");
                 client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
-                var request = new RestRequest("get_messages_oauth2", Method.POST);
+                var request = new RestRequest("readContentGmail", Method.POST);
                 //request.AddHeader("X-API-TOKEN", "WVkyQkhBR0lQVzRJMElYOE5QUVM=");
 
                 request.AddJsonBody(dataRequest);
@@ -1800,8 +1865,12 @@ namespace fb_reg
             public int quantity { get; set; }
             [JsonProperty("token")]
             public string token { get; set; }
-            [JsonProperty("product_id")]
+
+            [Newtonsoft.Json.JsonProperty("product_id")]
             public string product_id { get; set; }
+
+            [JsonProperty("type")]
+            public string type { get; set; }
         }
         public class GmailUnlimitedBodyRequest
         {
@@ -1823,16 +1892,29 @@ namespace fb_reg
             {
                 try
                 {
-                    HotmailUnlimitedBodyRequest requestBody = new HotmailUnlimitedBodyRequest();
-                    requestBody.quantity = amount;
-                    requestBody.token = PublicData.TokenUnlimit;
-                    requestBody.product_id = type;
-                    var client = new RestClient("https://web.unlimitmail.com/");
-                    //client.CachePolicy = new HttpRequestCachePolicy(HttpRequestCacheLevel.NoCacheNoStore);
-                    var request = new RestRequest("api/buy-product", Method.POST);
+            
+                    var client = new RestClient("https://web.unlimitmail.com");
+
+                    var request = new RestRequest("/api/buyHotMailUd", Method.POST);
+
                     request.AddHeader("Content-Type", "application/json");
-                    request.RequestFormat = DataFormat.Json;
-                    request.AddJsonBody(requestBody);
+
+                    request.AddHeader("Cookie",
+                        "XSRF-TOKEN=...; unlimitmail_session=...");
+
+//                  
+                    var body = @"{
+                      ""token"": """ + PublicData.TokenUnlimit + @""",
+                      ""product_id"": """ + type + @""",
+                      ""quantity"": " + amount + @",
+                      ""type"": ""full""
+                    }";
+
+                    request.AddParameter(
+                        "application/json",
+                        body,
+                        ParameterType.RequestBody);
+
                     var response = client.Execute(request);
                     var content = response.Content; // Raw content as string    
                     try
@@ -2480,6 +2562,7 @@ namespace fb_reg
                 {
                     mail.email = data.data;
                     mail.password = Constant.GMAIL_SELL_GMAIL;
+                    mail.isHotmail = false;
                 }
                 //Utility.isAvailableSellGmail = true;
             }
@@ -3336,18 +3419,18 @@ namespace fb_reg
                     return null;
                 }
                 string apiGetHotMail = string.Format("https://api.dongvanfb.net/user/buy?apikey={0}&account_type={1}&quality={2}&type=full", "b4e2f1a9dc40f4aad654c570ee6418f5", mailType, count);
-                string proxyHost = "niceproxy.io";
-                int proxyPort = 17521;
-                string proxyUser = "dsgerter_31r6-ssid-l6GaUOvfCN-sst-30";
-                string proxyPass = "dgsrdfdgt5";
+                //string proxyHost = "niceproxy.io";
+                //int proxyPort = 17521;
+                //string proxyUser = "dsgerter_31r6-ssid-l6GaUOvfCN-sst-30";
+                //string proxyPass = "dgsrdfdgt5";
 
                 var request = (HttpWebRequest)WebRequest.Create(apiGetHotMail);
                 request.Method = "GET";
                 request.Accept = "application/json";
                 request.ContentType = "application/json; charset=utf-8";
 
-                WebProxy proxy = new WebProxy(proxyHost, proxyPort);
-                proxy.Credentials = new NetworkCredential(proxyUser, proxyPass);
+                //WebProxy proxy = new WebProxy(proxyHost, proxyPort);
+                //proxy.Credentials = new NetworkCredential(proxyUser, proxyPass);
 
                 //request.Proxy = proxy;
 

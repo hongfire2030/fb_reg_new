@@ -34,6 +34,8 @@ using fb_reg.Utilities;
 using ActiveUp.Net.Security.OpenPGP.Packets;
 using OtpNet;
 using static fb_reg.Utility;
+using Chilkat;
+using RestSharp;
 
 
 namespace fb_reg
@@ -287,10 +289,7 @@ class Utility
         public static void LogStatus(string deviceId, string status, int sleep = 0)
         {
             DeviceObject device = DeviceManager.GetDevice(deviceId);
-            if (device == null)
-            {
-                return;
-            }
+            
             LogStatus(device, status, sleep);
         }
 
@@ -306,54 +305,76 @@ class Utility
 
         public static void LogStatus (string text)
         {
-            LokiLogger.Log(
+            try
+            {
+                LokiLogger.Log(
                 status: "LOG_STATUS",
                 deviceId: "SYSTEM",
                 country: "",
                 email: "",
                 proxy: "",
                 message: text);
+            } catch (Exception ex )
+            {
+
+            }
+            
         }
         public static void LogStatus(DeviceObject device, string text, int sleep = 0)
         {
-            string key = device.keyProxy;
-
-            device.status = text + "-block:" + device.blockCount + " - " + key;
-
-            UpdateStatus2(device);
-            if (sleep > 0)
+            try
             {
-                Thread.Sleep(sleep);
-            }
+                if (device == null)
+                {
+                    LogStatus(text);
+                    return;
+                }
+                string deviceId = device.deviceId;
+                
 
-            LokiLogger.Log(
-                status: "LOG_STATUS",
-                deviceId: device.deviceId,
-                country: "",
-                email: "",
-                proxy: "",
-                message: device.status);
+                
+                string key = device.keyProxy;
+
+                device.status = text + "-block:" + device.blockCount + " - " + key;
+                LokiLogger.Log(
+                    status: "LOG_STATUS",
+                    deviceId: deviceId,
+                    country: "",
+                    email: "",
+                    proxy: "",
+                    message: device.status);
+                UpdateStatus2(device);
+                if (sleep > 0)
+                {
+                    Thread.Sleep(sleep);
+                }
+            } catch( Exception  ex)
+            {
+
+            }
         }
 
         public static void LogError(DeviceObject device, string text, int sleep = 0)
         {
-            string key = device.keyProxy;
-
-            device.status = text + "-block:" + device.blockCount + " - " + key;
-
-            UpdateStatus2(device);
-            if (sleep > 0)
-            {
-                Thread.Sleep(sleep);
-            }
-
+            
             LokiLogger.Log(
                 status: "LOG_ERROR",
                 deviceId: device.deviceId,
                 country: "",
                 email: "",
                 proxy: "",
-                message: device.status);
+                message: text);
+        }
+        public static void LogAvatarFail(DeviceObject device, string text, int sleep = 0)
+        {
+
+            LokiLogger.Log(
+                status: "LOG_AVATAR_FAIL",
+                deviceId: device.deviceId,
+                country: "",
+                email: "",
+                proxy: "",
+                message: text);
         }
         public static Account GetAccMoi()
         {
@@ -1663,26 +1684,26 @@ class Utility
             return Constant.FAIL;
         }
 
-        public static ResponseDongVanObject GetHotMailDongVanApi(int count, int mailType)
-        {
-            try
-            {
-                string apiGetHotMail = string.Format("https://api.dongvanfb.net/user/buy?apikey={0}&account_type={1}&quality={2}&type=null", "b4e2f1a9dc40f4aad654c570ee6418f5", mailType, count);
-                var request = (HttpWebRequest)WebRequest.Create(apiGetHotMail);
-                request.Method = "GET";
-                request.Accept = "application/json";
-                request.ContentType = "application/json; charset=utf-8";
+        //public static ResponseDongVanObject GetHotMailDongVanApi(int count, int mailType)
+        //{
+        //    try
+        //    {
+        //        string apiGetHotMail = string.Format("https://api.dongvanfb.net/user/buy?apikey={0}&account_type={1}&quality={2}&type=null", "b4e2f1a9dc40f4aad654c570ee6418f5", mailType, count);
+        //        var request = (HttpWebRequest)WebRequest.Create(apiGetHotMail);
+        //        request.Method = "GET";
+        //        request.Accept = "application/json";
+        //        request.ContentType = "application/json; charset=utf-8";
 
-                var response = (HttpWebResponse)request.GetResponse();
-                var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
+        //        var response = (HttpWebResponse)request.GetResponse();
+        //        var responseString = new StreamReader(response.GetResponseStream()).ReadToEnd();
 
-                return JsonConvert.DeserializeObject<ResponseDongVanObject>(responseString);
-            }
-            catch (Exception ex)
-            {
-                return null;
-            }
-        }
+        //        return JsonConvert.DeserializeObject<ResponseDongVanObject>(responseString);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        return null;
+        //    }
+        //}
 
         public static bool checkScreen(string deviceID, string screenName)
         {
@@ -2111,13 +2132,13 @@ class Utility
 
         }
 
-        public class ResponseDongVanObject
-        {
-            [JsonProperty("success")]
-            public int success { get; set; }
-            [JsonProperty("accounts")]
-            public string accounts { get; set; }
-        }
+        //public class ResponseDongVanObject
+        //{
+        //    [JsonProperty("success")]
+        //    public int success { get; set; }
+        //    [JsonProperty("accounts")]
+        //    public string accounts { get; set; }
+        //}
         public static string DownloadUsAvatar(string gender)
         {
 
@@ -2614,92 +2635,90 @@ class Utility
             {
                 if (isVerified == Constant.TRUE)
                 {
-                     LogCheckpoint(device, order, Constant.VERI_SUCCESS);   
+                    LogCheckpoint(device, order, Constant.VERI_SUCCESS);
                 }
-                //else
-                //{
-                //     LogCheckpoint(device, order, Constant.CHECKPOINT);
-                //}
-            } catch (Exception ex)
-            {
-
-            }
-            
+               
 
                 order.isSuccess = true;
-            string deviceID = device.deviceId;
-            string cookies = FbUtil.GetCookieFromPhone(deviceID);
-            if ((order.isReverify || order.reupFullInfoAcc) && cookies.Length < 178)
-            {
-                cookies = order.account.cookie + "|" + order.account.token;
-            }
-            string uid;
-            bool needBackup = true;
-            if (!string.IsNullOrEmpty(order.uid))
-            {
-                uid = order.uid;
-            }
-            else
-            {
-                uid = FbUtil.GetUidFromCookie(cookies);
-            }
-
-            if (string.IsNullOrEmpty(uid))
-            {
-                return -1;
-            }
-            if (string.IsNullOrEmpty(Hotmail) || Hotmail == Constant.FAIL)
-            {
-                Hotmail = Constant.FAIL + "|" + Constant.FAIL;
-            } else
-            {
-                string[] temp = Hotmail.Split('|');
-                if (temp.Length > 2)
+                string deviceID = device.deviceId;
+                string cookies = FbUtil.GetCookieFromPhone(deviceID);
+                if ((order.isReverify || order.reupFullInfoAcc) && cookies.Length < 178)
                 {
-                    Hotmail = temp[0] + "|" + temp[1];
+                    cookies = order.account.cookie + "|" + order.account.token;
                 }
-            }
-
-            if (order.hasAddFriend)
-            {
-                if (!string.IsNullOrEmpty(order.accType))
+                string uid;
+                bool needBackup = true;
+                if (!string.IsNullOrEmpty(order.uid))
                 {
-                    order.accType = order.accType.Replace("_friend", "");
-                }
-                order.accType = order.accType + "_friend";
-            }
-
-            string rawData = uid + "|" + password
-                + "|" + cookies + "|" + qrCode + "|" + Hotmail + "|" + gender + "|" + yearOld;
-
-            string hasAvatar;
-            string has2Fa;
-            string emailType = "";
-
-            string fileName = "FileCLone/";
-            if (order.checkAccHasAvatar)
-            {
-                fileName = fileName + "avatar";
-                hasAvatar = Constant.TRUE;
-            }
-            else
-            {
-                if (isVerified != Constant.TRUE && !order.nvrUpAvatar)
-                {
-                    fileName = fileName + "NoAvatar";
-                    hasAvatar = Constant.FALSE;
+                    uid = order.uid;
                 }
                 else
                 {
-                    // Recheck avatar
-                    if (order.hasAvatar)
+                    uid = FbUtil.GetUidFromCookie(cookies);
+                }
+
+                if (string.IsNullOrEmpty(uid))
+                {
+                    return -1;
+                }
+                if (string.IsNullOrEmpty(Hotmail) || Hotmail == Constant.FAIL)
+                {
+                    Hotmail = Constant.FAIL + "|" + Constant.FAIL;
+                } else
+                {
+                    string[] temp = Hotmail.Split('|');
+                    if (temp.Length > 2)
                     {
-                        Device.GotoFbProfileEdit(deviceID);
-                        Thread.Sleep(3000);
-                        if (CheckTextExist(deviceID, "nodeindex0textchỉnhsửaresourceidclassandroidwidgettextviewpackagecomfacebookkatanacontentdesccheckablefalsecheckedfalseclickablefalseenabledtruefocusablefalsefocusedfalsescrollablefalselongclickablefalsepasswordfalseselectedfalseboundsxxx1115,3", 2)) // đã có avatar rồi
+                        Hotmail = temp[0] + "|" + temp[1];
+                    }
+                }
+
+                if (order.hasAddFriend)
+                {
+                    if (!string.IsNullOrEmpty(order.accType))
+                    {
+                        order.accType = order.accType.Replace("_friend", "");
+                    }
+                    order.accType = order.accType + "_friend";
+                }
+
+                string rawData = uid + "|" + password
+                    + "|" + cookies + "|" + qrCode + "|" + Hotmail + "|" + gender + "|" + yearOld;
+
+                string hasAvatar;
+                string has2Fa;
+                string emailType = "";
+
+                string fileName = "FileCLone/";
+                if (order.checkAccHasAvatar)
+                {
+                    fileName = fileName + "avatar";
+                    hasAvatar = Constant.TRUE;
+                }
+                else
+                {
+                    if (isVerified != Constant.TRUE && !order.nvrUpAvatar)
+                    {
+                        fileName = fileName + "NoAvatar";
+                        hasAvatar = Constant.FALSE;
+                    }
+                    else
+                    {
+                        // Recheck avatar
+                        if (order.hasAvatar)
                         {
-                            fileName = fileName + "avatar";
-                            hasAvatar = Constant.TRUE;
+                            Device.GotoFbProfileEdit(deviceID);
+                            Thread.Sleep(3000);
+                            if (CheckTextExist(deviceID, "nodeindex0textchỉnhsửaresourceidclassandroidwidgettextviewpackagecomfacebookkatanacontentdesccheckablefalsecheckedfalseclickablefalseenabledtruefocusablefalsefocusedfalsescrollablefalselongclickablefalsepasswordfalseselectedfalseboundsxxx1115,3", 2)) // đã có avatar rồi
+                            {
+                                fileName = fileName + "avatar";
+                                hasAvatar = Constant.TRUE;
+                            }
+                            else
+                            {
+                                fileName = fileName + "NoAvatar";
+                                hasAvatar = Constant.FALSE;
+                            }
                         }
                         else
                         {
@@ -2707,165 +2726,190 @@ class Utility
                             hasAvatar = Constant.FALSE;
                         }
                     }
-                    else
-                    {
-                        fileName = fileName + "NoAvatar";
-                        hasAvatar = Constant.FALSE;
-                    }
                 }
-            }
 
-            fileName = fileName + "_" + order.language;
+                fileName = fileName + "_" + order.language;
 
-            if (!string.IsNullOrWhiteSpace(qrCode))
-            {
-                fileName = fileName + "_2fa";
-                has2Fa = Constant.TRUE;
-            }
-            else
-            {
-                fileName = fileName + "_no2fa";
-                has2Fa = Constant.FALSE;
-            }
-            try
-            {
-                string mailPass = Hotmail.Split('|')[1];
-
-                if (mailPass == Constant.TEMPMAIL)
+                if (!string.IsNullOrWhiteSpace(qrCode))
                 {
-                    emailType = Constant.TEMPMAIL;
-                }
-                else if (order.currentMail.password == Constant.VERI_BY_PHONE)
-                {
-                    emailType = Constant.VERI_BY_PHONE;
-                }
-                else if (mailPass == Constant.GMAIL_SELL_GMAIL)
-                {
-                    emailType = Constant.GMAIL_SELL_GMAIL;
+                    fileName = fileName + "_2fa";
+                    has2Fa = Constant.TRUE;
                 }
                 else
                 {
-                    emailType = Constant.HOTMAIL;
+                    fileName = fileName + "_no2fa";
+                    has2Fa = Constant.FALSE;
+                }
+                try
+                {
+                    string mailPass = Hotmail.Split('|')[1];
+
+                    if (mailPass == Constant.TEMPMAIL)
+                    {
+                        emailType = Constant.TEMPMAIL;
+                    }
+                    else if (order.currentMail.password == Constant.VERI_BY_PHONE)
+                    {
+                        emailType = Constant.VERI_BY_PHONE;
+                    }
+                    else if (mailPass == Constant.GMAIL_SELL_GMAIL)
+                    {
+                        emailType = Constant.GMAIL_SELL_GMAIL;
+                    }
+                    else
+                    {
+                        emailType = Constant.HOTMAIL;
+                    }
+                    if (order.currentMail != null && 
+                        (order.currentMail.type == Constant.HOTMAIL_TRUSTED || order.currentMail.source == "upload"))
+                    {
+                        emailType = Constant.HOTMAIL_TRUSTED;
+                    }
+
+                    fileName = fileName + "_" + emailType;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+                bool verified;
+                if (isVerified == Constant.TRUE)
+                {
+                    fileName = fileName + "_veri";
+                    verified = true;
+                }
+                else
+                {
+                    verified = false;
+                    fileName = fileName + "_Noveri";
                 }
 
-                fileName = fileName + "_" + emailType;
+
+                if (order.checkAccHasCover)
+                {
+                    status = status + "|cover";
+                }
+                if (order.hasAddFriend)
+                {
+                    status = status + "|friend";
+                } else
+                {
+                    status = status + "|no_friend";
+                }
+                
+                status = LogSession.GetLogKey(deviceID) + "|" + status;
+                
+                if (order.addHotmailStatus > 0)
+                {
+                    status = status + "|addHotmailStatus:" + order.addHotmailStatus;
+                    order.accType = order.accType + "addHotmailStatus" + order.addHotmailStatus ;
+                }   
+                if (order.ommitMailStatus > 0)
+                {
+                    status = status + "|ommitMailStatus:" + order.ommitMailStatus;
+                    order.accType = order.accType + "_ommitMailStatus" + order.ommitMailStatus;
+                }
+                if (order.ommitPhoneStatus > 0)
+                {
+                    status = status + "|ommitPhoneStatus:" + order.ommitPhoneStatus;
+                    order.accType = order.accType + "_ommitPhoneStatus" + order.ommitPhoneStatus;
+                }   
+                bool checkBackup = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    checkBackup = FbUtil.PullBackupFbNew(uid, deviceID);
+                    if (checkBackup)
+                    {
+                        break;
+                    }
+                    LogStatus(device, "Pull file backup error --- thử lại:" + i, 2000);
+                }
+                if (!checkBackup)
+                {
+                    has2Fa = Constant.TRUE;
+                    qrCode = "";
+                }
+                string data = rawData + "|" + hasAvatar + "|" + has2Fa
+                    + "|" + order.language + "|" + emailType + "|" + isVerified
+                    + "|" + Environment.MachineName + "|" + deviceID;
+
+                if (hasAvatar == Constant.TRUE && has2Fa == Constant.TRUE || order.doitenAcc || isVerified != Constant.TRUE)
+                {
+                    needBackup = false;
+                }
+
+
+                if (isServer)
+                {
+                    if (order.veriByPhone || order.veriDirectByPhone)
+                    {
+                        if (!string.IsNullOrEmpty(order.phoneT.source))
+                        {
+                            status = order.phoneT.phone;
+                        }
+                    }
+
+
+                    bool checkOk = false;
+                    
+                    for (int i = 0; i < 10; i++)
+                    {
+                        checkOk = ServerApi.PostData(deviceID, isServer, data, status, order.accType);
+                        if (!checkOk)
+                        {
+
+                            LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 1000);
+                            Device.RebootDevice(deviceID);
+                        } else
+                        {
+                            LogStatus(device, "stored:" + data, 1000);
+                            
+                            break;
+                        }
+                    }
+                    if (!checkOk)
+                    {
+                        try
+                        {
+                            LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào file-----", 10000);
+                            DateTime dateTime = DateTime.UtcNow.Date;
+                            using (StreamWriter HDD = new StreamWriter(fileName + "_Missing_" + dateTime.ToString("dd/MM/yyyy") + ".txt", true))
+                            {
+                                HDD.WriteLine(data);
+                                HDD.Close();
+                            }
+                        }
+                        catch (Exception edeee)
+                        {
+                            LogStatus(device, "eeee lưu acc file: " + edeee.Message, 1000);
+                        }
+
+                        return -2;
+                    }
+                }
+                needBackup = true;
+                if (!verified || needBackup)
+                {
+                    Thread.Sleep(1000);
+                    ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
+                    Thread.Sleep(3000);
+                    try
+                    {
+                        File.Delete("Authentication/" + uid + ".tar.gz");
+                    }
+                    catch (IOException ex)
+                    {
+                        Console.WriteLine("ex:" + ex.Message);
+                    }
+                }
+
+                return 1;
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex.Message);
+                LogError(device, "Exception store:" + ex.Message, 20000);
+                return -3;
             }
-            bool verified;
-            if (isVerified == Constant.TRUE)
-            {
-                fileName = fileName + "_veri";
-                verified = true;
-            }
-            else
-            {
-                verified = false;
-                fileName = fileName + "_Noveri";
-            }
-
-
-            if (order.checkAccHasCover)
-            {
-                status = status + "|cover";
-            }
-            if (order.hasAddFriend)
-            {
-                status = status + "|friend";
-            } else
-            {
-                status = status + "|no_friend";
-            }
-                bool checkBackup = false;
-            for (int i = 0; i < 3; i++)
-            {
-                checkBackup = FbUtil.PullBackupFbNew(uid, deviceID);
-                if (checkBackup)
-                {
-                    break;
-                }
-                LogStatus(device, "Pull file backup error --- thử lại:" + i, 2000);
-            }
-            if (!checkBackup)
-            {
-                has2Fa = Constant.TRUE;
-                qrCode = "";
-            }
-            string data = rawData + "|" + hasAvatar + "|" + has2Fa
-                + "|" + order.language + "|" + emailType + "|" + isVerified
-                + "|" + Environment.MachineName + "|" + deviceID;
-
-            if (hasAvatar == Constant.TRUE && has2Fa == Constant.TRUE || order.doitenAcc || isVerified != Constant.TRUE)
-            {
-                needBackup = false;
-            }
-            
-
-            if (isServer)
-            {
-                if (order.veriByPhone || order.veriDirectByPhone)
-                {
-                    if (!string.IsNullOrEmpty(order.phoneT.source))
-                    {
-                        status = order.phoneT.phone;
-                    }
-                }
-
-                
-                bool checkOk = false;
-                for (int i = 0; i < 10; i ++)
-                {
-                    checkOk = ServerApi.PostData(deviceID, isServer, data, status, order.accType);
-                    if (! checkOk)
-                    {
-                            
-                        LogStatus(device, "Lưu Acc bị lỗi rồi, thử lại lần nữa -----" + i, 1000);
-                        Device.RebootDevice(deviceID);
-                    } else
-                    {
-                        LogStatus(device, "Lưu Acc Thành công ---" + i, 5000);
-                        break;
-                    }
-                }
-                if (!checkOk)
-                {
-                    try
-                    {
-                        LogStatus(device, "Lưu Acc bị lỗi rồi, Lưu vào file-----", 10000);
-                        DateTime dateTime = DateTime.UtcNow.Date;
-                        using (StreamWriter HDD = new StreamWriter(fileName + "_Missing_" + dateTime.ToString("dd/MM/yyyy") + ".txt", true))
-                        {
-                            HDD.WriteLine(data);
-                            HDD.Close();
-                        }
-                    }
-                    catch (Exception edeee)
-                    {
-                        LogStatus(device, "eeee lưu acc file: " + edeee.Message, 1000);
-                    }
-
-                    return -2;
-                }
-            }
-            needBackup = true;
-            if (!verified || needBackup)
-            {
-                Thread.Sleep(1000);
-                ServerApi.UploadAuthAcc(System.Windows.Forms.Application.StartupPath + "\\Authentication\\" + uid + ".tar.gz", uid);
-                Thread.Sleep(3000);
-                try
-                {
-                    File.Delete("Authentication/" + uid + ".tar.gz");
-                }
-                catch (IOException ex)
-                {
-                    Console.WriteLine("ex:" + ex.Message);
-                }
-            }
-            
-            return 1;
         }
         public static int storeAccWithThread(bool isServer, OrderObject order, DeviceObject device, string password, string Hotmail, string qrCode,
             string gender, int yearOld, string isVerified, string status)
@@ -3476,32 +3520,32 @@ class Utility
             }
             return network;
         }
-        public static void GetCookieTempMail()
-        {
-            ServicePointManager.Expect100Continue = true;
-            ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-            string uri = "https://generator.email";
-            //string uri = "https://forum.donanimhaber.com/service/v1/session/set?version=-1&securekey=123213&projectType=Forum&forumId=12";
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
-            request.Method = WebRequestMethods.Http.Get;
-            request.AllowAutoRedirect = false;
-            request.CookieContainer = new CookieContainer();
-            request.KeepAlive = true;
-            request.ContentType = "application/x-www-form-urlencoded";
-            request.UserAgent = "Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.0.5) Gecko/2008120122 Firefox/3.0.5";
+        //public static void GetCookieTempMail()
+        //{
+        //    ServicePointManager.Expect100Continue = true;
+        //    ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
+        //    string uri = "https://generator.email";
+        //    //string uri = "https://forum.donanimhaber.com/service/v1/session/set?version=-1&securekey=123213&projectType=Forum&forumId=12";
+        //    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+        //    request.Method = WebRequestMethods.Http.Get;
+        //    request.AllowAutoRedirect = false;
+        //    request.CookieContainer = new CookieContainer();
+        //    request.KeepAlive = true;
+        //    request.ContentType = "application/x-www-form-urlencoded";
+        //    request.UserAgent = "Mozilla/5.0 (Windows; U; Windows NT 6.0; en-US; rv:1.9.0.5) Gecko/2008120122 Firefox/3.0.5";
 
-            HttpWebResponse response = (HttpWebResponse)request.GetResponse();
-            Stream receiveStream = response.GetResponseStream();
-            StreamReader readStream = new StreamReader(receiveStream, Encoding.UTF8);
-            string oku = readStream.ReadToEnd();
+        //    HttpWebResponse response = (HttpWebResponse)request.GetResponse();
+        //    Stream receiveStream = response.GetResponseStream();
+        //    StreamReader readStream = new StreamReader(receiveStream, Encoding.UTF8);
+        //    string oku = readStream.ReadToEnd();
 
 
-            foreach (Cookie cook in response.Cookies)
-            {
-                Console.WriteLine("Domain: {0}, Name: {1}, value: {2}", cook.Domain, cook.Name, cook.Value);
+        //    foreach (Cookie cook in response.Cookies)
+        //    {
+        //        Console.WriteLine("Domain: {0}, Name: {1}, value: {2}", cook.Domain, cook.Name, cook.Value);
 
-            }
-        }
+        //    }
+        //}
 
         public static string GetPhoneCode(PhoneTextNow phoneT)
         {
@@ -3619,6 +3663,172 @@ class Utility
             return code;
         }
 
+        public class ReadMailRequest
+        {
+            public string email { get; set; }
+            public string password { get; set; }
+            public string refreshToken { get; set; }
+            public string clientId { get; set; }
+        }
+
+        public class ReadMailResponse
+        {
+            [JsonProperty("success")]
+            public bool Success { get; set; }
+
+            [JsonProperty("step")]
+            public string Step { get; set; }
+
+            [JsonProperty("email")]
+            public string Email { get; set; }
+
+            [JsonProperty("graph_status_code")]
+            public int GraphStatusCode { get; set; }
+
+            [JsonProperty("count")]
+            public int Count { get; set; }
+
+            [JsonProperty("mails")]
+            public List<MailItem> Mails { get; set; }
+        }
+
+        public class MailItem
+        {
+            [JsonProperty("id")]
+            public string Id { get; set; }
+
+            [JsonProperty("subject")]
+            public string Subject { get; set; }
+
+            [JsonProperty("from")]
+            public string From { get; set; }
+
+            [JsonProperty("receivedDateTime")]
+            public string ReceivedDateTime { get; set; }
+
+            [JsonProperty("bodyPreview")]
+            public string BodyPreview { get; set; }
+
+            [JsonProperty("isRead")]
+            public bool IsRead { get; set; }
+        }
+
+        public static ReadMailResponse ReadHotmail(
+                    string email,
+                    string password,
+                    string refreshToken,
+                    string clientId,
+                    bool debug = false)
+        {
+            try
+            {
+                var client = new RestClient(PublicData.CacheMailUbuntu);
+
+                var request = new RestRequest($"/api/read/hotmail?debug={debug.ToString().ToLower()}");
+
+                request.Timeout = 30000;
+
+                request.AddJsonBody(new ReadMailRequest
+                {
+                    email = email,
+                    password = password,
+                    refreshToken = refreshToken,
+                    clientId = clientId
+                });
+
+                var response = client.Post(request);
+
+                if (response.StatusCode == HttpStatusCode.OK)
+                {
+                    var result = JsonConvert.DeserializeObject<ReadMailResponse>(response.Content);
+                    if (result == null)
+                    {
+                        return null;
+                    }
+                    if (result.Mails == null)
+                    {
+                        return null;
+                    }
+                    foreach (var mail in result.Mails)
+                    {
+                        Console.WriteLine(mail.Subject);
+                    }
+                    return result;
+                }
+
+                return null;
+            }
+            catch (Exception ex)
+            {
+                return null;
+            }
+        }
+
+        public static string GetFacebookOtp(ReadMailResponse response)
+        {
+            if (response == null || !response.Success || response.Mails == null)
+                return "";
+
+            foreach (var mail in response.Mails
+                .OrderByDescending(x => DateTime.TryParse(x.ReceivedDateTime, out var dt) ? dt : DateTime.MinValue))
+            {
+                string text = $"{mail.Subject} {mail.BodyPreview}";
+
+                if (string.IsNullOrWhiteSpace(text))
+                    continue;
+
+                bool isFacebookMail =
+                    text.IndexOf("Facebook", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    text.IndexOf("Meta", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                    (mail.From ?? "").IndexOf("facebook", StringComparison.OrdinalIgnoreCase) >= 0;
+
+                if (!isFacebookMail)
+                    continue;
+
+                var match = Regex.Match(text, @"\b\d{5,8}\b");
+
+                if (match.Success)
+                    return match.Value;
+            }
+
+            return "";
+        }
+
+        public static string GetFacebookOtpFromSubject(string text)
+        {
+
+            if (string.IsNullOrWhiteSpace(text))
+                return Constant.FAIL;
+
+            var match = Regex.Match(text, @"\b\d{5,8}\b");
+
+            if (match.Success)
+                return match.Value;
+            return Constant.FAIL;
+        }
+        public static bool IsHotmailAlive(ReadMailResponse response)
+        {
+            
+            try
+            {
+                if (response == null)
+                    return false;
+
+                // Đọc mailbox thành công => mail còn sống
+                if (response.Success &&
+                    response.Step == "read_messages" &&
+                    response.GraphStatusCode == 200)
+                {
+                    return true;
+                }
+
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
         public static string readHotmailLocal(MailObject mail)
         {
             string clientId = mail.clientId;
@@ -3669,7 +3879,7 @@ class Utility
         {
             string code = Constant.FAIL;
             order.getOtp = true;
-            time = 4;
+            time = 5;
             inMail.deviceId = deviceID;
             if (inMail.password == Constant.TEMP_MAIL || inMail.password == Constant.GMAIL_SELL_GMAIL)
             {
@@ -3746,12 +3956,12 @@ class Utility
                     } else
                     {
 
-                        List<string> subjects = GetAllSubjectMail(inMail);
+                        List<string> subjectstemp = GetAllSubjectMail(inMail);
 
                         ////truy xuất nội dung từng mail
-                        foreach (string subject in subjects)
+                        foreach (string subject in subjectstemp)
                         {
-                            LogStatus( deviceID, i + "/" + subjects.Count +  " - subject:" + subject, 1000);
+                            LogStatus( deviceID, i + "/" + subjectstemp.Count +  " - subject:" + subject, 1000);
                             code = FindCodeInSubject(subject);
                             if (code != Constant.FAIL)
                             {
@@ -3777,9 +3987,39 @@ class Utility
                 }
                 LogStatus(deviceID, "Đọc mail vandong lỗi - thử local");
 
-                code = readHotmailLocal(inMail);
+                List<string> subjects = GetAllSubjectMail(inMail);
+                if (subjects != null && subjects.Count > 0)
+                {
+                    foreach (string subject in subjects)
+                    {
+                        LogStatus(deviceID, "subject:" + subject);
+                        code = FindCodeInSubject(subject);
+                        if (code != Constant.FAIL)
+                        {
+                            break;
+                        }
+                    }
+                } else
+                {
+                    ReadMailResponse inbox = ReadHotmail(inMail.email, inMail.password, inMail.refreshToken, inMail.clientId);
+                    code = GetFacebookOtp(inbox);
+                }
 
-                
+                    
+
+                //if (PublicData.needReuseMail)
+                //{
+                //    if (!string.IsNullOrEmpty(inMail.message) && inMail.message.Contains("mail tra ve"))
+                //    {
+                //        LogStatus(deviceID, "mail đã dùng 1 lần, bỏ đi");
+                //    } else
+                //    {
+                //        inMail.message = "";
+                //        CacheServer.ForceAddMailServerCache(inMail);
+                //        Utility.LogStatus(deviceID, "Trả hotmail server: " + inMail.toString());
+                //    }
+                //}
+
 
 
                 //ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12 | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls | SecurityProtocolType.Ssl3;
@@ -3847,21 +4087,25 @@ class Utility
 
         public static void DelayChayChamlai()
         {
-            if (PublicData.ChayChamLai)
-            {
-                int time = PublicData.ChayChamlaiDelay;
+            //if (PublicData.ChayChamLai)
+            //{
+                int time = PublicData.delay * 1000;
                 
                 if (time < 3000)
                 {
                     time = 1000;
                 }
                 DelayRandom(time);
-            }
+            //}
         }
         public static void DelayRandom( int time)
         {
-            int min = (int)(time * 0.5);
-            int max = (int)(time * 1.5);
+            int a = (int)(time * 0.5);
+            int b = (int)(time * 1.5);
+
+            int min = Math.Min(a, b);   // 5
+            int max = Math.Max(a, b);   // 10
+
             Random random = new Random();
             int delay = random.Next(min, max);
             
@@ -3917,18 +4161,21 @@ class Utility
 
         public static string FindCodeInSubject(string subject)
         {
+            
             string code = Constant.FAIL;
             
-            if (subject.Contains("mã xác nhận"))
-            {
-                var Item = subject.Split(' ');
-                code = Item[0];
-                if (string.IsNullOrEmpty(code))
-                {
-                    return Constant.FAIL;
-                }
-                return code;
-            }
+            //if (subject.Contains("mã xác nhận"))
+            //{
+            //    var Item = subject.Split(' ');
+            //    code = Item[0];
+            //    if (string.IsNullOrEmpty(code))
+            //    {
+            //        return Constant.FAIL;
+            //    }
+            //    return code;
+            //}
+            
+            code = GetFacebookOtpFromSubject(subject);
             return code;
         }
 
@@ -4006,24 +4253,42 @@ class Utility
             return HaHaHa;
         }
 
-        public static void WriteLog(string form, string mess)
+        //public static void WriteLog(string form, string mess)
+        //{
+            
+        //    using (FileStream fileStream = new FileStream(System.Windows.Forms.Application.StartupPath + "\\data\\log.txt", FileMode.Append, FileAccess.Write))
+        //    {
+        //        using (StreamWriter streamWriter = new StreamWriter(fileStream))
+        //        {
+        //            streamWriter.WriteLine(string.Concat(new string[]
+        //            {
+        //                DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
+        //                "  ",
+        //                form,
+        //                ": ",
+        //                mess
+        //            }));
+        //        }
+        //    }
+            
+        //}
+        public static string xmlformat(string XML)
         {
-            
-            using (FileStream fileStream = new FileStream(System.Windows.Forms.Application.StartupPath + "\\data\\log.txt", FileMode.Append, FileAccess.Write))
-            {
-                using (StreamWriter streamWriter = new StreamWriter(fileStream))
-                {
-                    streamWriter.WriteLine(string.Concat(new string[]
-                    {
-                        DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss"),
-                        "  ",
-                        form,
-                        ": ",
-                        mess
-                    }));
-                }
-            }
-            
+            //XML = Decode_UTF8(XML);
+            XML = XML.Replace(" ", "");
+            XML = XML.Replace("=", "");
+            XML = XML.Replace("\"", "");
+            XML = XML.Replace("-", "");
+            XML = XML.Replace("(", "");
+            XML = XML.Replace(")", "");
+            XML = XML.Replace("/", "");
+            XML = XML.Replace("[", "xxx");
+            XML = XML.Replace("]", "yyy");
+            XML = XML.Replace(":", "");
+            XML = XML.Replace(".", "");
+            XML = XML.Replace("_", "").ToLower();
+
+            return XML;
         }
         public static string GetUIXml(string deviceID)
         {
@@ -4170,7 +4435,7 @@ class Utility
                 xml = GetUIXml(deviceID);
             }
             
-            text = text.Replace(" ", "").ToLower();
+            text = xmlformat(text);
 
             //return Regex.Match(xml, Tên + "[a-z,A-Z,0-9,:,.,_]{0,}").ToString();
             if (xml.Contains(text))
@@ -4790,6 +5055,10 @@ class Utility
         public static void SetRowColor(DeviceObject device, Color color)
         {
             PublicData.dataGridView.Rows[device.index].DefaultCellStyle.BackColor = color;
+        }
+        public static void SetRowCheckpointColor(DeviceObject device)
+        {
+            PublicData.dataGridView.Rows[device.index].DefaultCellStyle.BackColor = Color.OrangeRed;
         }
         public static void LogRegStatus(DeviceObject device, string status)
         {

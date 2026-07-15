@@ -44,6 +44,10 @@ namespace fb_reg.Utilities
         }
         public static DeviceObject GetDevice(string deviceID)
         {
+            if (string.IsNullOrEmpty(deviceID))
+            {
+                return null;
+            }
             foreach (DeviceObject device in PublicData.listDeviceObject)
             {
                 if (CompareDevceId(device.deviceId, deviceID))

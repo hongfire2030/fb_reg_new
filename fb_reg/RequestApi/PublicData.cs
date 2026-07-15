@@ -1,4 +1,5 @@
 ﻿using ActiveUp.Net.Security.OpenPGP.Packets;
+using Emgu.CV.Saliency;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,6 +18,14 @@ namespace fb_reg.RequestApi
     }
     public static class PublicData
     {
+        public static bool omitgmail = false;
+        public static bool omitphone = false;
+        public static bool doiHotmail = false;
+        public static bool khonglaymailtrave = false;
+        public static int delay = 6;
+        public static int totalSuccess = 0;
+        //public static int totalFailure = 0;
+        public static int totalRun = 0;
         public static DateTime nextCheckTime = DateTime.MinValue;
         public static int maxRate = 85;
         public static RunningStatus RunStatus = RunningStatus.RunningNormal; //Idle, Running, Paused, Stopped
@@ -28,7 +37,7 @@ namespace fb_reg.RequestApi
         public static string includeProxy = "";
         public static string exceptionProxy = "us,vn";
         public static bool exceptionusvn = false;
-        public static bool vandong = true;
+        public static bool vandong = false;
         public static bool unlimit = true;
         public static bool global = false;
         public static bool stopAll = false;
@@ -42,6 +51,10 @@ namespace fb_reg.RequestApi
         public static bool ForceGmail = false;
         public static DataGridView dataGridView;
         public static List<DeviceObject> listDeviceObject = new List<DeviceObject>();
+
+
+        public static string CacheMailUbuntu = "http://148.113.207.13:18080";
+
         public static string LogProxyCountry = "http://148.113.207.13:18090";
         public static string NameServerUbuntu = "http://148.113.207.13:8000";
         public static string NameServer = "http://hes09ez92az.sn.mynetname.net:8081";
@@ -74,7 +87,7 @@ namespace fb_reg.RequestApi
         public static string AccessTokengmailShopgmailmmo = "he88E0i86xjL8Z27zbGk1nDDDm3vKixK";
         public static string AccessTokengmailClonenha = "83a87da6eda428457ad9e8b72dccce37GlpWHeVrTkfvUR710XY4nQoyP6zs2wLF";
 
-        public static int soLanChoMail = 150;
+        public static int soLanChoMail = 90;
         public static bool cho_mail = false;
         public static string SourceClonenha = "clonenha";   
         public static bool GetMailThuesim = false;
@@ -90,9 +103,18 @@ namespace fb_reg.RequestApi
         public static bool GetGmailUnlimit = false;
         public static string TokenUnlimit = "8vnz9yfkcdsjmp6lnoosuju5990hec3jesfsq7yeiz7xwt1mgyvshouq5dt7g8exttoyan1722140071";
         public static List<string> wifilist = new List<string>();
+        public static int delayAfterDie = 300000;
+        public static int delayAfterReg = 300000;
 
-        
 
+
+        public static List<string> listIdUnlimit = new List<string>();
+        public static List<string> listIdVandong = new List<string>() { "1", "2", "3"};
+        public static List<string> listIdTrustVandong = new List<string>() { "5", "6", "59", "60" };
+        public static List<string> listIdTrustUnlimit = new List<string>();
+
+        public static bool tramaildie = false;
+        public static bool checkMail = true;
         public static bool ThoatGmail = false;
         public static string FetchMailLog = "";
         public static System.Windows.Forms.Label PublicmaxMaillabel;

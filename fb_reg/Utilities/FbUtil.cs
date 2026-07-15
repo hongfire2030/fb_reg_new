@@ -3421,6 +3421,16 @@ tar -xpf /sdcard/facebook_backup.tar
                     Thread.Sleep(1000);
                     cmd = Device.ExecuteCMD(string.Format(
                         Device.CONSOLE_ADB + "push \"{2}/Authentication/{1}.tar.gz\" /sdcard/Alarms/", deviceID, uid, Application.StartupPath)); // push file mới
+
+
+
+
+
+
+
+
+
+
                     cmd = " shell su -c \"ls -l /data/data | grep com.facebook.katana | awk '{print $3\\\":\\\"$4}'\"";
                     cmd = string.Format(Device.CONSOLE_ADB, deviceID) + cmd;
                     Thread.Sleep(1000);
@@ -3436,12 +3446,15 @@ tar -xpf /sdcard/facebook_backup.tar
                         continue;
                     }
                         Thread.Sleep(1000);
-                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c cp /sdcard/Alarms/" + uid + ".tar.gz /data/data/com.facebook.katana/" + uid + ".tar.gz"); // chep file tạm vào com.facebook.katana
+
+                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c tar -xvzpf  /sdcard/Alarms/" + uid + ".tar.gz"); // giải nén file
+                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " restorecon -RF /data/data/com.facebook.katana");
+                    //cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c cp /sdcard/Alarms/" + uid + ".tar.gz /data/data/com.facebook.katana/" + uid + ".tar.gz"); // chep file tạm vào com.facebook.katana
 
                     Thread.Sleep(1000);
-                    cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c tar -xpf /data/data/" + packageFacebook + "/" + uid + ".tar.gz"); // giải nén file
+                    //cmd = Device.ExecuteCMD("adb -s " + deviceID + " shell su -c tar -xpf /data/data/" + packageFacebook + "/" + uid + ".tar.gz"); // giải nén file
 
-                    cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /data/data/com.facebook.katana/{1}.tar.gz' \"", deviceID, uid); // xóa file
+                    //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' rm -rf  /data/data/com.facebook.katana/{1}.tar.gz' \"", deviceID, uid); // xóa file
                     result = Device.ExecuteCMD(cmd); // delete folder uid
 
 
@@ -3449,8 +3462,8 @@ tar -xpf /sdcard/facebook_backup.tar
                     string chownCmd = $"shell su -c \"chown -R {owner} {folderPath}\"";
                     RunAdb(deviceID, chownCmd);  //update user
 
-                    chownCmd = $"shell su -c \"chmod -R 700 /data/data/com.facebook.katana\"";
-                    RunAdb(deviceID, chownCmd);
+                    //chownCmd = $"shell su -c \"chmod -R 700 /data/data/com.facebook.katana\"";
+                    //RunAdb(deviceID, chownCmd);
 
                     Thread.Sleep(1000);
 
@@ -3464,7 +3477,7 @@ tar -xpf /sdcard/facebook_backup.tar
                         return false;
                     }
 
-                    Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
+                    //Device.OpenApp(deviceID, Constant.FACEBOOK_PACKAGE);
                     Thread.Sleep(20000);
                     
 
@@ -3507,31 +3520,41 @@ tar -xpf /sdcard/facebook_backup.tar
                 result = Device.ExecuteCMD(cmd); // delete folder uid
 
                 Thread.Sleep(1000);
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // create folder uid
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana/files' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // create folder uid
-                Thread.Sleep(1000);
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r  /data/data/com.facebook.katana/app_gatekeepers /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // copy app_gatekeepers
-                Thread.Sleep(1000);
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/app_light_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // copy app_light_prefs
-                Thread.Sleep(1000);
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/databases /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // copy databases
-                Thread.Sleep(1000);
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // create folder uid
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' mkdir -p /sdcard/Alarms/data/data/com.facebook.katana/files' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // create folder uid
+                //Thread.Sleep(1000);
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r  /data/data/com.facebook.katana/app_gatekeepers /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // copy app_gatekeepers
+                //Thread.Sleep(1000);
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/app_light_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // copy app_light_prefs
+                //Thread.Sleep(1000);
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/databases /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // copy databases
+                //Thread.Sleep(1000);
 
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/shared_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // copy shared_prefs
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/shared_prefs /sdcard/Alarms/data/data/com.facebook.katana' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // copy shared_prefs
 
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/files/mobileconfig /sdcard/Alarms/data/data/com.facebook.katana/files' \"", deviceID);
-                result = Device.ExecuteCMD(cmd); // copy shared_prefs
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c ' cp -r /data/data/com.facebook.katana/files/mobileconfig /sdcard/Alarms/data/data/com.facebook.katana/files' \"", deviceID);
+                //result = Device.ExecuteCMD(cmd); // copy shared_prefs
 
-                Thread.Sleep(1000);
-                cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c 'cd /sdcard/Alarms/ && tar  -cvz -f {1}.tar.gz data'  \"", deviceID, uid, uid);
-                result = Device.ExecuteCMD(cmd); // Tar file
+                //Thread.Sleep(1000);
+                //cmd = string.Format(Device.CONSOLE_ADB + " shell \"su -c 'cd /sdcard/Alarms/ && tar  -cvz -f {1}.tar.gz data'  \"", deviceID, uid, uid);
+                //result = Device.ExecuteCMD(cmd); // Tar file
+                cmd = string.Format(
+    Device.CONSOLE_ADB +
+    " shell \"su -c 'cd / && tar -cvzpf /sdcard/Alarms/{1}.tar.gz " +
+    "data/data/com.facebook.katana/app_gatekeepers " +
+    "data/data/com.facebook.katana/app_light_prefs " +
+    "data/data/com.facebook.katana/databases " +
+    "data/data/com.facebook.katana/shared_prefs " +
+    "data/data/com.facebook.katana/files/mobileconfig'\"",
+    deviceID, uid);
 
+                result = Device.ExecuteCMD(cmd);
                 Thread.Sleep(1000);
                 string temp = deviceID.Replace(":", ".");
                 if (!Directory.Exists("Authentication"))
